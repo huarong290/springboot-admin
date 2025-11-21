@@ -1,0 +1,45 @@
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: springboot-admin
+
+  # 数据源配置（R2DBC MySQL）
+  r2dbc:
+    url: r2dbc:mysql://localhost:3306/hr_admin
+    username: root
+    password: 123456
+    pool:
+      enabled: true
+      initial-size: 5
+      max-size: 20
+
+  # Redis 响应式配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 6000ms
+      password: 123456
+
+  # Jackson 序列化配置
+  jackson:
+    serialization:
+      indent_output: true
+
+# JWT 配置
+jwt:
+  secret: mySecretKey2025
+  expiration: 3600000   # Access Token 有效期：1小时
+  refresh-expiration: 604800000 # Refresh Token 有效期：7天
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    org.springframework.web: DEBUG
+    org.springframework.r2dbc: DEBUG
+    org.springframework.data.redis: DEBUG
