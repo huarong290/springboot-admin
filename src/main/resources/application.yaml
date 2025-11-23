@@ -1,6 +1,7 @@
-
 server:
-  port: 8080
+  port: 18080
+#  servlet:
+#    context-path: /springboot-admin
 
 spring:
   application:
@@ -8,7 +9,7 @@ spring:
 
   # 数据源配置（R2DBC MySQL）
   r2dbc:
-    url: r2dbc:mysql://localhost:3306/hr_admin
+    url: r2dbc:mysql://localhost:3306/hr_admin?serverTimezone=Asia/Shanghai
     username: root
     password: 123456
     pool:
@@ -32,9 +33,10 @@ spring:
 
 # JWT 配置
 jwt:
-  secret: mySecretKey2025
-  expiration: 3600000   # Access Token 有效期：1小时
-  refresh-expiration: 604800000 # Refresh Token 有效期：7天
+  secret: "mySecretKey2025mySecretKey2025mySecretKey2025" # 建议使用 Base64 编码的 32 位以上字符串
+  access-token-expiration: 3600000   # 1小时
+  refresh-token-expiration: 604800000 # 7天
+  algorithm: HS256
 
 # 日志配置
 logging:
