@@ -49,7 +49,7 @@ public interface IRedisService {
     /**
      * 删除数据
      */
-    Mono<Void> deleteKey(String key);
+    Mono<Long> deleteKey(String key);
 
     /**
      * 根据用户名获取刷新令牌
