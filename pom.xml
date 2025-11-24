@@ -26,6 +26,7 @@
 		<springdoc.version>2.5.0</springdoc.version>
 		<r2dbc.mysql.version>1.0.2</r2dbc.mysql.version>
 		<jjwt.version>0.13.0</jjwt.version>
+		<hutool-all.version>5.8.36</hutool-all.version>
 	</properties>
 
 	<dependencies>
@@ -109,6 +110,11 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<dependency>
+			<groupId>cn.hutool</groupId>
+			<artifactId>hutool-all</artifactId>
+			<version>${hutool-all.version}</version>
+		</dependency>
 		<!-- 测试依赖 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

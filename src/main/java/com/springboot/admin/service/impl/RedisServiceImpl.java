@@ -69,8 +69,8 @@ public class RedisServiceImpl implements IRedisService {
     }
 
     @Override
-    public Mono<Void> deleteKey(String key) {
-        return redisTemplate.delete(key).then();
+    public Mono<Long> deleteKey(String key) {
+        return redisTemplate.delete(key); // 返回 Mono<Long>
     }
 
     @Override
