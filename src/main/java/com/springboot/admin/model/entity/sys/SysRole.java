@@ -2,6 +2,7 @@ package com.springboot.admin.model.entity.sys;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.LocalDateTime;
@@ -14,45 +15,54 @@ import java.time.LocalDateTime;
 public class SysRole {
 
     @Id
+    @Column("id")
     private Long id;
 
     /**
      * 角色名称
      */
+    @Column("role_name")
     private String roleName;
 
     /**
      * 角色编码
      */
+    @Column("role_code")
     private String roleCode;
 
     /**
      * 角色描述
      */
+    @Column("role_description")
     private String roleDescription;
 
     /**
      * 是否删除
      */
+    @Column("delete_flag")
     private Integer deleteFlag;
 
     /**
      * 创建者
      */
+    @Column("create_by")
     private String createBy;
 
     /**
      * 创建时间
      */
+    @Column("create_time")
     private LocalDateTime createTime;
 
     /**
      * 修改者
      */
+    @Column("update_by")
     private String updateBy;
 
     /**
      * 修改时间
      */
+    @Column("update_time")
     private LocalDateTime updateTime;
 }

@@ -6,10 +6,17 @@ import reactor.core.publisher.Mono;
 
 /**
  * 用户表 Service 接口
- *
+ * <p>
  * 提供用户相关的业务逻辑方法。
  */
 public interface ISysUserService {
+    /**
+     * 根据用户ID查询用户信息
+     *
+     * @param id 用户ID
+     * @return Mono<SysUser> 响应式单对象，可能为空
+     */
+    Mono<SysUser> getUserById(Long id);
 
     /**
      * 根据用户名查询用户信息
@@ -44,10 +51,55 @@ public interface ISysUserService {
     Mono<Void> deleteUser(Long id);
 
     /**
+     * 批量删除用户
+     *
+     * @param ids 用户ID集合
+     * @return Mono<Void>
+     */
+    Mono<Void> deleteUsers(Iterable<Long> ids);
+
+    /**
      * 查询所有用户
      *
      * @return Flux<SysUser> 响应式流，返回多个用户对象
      */
-    Flux<SysUser> listUsers();
+    Flux<SysUser> getSysUserList();
+
+    /**
+     * 判断用户名是否存在
+     *
+     * @param username 用户名
+     * @return true/false (Mono<Boolean>)
+     */
+    Mono<Boolean> existsByUsername(String username);
+
+    /**
+     * 根据部门ID查询用户列表
+     *
+     * @param deptId 部门ID
+     * @return 用户集合 (Flux<SysUser>)
+     */
+
+    Flux<SysUser> listUsersByDeptId(Long deptId);
+//    /**
+//     * 根据用户ID查询菜单列表
+//     *
+//     * @return Flux<SysMenu> 响应式单对象，返回多个菜单对象
+//     */
+//    Flux<SysMenu> listMenusByUserId(Long userId);
+//
+//    /**
+//     * 根据用户ID查询角色列表
+//     *
+//     * @return Flux<SysRole> 响应式单对象，返回多个角色对象
+//     */
+//    Flux<SysRole> listRolesByUserId(Long userId);
+//
+//    /**
+//     * 根据用户ID查询权限列表
+//     *
+//     * @return Flux<SysPermission> 响应式单对象，返回多个权限列对象
+//     */
+//    Flux<SysPermission> listPermissionsByUserId(Long userId);
 }
 

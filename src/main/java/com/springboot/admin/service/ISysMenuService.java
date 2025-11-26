@@ -57,5 +57,12 @@ public interface ISysMenuService {
      *
      * @return Flux<SysMenu> 响应式流，返回多个菜单对象
      */
-    Flux<SysMenu> listMenus();
+    Flux<SysMenu> getMenuList();
+
+    /**
+     * 查询所有菜单
+     * @param userId 用户id
+     * @return Flux<SysMenu> 响应式流，返回多个菜单对象
+     */
+    Flux<SysMenu> getMenuListByUserId(Long userId);
 }

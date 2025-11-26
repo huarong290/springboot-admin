@@ -1,4 +1,4 @@
-package com.springboot.admin.repository;
+package com.springboot.admin.repository.single;
 
 import com.springboot.admin.model.entity.sys.SysRoleMenu;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;

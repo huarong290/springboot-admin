@@ -47,71 +47,71 @@ public class JwtAuthWebFilter implements WebFilter {
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
 
-        // 登录、刷新、登出接口放行，不做 AccessToken 校验
+        // 登录、刷新、登出接口放行
         if (path.startsWith("/api/auth/login")
                 || path.startsWith("/api/auth/refresh")
                 || path.startsWith("/api/auth/logout")) {
             return chain.filter(exchange);
         }
+
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return chain.filter(exchange);
+            return sendErrorResponse(exchange, HttpStatus.UNAUTHORIZED,
+                    "缺少认证令牌", BusinessResultCode.TOKEN_INVALID);
         }
 
         String token = authHeader.substring(7);
+        log.info("Authorization header: {}", token);
 
-        // 验证 token（响应式）
         return jwtUtil.isAccessTokenValid(token)
                 .flatMap(valid -> {
                     if (!valid) {
                         return sendErrorResponse(exchange, HttpStatus.UNAUTHORIZED,
                                 "认证令牌已过期或无效", BusinessResultCode.TOKEN_INVALID);
                     }
-                    // 检查 Redis 中 token 状态
-                    return redisService.isTokenValid(token)
-                            .flatMap(redisValid -> {
-                                if (!redisValid) {
+
+                    return jwtUtil.getUsername(token)
+                            .flatMap(username -> {
+                                if (username == null) {
                                     return sendErrorResponse(exchange, HttpStatus.UNAUTHORIZED,
-                                            "认证令牌已被撤销", BusinessResultCode.TOKEN_REVOKED);
+                                            "认证令牌无效", BusinessResultCode.TOKEN_INVALID);
                                 }
-                                // 获取用户名
-                                return jwtUtil.getUsername(token)
-                                        .flatMap(username -> {
-                                            if (username == null) {
-                                                return sendErrorResponse(exchange, HttpStatus.UNAUTHORIZED,
-                                                        "认证令牌无效", BusinessResultCode.TOKEN_INVALID);
+
+                                log.info("Token subject={}, exp={}", username,
+                                        jwtUtil.parseToken(token).block().getExpiration());
+
+                                return userDetailsService.findByUsername(username)
+                                        .switchIfEmpty(Mono.error(new UsernameNotFoundException("用户不存在")))
+                                        .flatMap(customDetails -> {
+                                            if (!customDetails.isEnabled()) {
+                                                return sendErrorResponse(exchange, HttpStatus.FORBIDDEN,
+                                                        "用户账号已被禁用", BusinessResultCode.USER_DISABLED);
                                             }
-                                            // 加载用户信息
-                                            return userDetailsService.findByUsername(username)
-                                                    .switchIfEmpty(Mono.error(new UsernameNotFoundException("用户不存在")))
-                                                    .flatMap(customDetails -> {
-                                                        if (!customDetails.isEnabled()) {
-                                                            return sendErrorResponse(exchange, HttpStatus.FORBIDDEN,
-                                                                    "用户账号已被禁用", BusinessResultCode.USER_DISABLED);
-                                                        }
 
-                                                        UsernamePasswordAuthenticationToken authToken =
-                                                                new UsernamePasswordAuthenticationToken(customDetails, null, customDetails.getAuthorities());
+                                            UsernamePasswordAuthenticationToken authToken =
+                                                    new UsernamePasswordAuthenticationToken(customDetails, null, customDetails.getAuthorities());
 
-                                                        SecurityContextImpl context = new SecurityContextImpl(authToken);
+                                            SecurityContextImpl context = new SecurityContextImpl(authToken);
 
-                                                        // 将认证信息写入响应式上下文
-                                                        return chain.filter(exchange)
-                                                                .contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(context)));
-                                                    })
-                                                    .onErrorResume(UsernameNotFoundException.class, e ->
-                                                            sendErrorResponse(exchange, HttpStatus.NOT_FOUND,
-                                                                    "用户不存在", BusinessResultCode.USER_NOT_FOUND))
-                                                    .onErrorResume(Exception.class, e -> {
-                                                        log.error("加载用户信息时发生错误: {}", e.getMessage(), e);
-                                                        return sendErrorResponse(exchange, HttpStatus.INTERNAL_SERVER_ERROR,
-                                                                "系统内部错误", ApiResultCode.INTERNAL_SERVER_ERROR);
-                                                    });
+                                            return chain.filter(exchange)
+                                                    .contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(context)));
+                                        })
+                                        // 用户不存在 → 401
+                                        .onErrorResume(UsernameNotFoundException.class, e ->
+                                                sendErrorResponse(exchange, HttpStatus.UNAUTHORIZED,
+                                                        "用户不存在", BusinessResultCode.USER_NOT_FOUND))
+                                        // 系统错误 → 500
+                                        .onErrorResume(Exception.class, e -> {
+                                            log.error("加载用户信息时发生错误: {}", e.getMessage(), e);
+                                            return sendErrorResponse(exchange, HttpStatus.INTERNAL_SERVER_ERROR,
+                                                    "系统内部错误", ApiResultCode.INTERNAL_SERVER_ERROR);
                                         });
                             });
                 });
     }
+
+
 
     /**
      * 响应式错误输出
