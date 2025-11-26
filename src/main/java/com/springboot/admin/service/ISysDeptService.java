@@ -6,7 +6,7 @@ import reactor.core.publisher.Mono;
 
 /**
  * 部门表 Service 接口
- *
+ * <p>
  * 提供部门相关的业务逻辑方法。
  */
 public interface ISysDeptService {
@@ -15,17 +15,9 @@ public interface ISysDeptService {
      * 根据部门ID查询部门信息
      *
      * @param id 部门ID
-     * @return Mono<SysDept> 响应式单对象，可能为空
+     * @return Mono<SysDept> 响应式单对象
      */
     Mono<SysDept> getDeptById(Long id);
-
-    /**
-     * 根据组织ID查询部门列表
-     *
-     * @param orgId 组织ID
-     * @return Flux<SysDept> 响应式流，返回多个部门对象
-     */
-    Flux<SysDept> getDeptsByOrgId(Long orgId);
 
     /**
      * 新增部门
@@ -56,5 +48,22 @@ public interface ISysDeptService {
      *
      * @return Flux<SysDept> 响应式流，返回多个部门对象
      */
-    Flux<SysDept> listDepts();
+    Flux<SysDept> getDeptList();
+
+    /**
+     * 判断部门编码是否存在
+     *
+     * @param deptCode 部门编码
+     * @return Mono<Boolean> 响应式流，返回True或False
+     */
+    Mono<Boolean> existsByDeptCode(String deptCode);
+
+    /**
+     * 根据组织ID查询部门列表
+     *
+     * @param orgId 组织ID
+     * @return Flux<SysDept> 响应式流，返回多个部门对象
+     */
+    Flux<SysDept> findDeptListByOrgId(Long orgId);
 }
+

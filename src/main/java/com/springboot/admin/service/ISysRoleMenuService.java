@@ -40,6 +40,6 @@ public interface ISysRoleMenuService {
      *
      * @return Flux<SysRoleMenu> 响应式流，返回多个角色菜单关联对象
      */
-    Flux<SysRoleMenu> listRoleMenus();
+    Flux<SysRoleMenu> getRoleMenuList();
 }
 

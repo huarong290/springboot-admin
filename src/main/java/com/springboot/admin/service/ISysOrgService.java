@@ -1,12 +1,13 @@
 package com.springboot.admin.service;
 
+import com.springboot.admin.model.entity.sys.SysDept;
 import com.springboot.admin.model.entity.sys.SysOrg;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
  * 组织表 Service 接口
- *
+ * <p>
  * 提供组织相关的业务逻辑方法。
  */
 public interface ISysOrgService {
@@ -48,5 +49,17 @@ public interface ISysOrgService {
      *
      * @return Flux<SysOrg> 响应式流，返回多个组织对象
      */
-    Flux<SysOrg> listOrgs();
+    Flux<SysOrg> getOrgList();
+
+
+    /**
+     * 判断组织编码是否存在
+     * @return Mono<Boolean> 响应式流，返回True或False
+     */
+    Mono<Boolean> existsByOrgCode(String orgCode);
+
+    /**
+     * 根据组织ID查询部门列表
+     */
+    Flux<SysDept> listDeptsByOrgId(Long orgId);
 }

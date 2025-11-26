@@ -1,11 +1,15 @@
-package com.springboot.admin.repository;
+package com.springboot.admin.repository.single;
 
 import com.springboot.admin.model.entity.sys.SysMenu;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Flux;
 
+
 /**
  * 菜单表 Repository 接口
+ * <p>
+ * 用于封装菜单表的单表操作：
+ * - 增删改查
  */
 public interface SysMenuRepository extends ReactiveCrudRepository<SysMenu, Long> {
 

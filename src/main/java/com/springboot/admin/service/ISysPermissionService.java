@@ -48,6 +48,27 @@ public interface ISysPermissionService {
      *
      * @return Flux<SysPermission> 响应式流，返回多个权限点对象
      */
-    Flux<SysPermission> listPermissions();
+    Flux<SysPermission> getPermissionList();
+
+    /**
+     * 判断权限编码是否存在
+     *
+     * @param permissionCode 权限编码
+     * @return Mono<Boolean> 响应式单对象，返回True或False
+     */
+    Mono<Boolean> existsByPermissionCode(String permissionCode);
+
+    /**
+     * 查询所有权限点
+     *@param userId 用户id
+     * @return Flux<SysPermission> 响应式流，返回多个权限点对象
+     */
+    Flux<SysPermission> listPermissionsByUserId(Long userId);
+    /**
+     * 查询所有权限点
+     *@param roleId 用户id
+     * @return Flux<SysPermission> 响应式流，返回多个权限点对象
+     */
+    Flux<SysPermission> listPermissionsByRoleId(Long roleId);
 }
 

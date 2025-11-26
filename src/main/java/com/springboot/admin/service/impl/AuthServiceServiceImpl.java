@@ -5,9 +5,11 @@ import com.springboot.admin.exception.BusinessException;
 import com.springboot.admin.model.dto.TokenRefreshReqDTO;
 import com.springboot.admin.model.dto.TokenResDTO;
 import com.springboot.admin.model.dto.UserLoginReqDTO;
-import com.springboot.admin.service.IAuthService;
-import com.springboot.admin.service.IRedisService;
-import com.springboot.admin.service.ISysUserService;
+import com.springboot.admin.model.dto.menu.MenuDTO;
+import com.springboot.admin.model.dto.menu.MetaDTO;
+import com.springboot.admin.model.dto.user.UserInfoDTO;
+import com.springboot.admin.model.entity.sys.SysMenu;
+import com.springboot.admin.service.*;
 import com.springboot.admin.utils.JwtUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -33,6 +38,14 @@ public class AuthServiceServiceImpl implements IAuthService {
 
     @Autowired
     private ISysUserService sysUserService;
+
+
+    @Autowired
+    private ISysRoleService sysRoleService;
+    @Autowired
+    private ISysPermissionService sysPermissionService;
+    @Autowired
+    private ISysMenuService sysMenuService;
     /**
      * 用户登录：验证密码，生成并存储 Access 和 Refresh Token
      *
@@ -118,6 +131,111 @@ public class AuthServiceServiceImpl implements IAuthService {
                             .doOnSuccess(v -> log.info("刷新令牌 {} 已移除，用户登出成功", refreshToken));
                 });
     }
+    @Override
+    public Mono<UserInfoDTO> getUserInfoByToken(String token) {
+        // 1. 解析 token 获取 Claims
+        return jwtUtil.parseToken(token)
+                .flatMap(claims -> {
+                    String username = claims.getSubject();
+                    log.info("开始获取用户信息，username={}", username);
+
+                    // 2. 查询用户信息
+                    return sysUserService.getUserByUsername(username)
+                            .switchIfEmpty(Mono.error(new BusinessException("0100104", "用户不存在")))
+                            .flatMap(user -> {
+                                log.info("用户信息: {}", user);
+
+                                // 3. 查询角色 —— 使用 flatMap 避免 null
+                                Mono<List<String>> rolesMono = sysRoleService.listRolesByUserId(user.getId())
+                                        .flatMap(role -> {
+                                            if (role == null || role.getRoleCode() == null) {
+                                                return Mono.empty();
+                                            }
+                                            return Mono.just(role.getRoleCode());
+                                        })
+                                        .collectList()
+                                        .doOnNext(roles -> log.info("角色列表: {}", roles));
+
+                                // 4. 查询权限 —— 使用 flatMap 避免 null
+                                Mono<List<String>> permissionsMono = sysPermissionService.listPermissionsByUserId(user.getId())
+                                        .flatMap(permission -> {
+                                            log.info("权限列表permission: {}", permission);
+                                            if (permission == null || permission.getPermissionCode() == null) {
+                                                return Mono.empty();
+                                            }
+                                            return Mono.just(permission.getPermissionCode());
+                                        })
+                                        .collectList()
+                                        .doOnNext(perms -> log.info("权限列表: {}", perms));
+
+                                // 5. 查询菜单 —— 使用 flatMap 避免 null
+                                Mono<List<MenuDTO>> menusMono = sysMenuService.getMenuListByUserId(user.getId())
+                                        .flatMap(menu -> {
+                                            if (menu == null) {
+                                                return Mono.empty();
+                                            }
+                                            return Mono.just(convertToMenuDTO(menu));
+                                        })
+                                        .collectList()
+                                        .doOnNext(menus -> log.info("菜单列表: {}", menus));
+
+                                // 6. 聚合结果
+                                return Mono.zip(rolesMono, permissionsMono, menusMono)
+                                        .map(tuple -> {
+                                            List<String> roles = Optional.ofNullable(tuple.getT1()).orElse(List.of());
+                                            List<String> permissions = Optional.ofNullable(tuple.getT2()).orElse(List.of());
+                                            List<MenuDTO> menus = Optional.ofNullable(tuple.getT3()).orElse(List.of());
+
+                                            UserInfoDTO dto = new UserInfoDTO();
+                                            dto.setUserId(user.getId());
+                                            dto.setUsername(user.getUsername());
+                                            dto.setNickname(user.getNickname());
+                                            dto.setAvatar(user.getAvatar());
+                                            dto.setRoles(roles);
+                                            dto.setPermissions(permissions);
+                                            dto.setMenus(menus);
+
+                                            log.info("最终组装的 UserInfoDTO: {}", dto);
+                                            return dto;
+                                        });
+                            });
+                })
+                .onErrorResume(e -> {
+                    log.error("获取用户信息失败: {}", e.getMessage(), e);
+                    return Mono.error(new BusinessException("0100105", "获取用户信息失败"));
+                });
+    }
+
+
+
+
+    /**
+     * SysMenu 转换为 MenuDTO
+     */
+    private MenuDTO convertToMenuDTO(SysMenu menu) {
+        MenuDTO dto = new MenuDTO();
+        dto.setId(menu.getId());
+        dto.setPath(menu.getMenuPath());
+        dto.setComponent(menu.getMenuComponent());
+        dto.setParentId(menu.getMenuParentId());
+        dto.setType(menu.getMenuType());
+        dto.setPermission(menu.getMenuPermission());
+
+        // 构建 meta 信息
+        MetaDTO meta = new MetaDTO();
+        meta.setTitle(menu.getMenuName());       // 菜单标题
+        meta.setIcon(menu.getMenuIcon());        // 菜单图标
+        meta.setVisible(menu.getMenuVisible() != null && menu.getMenuVisible() == 1);// 是否显示
+
+        // 如果你有角色和权限的关联，可以在这里填充
+        // meta.setRoles(...);
+        // meta.setPermissions(...);
+
+        dto.setMeta(meta);
+
+        return dto;
+    }
+
 
 
 

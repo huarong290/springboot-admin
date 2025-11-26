@@ -40,6 +40,7 @@ public class SecurityConfig {
                         ).permitAll()
                         // 登录接口放行
                         .pathMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
+                       // .pathMatchers(HttpMethod.GET, "/api/auth/userInfo").permitAll()
                         // 其他接口需要认证
                         .anyExchange().authenticated()
                 )

@@ -8,6 +8,7 @@ import com.springboot.admin.model.dto.CaptchaDTO;
 import com.springboot.admin.model.dto.TokenRefreshReqDTO;
 import com.springboot.admin.model.dto.TokenResDTO;
 import com.springboot.admin.model.dto.UserLoginReqDTO;
+import com.springboot.admin.model.dto.user.UserInfoDTO;
 import com.springboot.admin.service.IAuthService;
 import com.springboot.admin.service.ICaptchaService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,10 +18,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -48,9 +46,9 @@ public class AuthController {
         // 先校验验证码
         return captchaService.validateCaptcha(dto.getCaptchaId(), dto.getCaptchaCode())
                 .flatMap(valid -> {
-                    if (!valid) {
-                        return Mono.just(ApiResult.<TokenResDTO>failResult(ApiResultCode.FAILED, "验证码错误或已过期"));
-                    }
+//                    if (!valid) {
+//                        return Mono.just(ApiResult.<TokenResDTO>failResult(ApiResultCode.FAILED, "验证码错误或已过期"));
+//                    }
                     // 验证码正确，继续登录逻辑
                     return authService.login(dto)
                             .flatMap(tokenRes ->
@@ -101,5 +99,18 @@ public class AuthController {
     }
 
 
+    @GetMapping("/userInfo")
+    @Operation(summary = "获取用户信息", description = "登录后获取角色、权限、菜单")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<UserInfoDTO>> getUserInfo(ServerHttpRequest request) {
+        String token = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (StringUtils.isNotBlank(token) && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        log.info("token={}", token);
+        return authService.getUserInfoByToken(token)
+                .map(ApiResult::successResult)
+                .onErrorResume(e -> Mono.just(ApiResult.failResult(ApiResultCode.FAILED, "获取用户信息失败")));
+    }
 
 }

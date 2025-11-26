@@ -45,3 +45,5 @@ logging:
     org.springframework.web: DEBUG
     org.springframework.r2dbc: DEBUG
     org.springframework.data.redis: DEBUG
+#    org.springframework.r2dbc.core: TRACE
+

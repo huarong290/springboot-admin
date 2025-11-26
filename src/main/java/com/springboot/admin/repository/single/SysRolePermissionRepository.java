@@ -1,8 +1,9 @@
-package com.springboot.admin.repository;
+package com.springboot.admin.repository.single;
 
 import com.springboot.admin.model.entity.sys.SysRolePermission;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * 角色权限点关联表 Repository 接口
@@ -18,4 +19,5 @@ public interface SysRolePermissionRepository extends ReactiveCrudRepository<SysR
      * @return Flux<SysRolePermission> 响应式流，返回多个角色权限点关联对象
      */
     Flux<SysRolePermission> findByRoleId(Long roleId);
+
 }
