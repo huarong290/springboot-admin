@@ -81,13 +81,11 @@ public class AuthController {
     @PostMapping("/logout")
     @Operation(summary = "用户登出", description = "移除刷新令牌，使用户立即失效")
     @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<Void>> logout(ServerHttpRequest request) {
-        String token = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        if (StringUtils.isNotBlank(token) && token.startsWith("Bearer ")) {
-            token = token.substring(7);
-        }
+    public Mono<ApiResult<Void>> logout(@RequestBody TokenRefreshReqDTO dto) {
+        String refreshToken = dto.getRefreshToken();
 
-        return authService.logout(token)
+
+        return authService.logout(refreshToken)
                 .thenReturn(ApiResult.<Void>successResult("退出登录成功", null))
                 .onErrorResume(e -> {
                     // 如果是业务异常，返回对应错误码和消息
