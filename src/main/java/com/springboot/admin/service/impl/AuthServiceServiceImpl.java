@@ -125,7 +125,7 @@ public class AuthServiceServiceImpl implements IAuthService {
                 .flatMap(exists -> {
                     if (!exists) {
                         // 抛出业务异常，交给全局异常处理器
-                        return Mono.error(new BusinessException("0100103", "令牌已被撤销"));
+                        return Mono.error(new BusinessException("0100103", "令牌已经失效"));
                     }
                     return redisService.removeRefreshToken(refreshToken)
                             .doOnSuccess(v -> log.info("刷新令牌 {} 已移除，用户登出成功", refreshToken));
