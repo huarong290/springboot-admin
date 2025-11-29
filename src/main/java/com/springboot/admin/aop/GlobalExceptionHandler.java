@@ -5,8 +5,10 @@ import com.springboot.admin.common.ApiResultCode;
 import com.springboot.admin.exception.BaseException;
 import com.springboot.admin.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.reactive.resource.NoResourceFoundException;
 import reactor.core.publisher.Mono;
 
 @Slf4j
@@ -30,7 +32,14 @@ public class GlobalExceptionHandler {
         log.error("基础异常: code={}, message={}", e.getCode(), e.getMessage());
         return Mono.just(ApiResult.failResult(e.getCode(), e.getMessage()));
     }
-
+    /**
+     * ⚠️ 静态资源找不到时，直接返回 404，不包装成 JSON
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public Mono<ResponseEntity<Void>> handleNoResourceFound(NoResourceFoundException e) {
+        log.warn("静态资源未找到: {}", e.getMessage());
+        return Mono.just(ResponseEntity.notFound().build());
+    }
     /**
      * 处理其他未捕获异常
      */

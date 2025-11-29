@@ -5,6 +5,7 @@ import com.springboot.admin.common.ApiResult;
 import com.springboot.admin.common.ApiResultCode;
 import com.springboot.admin.common.BusinessResultCode;
 import com.springboot.admin.common.IApiResult;
+import com.springboot.admin.config.SecurityWhitelistProperties;
 import com.springboot.admin.service.IRedisService;
 import com.springboot.admin.utils.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -32,28 +33,27 @@ public class JwtAuthWebFilter implements WebFilter {
     private final IRedisService redisService;
     private final ReactiveUserDetailsService userDetailsService;
     private final ObjectMapper objectMapper;
+    private final SecurityWhitelistProperties  securityWhitelistProperties;
 
     public JwtAuthWebFilter(JwtUtil jwtUtil,
                             IRedisService redisService,
                             ReactiveUserDetailsService userDetailsService,
-                            ObjectMapper objectMapper) {
+                            ObjectMapper objectMapper,SecurityWhitelistProperties  securityWhitelistProperties) {
         this.jwtUtil = jwtUtil;
         this.redisService = redisService;
         this.userDetailsService = userDetailsService;
         this.objectMapper = objectMapper;
+        this.securityWhitelistProperties = securityWhitelistProperties;
     }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
 
-        // 登录、刷新、登出接口放行
-        if (path.startsWith("/api/auth/login")
-                || path.startsWith("/api/auth/refresh")
-                || path.startsWith("/api/auth/logout")) {
+        // ⚠️ 白名单路径直接放行
+        if (isWhitelisted(path)) {
             return chain.filter(exchange);
         }
-
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -133,4 +133,13 @@ public class JwtAuthWebFilter implements WebFilter {
             return exchange.getResponse().setComplete();
         }
     }
+
+    private boolean isWhitelisted(String path) {
+        return securityWhitelistProperties.getWhitelist().stream().anyMatch(pattern -> {
+            // 把 ** 转换成正则 .* 来匹配
+            String regex = pattern.replace("**", ".*");
+            return path.matches(regex);
+        });
+    }
+
 }

@@ -47,3 +47,15 @@ logging:
     org.springframework.data.redis: DEBUG
 #    org.springframework.r2dbc.core: TRACE
 
+security:
+  whitelist:
+    - /api/auth/login
+    - /api/auth/refresh
+    - /api/auth/logout
+    - /api/auth/getCaptcha
+    - /swagger-ui/**
+    - /v3/api-docs/**
+    - /swagger-resources/**
+    - /webjars/**
+    - /favicon.ico
+

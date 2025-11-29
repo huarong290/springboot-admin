@@ -3,7 +3,6 @@ package com.springboot.admin.config;
 import com.springboot.admin.filter.JwtAuthWebFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
@@ -25,22 +24,13 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http,SecurityWhitelistProperties whitelistProps) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeExchange(exchange -> exchange
-                        // Swagger 放行
-                        .pathMatchers(
-                                "/swagger-ui.html",
-                                "/swagger-ui/**",
-                                "/api-docs/**",
-                                "/v3/api-docs/**",
-                                "/webjars/**"
-                        ).permitAll()
-                        // 登录接口放行
-                        .pathMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
-                       // .pathMatchers(HttpMethod.GET, "/api/auth/userInfo").permitAll()
+                        //  使用 yml 配置的白名单
+                        .pathMatchers(whitelistProps.getWhitelist().toArray(new String[0])).permitAll()
                         // 其他接口需要认证
                         .anyExchange().authenticated()
                 )
