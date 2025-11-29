@@ -32,7 +32,7 @@ public class AuthController {
     private ICaptchaService captchaService;
     @Operation(summary = "获取验证码", description = "登陆时使用验证码")
     @Logable(logRequest = true, logResponse = true)
-    @PostMapping("/getCaptcha")
+    @GetMapping("/getCaptcha")
     public Mono<ApiResult<CaptchaDTO>> getCaptcha() {
         return captchaService.generateCaptcha()
                 .map(ApiResult::successResult)

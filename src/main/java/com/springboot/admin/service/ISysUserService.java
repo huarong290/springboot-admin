@@ -46,17 +46,17 @@ public interface ISysUserService {
      * 删除用户
      *
      * @param id 用户ID
-     * @return Mono<Void> 响应式空对象，表示删除完成
+     * @return Mono<Long> 响应式空对象，表示删除完成的数量
      */
-    Mono<Void> deleteUser(Long id);
+    Mono<Long> deleteUser(Long id);
 
     /**
      * 批量删除用户
      *
      * @param ids 用户ID集合
-     * @return Mono<Void>
+     * @return Mono<Long>
      */
-    Mono<Void> deleteUsers(Iterable<Long> ids);
+    Mono<Long> deleteUsers(Iterable<Long> ids);
 
     /**
      * 查询所有用户

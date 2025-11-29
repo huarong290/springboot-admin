@@ -1,13 +1,11 @@
 package com.springboot.admin.service.impl;
 
 import com.springboot.admin.model.entity.sys.SysUser;
-import com.springboot.admin.model.entity.sys.SysRole;
-import com.springboot.admin.model.entity.sys.SysPermission;
-import com.springboot.admin.model.entity.sys.SysMenu;
-import com.springboot.admin.repository.single.SysUserRepository;
 import com.springboot.admin.repository.custom.SysUserRepositoryCustom;
+import com.springboot.admin.repository.single.SysUserRepository;
 import com.springboot.admin.service.ISysUserService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -68,6 +66,15 @@ public class SysUserServiceImpl implements ISysUserService {
      */
     @Override
     public Mono<SysUser> addUser(SysUser user) {
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            return Mono.error(new IllegalArgumentException("新增用户必须设置密码"));
+        }
+
+        // 前端传的是明文 → 加密后再保存
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        user.setPassword(encoder.encode(user.getPassword()));
+
+        // 保存用户
         return userRepository.save(user);
     }
 
@@ -79,30 +86,26 @@ public class SysUserServiceImpl implements ISysUserService {
      */
     @Override
     public Mono<SysUser> updateUser(SysUser user) {
-        return userRepository.save(user);
+        return userRepository.findById(user.getId())
+                .flatMap(existingUser -> {
+                    //  判断密码是否为空
+                    if (user.getPassword() != null && !user.getPassword().isBlank()) {
+                        // 前端传的是明文 → 加密后再保存
+                        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+                        existingUser.setPassword(encoder.encode(user.getPassword()));
+                    }
+                    // 更新其他字段
+                    existingUser.setNickname(user.getNickname());
+                    existingUser.setEmail(user.getEmail());
+                    existingUser.setPhone(user.getPhone());
+                    existingUser.setAvatar(user.getAvatar());
+                    existingUser.setDeptId(user.getDeptId());
+                    existingUser.setOrgId(user.getOrgId());
+                    return userRepository.save(existingUser);
+                });
     }
 
-    /**
-     * 删除用户
-     *
-     * @param id 用户ID
-     * @return Mono<Void>
-     */
-    @Override
-    public Mono<Void> deleteUser(Long id) {
-        return userRepository.deleteById(id);
-    }
 
-    /**
-     * 批量删除用户
-     *
-     * @param ids 用户ID集合
-     * @return Mono<Void>
-     */
-    @Override
-    public Mono<Void> deleteUsers(Iterable<Long> ids) {
-        return userRepository.deleteAllById(ids);
-    }
 
     /**
      * 查询所有用户
@@ -125,8 +128,30 @@ public class SysUserServiceImpl implements ISysUserService {
         return userRepository.existsByUsername(username);
     }
 
-    /** ---------------- 多表操作 ---------------- */
+    /** ---------------- 自定义单表操作 ---------------- */
 
+    /**
+     * 删除用户
+     *
+     * @param id 用户ID
+     * @return Mono<Long>
+     */
+    @Override
+    public Mono<Long> deleteUser(Long id) {
+        return userRepositoryCustom.deleteUserById(id);
+    }
+
+    /**
+     * 批量删除用户
+     *
+     * @param ids 用户ID集合
+     * @return Mono<Long>
+     */
+    @Override
+    public Mono<Long> deleteUsers(Iterable<Long> ids) {
+        return userRepositoryCustom.deleteUsersByIds(ids);
+    }
+    /** ---------------- 自定义多表操作 ---------------- */
     /**
      * 根据部门ID查询用户列表
      *
