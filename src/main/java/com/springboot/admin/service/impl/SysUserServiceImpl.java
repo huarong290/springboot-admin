@@ -75,10 +75,13 @@ public class SysUserServiceImpl implements ISysUserService {
      * @return 保存后的用户对象 (Mono<SysUser>)
      */
     @Override
-    public Mono<SysUser> addUser(UserDTO dto) {
+    public Mono<Long> addUser(UserDTO dto) {
+        // DTO 转换成实体
         SysUser user = userConvert.toEntity(dto);
-        user.setPassword(passwordEncoder.encode(dto.getPassword())); // 特殊处理密码
-        return userRepository.save(user);
+        // 特殊处理密码
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        // 调用自定义仓库方法，返回主键 ID
+        return userRepositoryCustom.insertUser(user);
     }
     /**
      * 更新用户
@@ -87,40 +90,15 @@ public class SysUserServiceImpl implements ISysUserService {
      * @return 更新后的用户对象 (Mono<SysUser>)
      */
     @Override
-    public Mono<SysUser> updateUser(UserDTO userDTO) {
-        return userRepository.findById(userDTO.getId())
-                .flatMap(existingUser -> {
-                    if (userDTO.getUsername() != null) {
-                        existingUser.setUsername(userDTO.getUsername());
-                    }
-                    //  判断密码是否为空
-                    if (userDTO.getPassword() != null && !userDTO.getPassword().isBlank()) {
-                        // 前端传的是明文 → 加密后再保存
-                        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-                        existingUser.setPassword(encoder.encode(userDTO.getPassword()));
-                    }
-                    // 更新其他字段
-                    existingUser.setNickname(userDTO.getNickname());
-                    if (userDTO.getEmail() != null) {
-                        existingUser.setEmail(userDTO.getEmail());
-                    }
-                    if (userDTO.getAvatar() != null) {
-                        existingUser.setAvatar(userDTO.getAvatar());
-                    }
-                    if (userDTO.getOrgId() != null) {
-                        existingUser.setOrgId(userDTO.getOrgId());
-                    }
-                    if (userDTO.getDeptId() != null) {
-                        existingUser.setDeptId(userDTO.getDeptId());
-                    }
-                    if (userDTO.getPhone() != null) {
-                        existingUser.setPhone(userDTO.getPhone());
-                    }
-                    if (userDTO.getEnabled() != null) {
-                        existingUser.setEnabled(userDTO.getEnabled());
-                    }
-                    return userRepository.save(existingUser);
-                });
+
+    public Mono<Long> updateUser(UserDTO userDTO) {
+        // 判断密码是否为空并加密
+        String encodedPassword = null;
+        if (userDTO.getPassword() != null && !userDTO.getPassword().isBlank()) {
+            encodedPassword = passwordEncoder.encode(userDTO.getPassword());
+        }
+        // 调用自定义仓库方法，返回更新条数
+        return userRepositoryCustom.updateUser(userDTO, encodedPassword);
     }
 
 

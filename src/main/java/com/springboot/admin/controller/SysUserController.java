@@ -2,7 +2,6 @@ package com.springboot.admin.controller;
 
 import com.springboot.admin.common.ApiResult;
 import com.springboot.admin.common.ApiResultCode;
-import com.springboot.admin.convert.SysUserConvert;
 import com.springboot.admin.model.dto.user.UserDTO;
 import com.springboot.admin.model.entity.sys.SysUser;
 import com.springboot.admin.model.vo.user.UserVO;
@@ -57,8 +56,9 @@ public class SysUserController {
     }
     @PostMapping("/create")
     @Operation(summary = "新增用户")
-    public Mono<ApiResult<SysUser>> addUser(@RequestBody UserDTO userDTO) {
+    public Mono<ApiResult<Long>> addUser(@RequestBody UserDTO userDTO) {
         return userService.addUser(userDTO)
+                // 假设 service 返回的是新用户的 ID
                 .map(ApiResult::successResult)
                 .onErrorResume(e -> {
                     log.error("新增用户失败: {}", e.getMessage(), e);
@@ -66,16 +66,19 @@ public class SysUserController {
                 });
     }
 
+
     @PutMapping("/update")
     @Operation(summary = "更新用户信息")
-    public Mono<ApiResult<SysUser>> updateUser(@RequestBody UserDTO userDTO) {
+    public Mono<ApiResult<Long>> updateUser(@RequestBody UserDTO userDTO) {
         return userService.updateUser(userDTO)
+                // 假设 service 返回的是更新成功的记录数 (int)
                 .map(ApiResult::successResult)
                 .onErrorResume(e -> {
                     log.error("更新用户失败: {}", e.getMessage(), e);
                     return Mono.just(ApiResult.failResult(ApiResultCode.FAILED, "更新用户失败"));
                 });
     }
+
 
 //    /**
 //     * 新增用户

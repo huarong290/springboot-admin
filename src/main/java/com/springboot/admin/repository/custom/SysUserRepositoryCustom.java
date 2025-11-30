@@ -1,5 +1,6 @@
 package com.springboot.admin.repository.custom;
 
+import com.springboot.admin.model.dto.user.UserDTO;
 import com.springboot.admin.model.entity.sys.SysRole;
 import com.springboot.admin.model.entity.sys.SysUser;
 import lombok.Getter;
@@ -81,6 +82,68 @@ public class SysUserRepositoryCustom {
                 .all();
     }
 
+    /**
+     * 新增用户，返回生成的主键 ID
+     */
+    public Mono<Long> insertUser(SysUser user) {
+        String sql = """
+        INSERT INTO sys_user (username, password, email, phone, dept_id, org_id, nickname, enabled, avatar, create_time, update_time)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+        """;
+
+        return client.sql(sql)
+                .bind(0, user.getUsername())
+                .bind(1, user.getPassword())
+                .bind(2, user.getEmail())
+                .bind(3, user.getPhone())
+                .bind(4, user.getDeptId())
+                .bind(5, user.getOrgId())
+                .bind(6, user.getNickname())
+                .bind(7, user.getEnabled())
+                .bind(8, user.getAvatar())
+                .filter(statement -> statement.returnGeneratedValues("id"))
+                .fetch()
+                .first()
+                .map(row -> (Long) row.get("id"));
+    }
+
+
+    /**
+     * 更新用户，返回更新成功的记录数
+     */
+    /**
+     * 更新用户，返回更新成功的记录数
+     */
+    public Mono<Long> updateUser(UserDTO dto, String encodedPassword) {
+        String sql = """
+        UPDATE sys_user
+        SET username = ?,
+            password = ?,
+            email = ?,
+            phone = ?,
+            dept_id = ?,
+            org_id = ?,
+            nickname = ?,
+            enabled = ?,
+            avatar = ?,
+            update_time = NOW()
+        WHERE id = ?
+        """;
+
+        return client.sql(sql)
+                .bind(0, dto.getUsername())
+                .bind(1, encodedPassword)
+                .bind(2, dto.getEmail())
+                .bind(3, dto.getPhone())
+                .bind(4, dto.getDeptId())
+                .bind(5, dto.getOrgId())
+                .bind(6, dto.getNickname())
+                .bind(7, dto.getEnabled())
+                .bind(8, dto.getAvatar())
+                .bind(9, dto.getId())
+                .fetch()
+                .rowsUpdated();
+    }
 
 
     /**
