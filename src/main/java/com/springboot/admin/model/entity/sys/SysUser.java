@@ -15,7 +15,6 @@ import java.time.LocalDateTime;
 public class SysUser {
 
     @Id
-    @Column("id")
     private Long id;
 
     /**

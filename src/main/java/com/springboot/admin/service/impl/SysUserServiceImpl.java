@@ -1,11 +1,16 @@
 package com.springboot.admin.service.impl;
 
+import com.alibaba.fastjson2.JSONObject;
+import com.springboot.admin.convert.SysUserConvert;
+import com.springboot.admin.model.dto.user.UserDTO;
 import com.springboot.admin.model.entity.sys.SysUser;
+import com.springboot.admin.model.vo.user.UserVO;
 import com.springboot.admin.repository.custom.SysUserRepositoryCustom;
 import com.springboot.admin.repository.single.SysUserRepository;
 import com.springboot.admin.service.ISysUserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -27,11 +32,16 @@ public class SysUserServiceImpl implements ISysUserService {
 
     private final SysUserRepository userRepository;
     private final SysUserRepositoryCustom userRepositoryCustom;
-
+    private final SysUserConvert userConvert;
+    private final PasswordEncoder passwordEncoder; // 注入
     public SysUserServiceImpl(SysUserRepository userRepository,
-                              SysUserRepositoryCustom userRepositoryCustom) {
+                              SysUserRepositoryCustom userRepositoryCustom,
+                              SysUserConvert userConvert,
+                              PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.userRepositoryCustom = userRepositoryCustom;
+        this.userConvert = userConvert;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /** ---------------- 单表操作 ---------------- */
@@ -61,46 +71,54 @@ public class SysUserServiceImpl implements ISysUserService {
     /**
      * 新增用户
      *
-     * @param user 用户对象
+     * @param dto 用户对象
      * @return 保存后的用户对象 (Mono<SysUser>)
      */
     @Override
-    public Mono<SysUser> addUser(SysUser user) {
-        if (user.getPassword() == null || user.getPassword().isBlank()) {
-            return Mono.error(new IllegalArgumentException("新增用户必须设置密码"));
-        }
-
-        // 前端传的是明文 → 加密后再保存
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        user.setPassword(encoder.encode(user.getPassword()));
-
-        // 保存用户
+    public Mono<SysUser> addUser(UserDTO dto) {
+        SysUser user = userConvert.toEntity(dto);
+        user.setPassword(passwordEncoder.encode(dto.getPassword())); // 特殊处理密码
         return userRepository.save(user);
     }
-
     /**
      * 更新用户
      *
-     * @param user 用户对象
+     * @param userDTO 用户对象
      * @return 更新后的用户对象 (Mono<SysUser>)
      */
     @Override
-    public Mono<SysUser> updateUser(SysUser user) {
-        return userRepository.findById(user.getId())
+    public Mono<SysUser> updateUser(UserDTO userDTO) {
+        return userRepository.findById(userDTO.getId())
                 .flatMap(existingUser -> {
+                    if (userDTO.getUsername() != null) {
+                        existingUser.setUsername(userDTO.getUsername());
+                    }
                     //  判断密码是否为空
-                    if (user.getPassword() != null && !user.getPassword().isBlank()) {
+                    if (userDTO.getPassword() != null && !userDTO.getPassword().isBlank()) {
                         // 前端传的是明文 → 加密后再保存
                         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-                        existingUser.setPassword(encoder.encode(user.getPassword()));
+                        existingUser.setPassword(encoder.encode(userDTO.getPassword()));
                     }
                     // 更新其他字段
-                    existingUser.setNickname(user.getNickname());
-                    existingUser.setEmail(user.getEmail());
-                    existingUser.setPhone(user.getPhone());
-                    existingUser.setAvatar(user.getAvatar());
-                    existingUser.setDeptId(user.getDeptId());
-                    existingUser.setOrgId(user.getOrgId());
+                    existingUser.setNickname(userDTO.getNickname());
+                    if (userDTO.getEmail() != null) {
+                        existingUser.setEmail(userDTO.getEmail());
+                    }
+                    if (userDTO.getAvatar() != null) {
+                        existingUser.setAvatar(userDTO.getAvatar());
+                    }
+                    if (userDTO.getOrgId() != null) {
+                        existingUser.setOrgId(userDTO.getOrgId());
+                    }
+                    if (userDTO.getDeptId() != null) {
+                        existingUser.setDeptId(userDTO.getDeptId());
+                    }
+                    if (userDTO.getPhone() != null) {
+                        existingUser.setPhone(userDTO.getPhone());
+                    }
+                    if (userDTO.getEnabled() != null) {
+                        existingUser.setEnabled(userDTO.getEnabled());
+                    }
                     return userRepository.save(existingUser);
                 });
     }
@@ -113,9 +131,16 @@ public class SysUserServiceImpl implements ISysUserService {
      * @return 用户列表 (Flux<SysUser>)
      */
     @Override
-    public Flux<SysUser> getSysUserList() {
-        return userRepository.findAll();
+    public Flux<UserVO> getSysUserList() {
+        return userRepository.findAll()
+                .doOnNext(user -> log.info("查询到用户: {}", JSONObject.toJSONString(user)))
+                .map(user -> {
+                    UserVO vo = userConvert.toVO(user);
+                    log.info("转换后的VO: {}", vo);
+                    return vo;
+                });
     }
+
 
     /**
      * 判断用户名是否存在

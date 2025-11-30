@@ -13,11 +13,6 @@ public class CommonConfig {
      * 这样容器里既有 BCryptPasswordEncoder 类型的 Bean，
      * 也有其接口 PasswordEncoder 类型的 Bean，供全局使用。
      */
-    @Bean
-    public BCryptPasswordEncoder bCryptPasswordEncoder() {
-
-        return new BCryptPasswordEncoder();
-    }
 
     // （可选）如果你习惯面向接口注入，下面这个也能同时提供 PasswordEncoder Bean
     @Bean

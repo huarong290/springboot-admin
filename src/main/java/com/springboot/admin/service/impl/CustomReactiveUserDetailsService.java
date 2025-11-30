@@ -1,27 +1,31 @@
 package com.springboot.admin.service.impl;
+
 import com.springboot.admin.model.entity.sys.SysRole;
 import com.springboot.admin.model.entity.sys.SysUser;
 import com.springboot.admin.service.ISysRoleService;
 import com.springboot.admin.service.ISysUserService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import static org.springframework.security.core.userdetails.User.withUsername;
 
 import java.util.List;
+
+import static org.springframework.security.core.userdetails.User.withUsername;
 
 @Service
 public class CustomReactiveUserDetailsService implements ReactiveUserDetailsService {
 
-    @Autowired
-    private ISysUserService iSysUserService;
-    @Autowired
-    private  ISysRoleService iSysRoleService;
+    private final ISysUserService iSysUserService;
+    private final ISysRoleService iSysRoleService;
+
+    public CustomReactiveUserDetailsService(ISysUserService userService, ISysRoleService roleService) {
+        this.iSysUserService = userService;
+        this.iSysRoleService = roleService;
+    }
 
     @Override
     public Mono<UserDetails> findByUsername(String username) {
@@ -30,7 +34,7 @@ public class CustomReactiveUserDetailsService implements ReactiveUserDetailsServ
                 .flatMap(user ->
                         iSysRoleService.listRolesByUserId(user.getId())
                                 .map(SysRole::getRoleCode)
-                                .map(roleCode -> (GrantedAuthority) new SimpleGrantedAuthority(roleCode))
+                                .map(roleCode -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + roleCode))
                                 .collectList()
                                 .map(authorities -> buildUserDetails(user, authorities))
                 );
