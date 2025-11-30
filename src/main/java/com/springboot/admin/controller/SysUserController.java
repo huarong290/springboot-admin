@@ -2,7 +2,10 @@ package com.springboot.admin.controller;
 
 import com.springboot.admin.common.ApiResult;
 import com.springboot.admin.common.ApiResultCode;
+import com.springboot.admin.convert.SysUserConvert;
+import com.springboot.admin.model.dto.user.UserDTO;
 import com.springboot.admin.model.entity.sys.SysUser;
+import com.springboot.admin.model.vo.user.UserVO;
 import com.springboot.admin.service.ISysUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,17 +55,10 @@ public class SysUserController {
                 .map(ApiResult::successResult)
                 .switchIfEmpty(Mono.just(ApiResult.failResult(ApiResultCode.NOT_FOUND, "用户不存在")));
     }
-
-    /**
-     * 新增用户
-     *
-     * @param user 用户对象（JSON）
-     * @return 返回保存后的用户对象
-     */
     @PostMapping("/create")
     @Operation(summary = "新增用户")
-    public Mono<ApiResult<SysUser>> addUser(@RequestBody SysUser user) {
-        return userService.addUser(user)
+    public Mono<ApiResult<SysUser>> addUser(@RequestBody UserDTO userDTO) {
+        return userService.addUser(userDTO)
                 .map(ApiResult::successResult)
                 .onErrorResume(e -> {
                     log.error("新增用户失败: {}", e.getMessage(), e);
@@ -70,22 +66,50 @@ public class SysUserController {
                 });
     }
 
-    /**
-     * 更新用户信息
-     *
-     * @param user 用户对象（JSON）
-     * @return 返回更新后的用户对象
-     */
     @PutMapping("/update")
     @Operation(summary = "更新用户信息")
-    public Mono<ApiResult<SysUser>> updateUser(@RequestBody SysUser user) {
-        return userService.updateUser(user)
+    public Mono<ApiResult<SysUser>> updateUser(@RequestBody UserDTO userDTO) {
+        return userService.updateUser(userDTO)
                 .map(ApiResult::successResult)
                 .onErrorResume(e -> {
                     log.error("更新用户失败: {}", e.getMessage(), e);
                     return Mono.just(ApiResult.failResult(ApiResultCode.FAILED, "更新用户失败"));
                 });
     }
+
+//    /**
+//     * 新增用户
+//     *
+//     * @param user 用户对象（JSON）
+//     * @return 返回保存后的用户对象
+//     */
+//    @PostMapping("/create")
+//    @Operation(summary = "新增用户")
+//    public Mono<ApiResult<SysUser>> addUser(@RequestBody SysUser user) {
+//        return userService.addUser(user)
+//                .map(ApiResult::successResult)
+//                .onErrorResume(e -> {
+//                    log.error("新增用户失败: {}", e.getMessage(), e);
+//                    return Mono.just(ApiResult.failResult(ApiResultCode.FAILED, "新增用户失败"));
+//                });
+//    }
+
+//    /**
+//     * 更新用户信息
+//     *
+//     * @param user 用户对象（JSON）
+//     * @return 返回更新后的用户对象
+//     */
+//    @PutMapping("/update")
+//    @Operation(summary = "更新用户信息")
+//    public Mono<ApiResult<SysUser>> updateUser(@RequestBody SysUser user) {
+//        return userService.updateUser(user)
+//                .map(ApiResult::successResult)
+//                .onErrorResume(e -> {
+//                    log.error("更新用户失败: {}", e.getMessage(), e);
+//                    return Mono.just(ApiResult.failResult(ApiResultCode.FAILED, "更新用户失败"));
+//                });
+//    }
 
 
 
@@ -119,7 +143,7 @@ public class SysUserController {
      */
     @GetMapping("/list")
     @Operation(summary = "查询所有用户")
-    public Flux<SysUser> getSysUserList() {
+    public Flux<UserVO> getSysUserList() {
         return userService.getSysUserList();
     }
 

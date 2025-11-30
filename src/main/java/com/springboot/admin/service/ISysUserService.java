@@ -1,6 +1,8 @@
 package com.springboot.admin.service;
 
+import com.springboot.admin.model.dto.user.UserDTO;
 import com.springboot.admin.model.entity.sys.SysUser;
+import com.springboot.admin.model.vo.user.UserVO;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -29,18 +31,18 @@ public interface ISysUserService {
     /**
      * 新增用户
      *
-     * @param user 用户对象
+     * @param userDTO 用户对象
      * @return Mono<SysUser> 响应式单对象，返回保存后的实体
      */
-    Mono<SysUser> addUser(SysUser user);
+    Mono<SysUser> addUser(UserDTO userDTO);
 
     /**
      * 更新用户信息
      *
-     * @param user 用户对象
+     * @param userDTO 用户对象
      * @return Mono<SysUser> 响应式单对象，返回更新后的实体
      */
-    Mono<SysUser> updateUser(SysUser user);
+    Mono<SysUser> updateUser(UserDTO userDTO);
 
     /**
      * 删除用户
@@ -63,7 +65,7 @@ public interface ISysUserService {
      *
      * @return Flux<SysUser> 响应式流，返回多个用户对象
      */
-    Flux<SysUser> getSysUserList();
+    Flux<UserVO> getSysUserList();
 
     /**
      * 判断用户名是否存在
