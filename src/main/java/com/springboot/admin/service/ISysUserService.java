@@ -32,9 +32,9 @@ public interface ISysUserService {
      * 新增用户
      *
      * @param userDTO 用户对象
-     * @return Mono<SysUser> 响应式单对象，返回保存后的实体
+     * @return Mono<Long> 响应式单对象，返回保存后的实体主键id
      */
-    Mono<SysUser> addUser(UserDTO userDTO);
+    Mono<Long> addUser(UserDTO userDTO);
 
     /**
      * 更新用户信息
@@ -42,7 +42,7 @@ public interface ISysUserService {
      * @param userDTO 用户对象
      * @return Mono<SysUser> 响应式单对象，返回更新后的实体
      */
-    Mono<SysUser> updateUser(UserDTO userDTO);
+    Mono<Long> updateUser(UserDTO userDTO);
 
     /**
      * 删除用户
