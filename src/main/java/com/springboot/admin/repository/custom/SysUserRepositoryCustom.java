@@ -107,10 +107,6 @@ public class SysUserRepositoryCustom {
                 .map(row -> (Long) row.get("id"));
     }
 
-
-    /**
-     * 更新用户，返回更新成功的记录数
-     */
     /**
      * 更新用户，返回更新成功的记录数
      */
