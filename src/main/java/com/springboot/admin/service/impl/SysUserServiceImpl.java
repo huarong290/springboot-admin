@@ -2,14 +2,13 @@ package com.springboot.admin.service.impl;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.springboot.admin.convert.SysUserConvert;
-import com.springboot.admin.model.dto.user.UserDTO;
+import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.entity.sys.SysUser;
 import com.springboot.admin.model.vo.user.UserVO;
 import com.springboot.admin.repository.custom.SysUserRepositoryCustom;
 import com.springboot.admin.repository.single.SysUserRepository;
 import com.springboot.admin.service.ISysUserService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -75,7 +74,7 @@ public class SysUserServiceImpl implements ISysUserService {
      * @return 保存后的用户对象 (Mono<SysUser>)
      */
     @Override
-    public Mono<Long> addUser(UserDTO dto) {
+    public Mono<Long> addUser(SysUserDTO dto) {
         // DTO 转换成实体
         SysUser user = userConvert.toEntity(dto);
         // 特殊处理密码
@@ -86,19 +85,19 @@ public class SysUserServiceImpl implements ISysUserService {
     /**
      * 更新用户
      *
-     * @param userDTO 用户对象
+     * @param sysUserDTO 用户对象
      * @return 更新后的用户对象 (Mono<SysUser>)
      */
     @Override
 
-    public Mono<Long> updateUser(UserDTO userDTO) {
+    public Mono<Long> updateUser(SysUserDTO sysUserDTO) {
         // 判断密码是否为空并加密
         String encodedPassword = null;
-        if (userDTO.getPassword() != null && !userDTO.getPassword().isBlank()) {
-            encodedPassword = passwordEncoder.encode(userDTO.getPassword());
+        if (sysUserDTO.getPassword() != null && !sysUserDTO.getPassword().isBlank()) {
+            encodedPassword = passwordEncoder.encode(sysUserDTO.getPassword());
         }
         // 调用自定义仓库方法，返回更新条数
-        return userRepositoryCustom.updateUser(userDTO, encodedPassword);
+        return userRepositoryCustom.updateUser(sysUserDTO, encodedPassword);
     }
 
 

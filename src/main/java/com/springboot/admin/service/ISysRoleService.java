@@ -1,15 +1,17 @@
 package com.springboot.admin.service;
 
-import com.springboot.admin.model.entity.sys.SysMenu;
-import com.springboot.admin.model.entity.sys.SysPermission;
-import com.springboot.admin.model.entity.sys.SysRole;
+import com.springboot.admin.model.dto.role.SysRoleDTO;
+import com.springboot.admin.model.vo.role.SysRoleVO;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 /**
  * 角色表 Service 接口
  *
  * 提供角色相关的业务逻辑方法。
+ * 使用 SysRoleDTO 作为入参，SysRoleVO 作为出参。
  */
 public interface ISysRoleService {
 
@@ -17,63 +19,73 @@ public interface ISysRoleService {
      * 根据角色ID查询角色信息
      *
      * @param id 角色ID
-     * @return Mono<SysRole> 响应式单对象
+     * @return Mono<SysRoleVO> 响应式单对象
      */
-    Mono<SysRole> getRoleById(Long id);
+    Mono<SysRoleVO> getRoleById(Long id);
+
     /**
      * 根据角色编码查询角色信息
      *
      * @param roleCode 角色编码
-     * @return Mono<SysRole> 响应式单对象
+     * @return Mono<SysRoleVO> 响应式单对象
      */
-    Mono<SysRole> getRoleByCode(String roleCode);
+    Mono<SysRoleVO> getRoleByCode(String roleCode);
+
     /**
      * 新增角色
      *
-     * @param role 角色对象
-     * @return Mono<SysRole> 响应式单对象，返回保存后的实体
+     * @param roleDTO 角色对象
+     * @return Mono<Long> 响应式单对象，返回保存后的实体主键id
      */
-    Mono<SysRole> addRole(SysRole role);
+    Mono<Long> addRole(SysRoleDTO roleDTO);
 
     /**
      * 更新角色信息
      *
-     * @param role 角色对象
-     * @return Mono<SysRole> 响应式单对象，返回更新后的实体
+     * @param roleDTO 角色对象
+     * @return Mono<SysRoleVO> 响应式单对象，返回更新后的实体
      */
-    Mono<SysRole> updateRole(SysRole role);
+    Mono<Long> updateRole(SysRoleDTO roleDTO);
 
     /**
      * 删除角色
      *
      * @param id 角色ID
-     * @return Mono<Void> 响应式空对象，表示删除完成
+     * @return Mono<Long> 响应式单对象，返回删除成功的记录数
      */
-    Mono<Void> deleteRole(Long id);
+    Mono<Long> deleteRole(Long id);
 
     /**
      * 批量删除角色
      *
      * @param ids 角色ID集合
-     * @return Mono<Void> 响应式空对象，表示删除完成
+     * @return Mono<Integer> 响应式单对象，返回删除成功的记录数
      */
-    Mono<Void> deleteRoles(Iterable<Long> ids);
+    Mono<Long> deleteRolesByIds(List<Long> ids);
+
+
+    /**
+     * 批量物理删除角色
+     *
+     * @param ids 角色ID集合
+     * @return Mono<Long> 删除成功的记录数
+     */
+    Mono<Long> deleteRolesPhysicallyByIds(List<Long> ids);
 
     /**
      * 查询所有角色
      *
-     * @return Flux<SysRole> 响应式流，返回多个角色对象
+     * @return Flux<SysRoleVO> 响应式流，返回多个角色对象
      */
-    Flux<SysRole> listRoles();
-
+    Flux<SysRoleVO> getRoleList();
 
     /**
      * 根据用户ID查询用户的角色列表
      *
      * @param userId 用户ID
-     * @return Flux<SysRole> 响应式流，返回该用户的角色对象
+     * @return Flux<SysRoleVO> 响应式流，返回该用户的角色对象
      */
-    Flux<SysRole> listRolesByUserId(Long userId);
+    Flux<SysRoleVO> listRolesByUserId(Long userId);
 
     /**
      * 判断角色是否存在
@@ -87,22 +99,15 @@ public interface ISysRoleService {
      * 根据权限ID查询角色列表
      *
      * @param permissionId 权限ID
-     * @return Flux<SysRole> 响应式流，返回拥有该权限的角色集合
+     * @return Flux<SysRoleVO> 响应式流，返回拥有该权限的角色集合
      */
-     Flux<SysRole> findRolesByPermissionId(Long permissionId);
+    Flux<SysRoleVO> findRolesByPermissionId(Long permissionId);
+
     /**
-     * 根据菜单D查询角色表
+     * 根据菜单ID查询角色列表
      *
-     * @param menuId 菜单D
-     * @return Flux<SysRole> 响应式流，返回该菜单拥有的角色集合
+     * @param menuId 菜单ID
+     * @return Flux<SysRoleVO> 响应式流，返回该菜单拥有的角色集合
      */
-    Flux<SysRole> listPermissionsByRoleId(Long menuId);
-//
-//    /**
-//     * 根据角色ID查询菜单列表
-//     *
-//     * @param roleId 角色ID
-//     * @return Flux<SysMenu> 响应式流，返回该角色拥有的菜单集合
-//     */
-//    Flux<SysMenu> listMenusByRoleId(Long roleId);
+    Flux<SysRoleVO> listRolesByMenuId(Long menuId);
 }

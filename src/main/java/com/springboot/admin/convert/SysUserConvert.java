@@ -1,6 +1,6 @@
 package com.springboot.admin.convert;
 
-import com.springboot.admin.model.dto.user.UserDTO;
+import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.entity.sys.SysUser;
 import com.springboot.admin.model.vo.user.UserVO;
 import org.mapstruct.Mapper;
@@ -16,7 +16,7 @@ import java.util.List;
 public interface SysUserConvert {
 
     // DTO -> Entity
-    SysUser toEntity(UserDTO dto);
+    SysUser toEntity(SysUserDTO dto);
 
     // Entity -> VO
     UserVO toVO(SysUser entity);

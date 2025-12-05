@@ -8,7 +8,7 @@ import lombok.Data;
  * 用于新增和修改用户时的请求体
  */
 @Data
-public class UserDTO {
+public class SysUserDTO {
 
     @Schema(description = "用户ID（更新时必填）")
     private Long id;

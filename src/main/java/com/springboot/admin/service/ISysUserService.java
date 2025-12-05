@@ -1,6 +1,6 @@
 package com.springboot.admin.service;
 
-import com.springboot.admin.model.dto.user.UserDTO;
+import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.entity.sys.SysUser;
 import com.springboot.admin.model.vo.user.UserVO;
 import reactor.core.publisher.Flux;
@@ -31,18 +31,18 @@ public interface ISysUserService {
     /**
      * 新增用户
      *
-     * @param userDTO 用户对象
+     * @param sysUserDTO 用户对象
      * @return Mono<Long> 响应式单对象，返回保存后的实体主键id
      */
-    Mono<Long> addUser(UserDTO userDTO);
+    Mono<Long> addUser(SysUserDTO sysUserDTO);
 
     /**
      * 更新用户信息
      *
-     * @param userDTO 用户对象
+     * @param sysUserDTO 用户对象
      * @return Mono<SysUser> 响应式单对象，返回更新后的实体
      */
-    Mono<Long> updateUser(UserDTO userDTO);
+    Mono<Long> updateUser(SysUserDTO sysUserDTO);
 
     /**
      * 删除用户

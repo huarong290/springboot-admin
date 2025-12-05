@@ -5,10 +5,9 @@ import com.springboot.admin.exception.BusinessException;
 import com.springboot.admin.model.dto.TokenRefreshReqDTO;
 import com.springboot.admin.model.dto.TokenResDTO;
 import com.springboot.admin.model.dto.UserLoginReqDTO;
-import com.springboot.admin.model.dto.menu.MenuDTO;
-import com.springboot.admin.model.dto.menu.MetaDTO;
 import com.springboot.admin.model.dto.user.UserInfoDTO;
-import com.springboot.admin.model.entity.sys.SysMenu;
+import com.springboot.admin.model.entity.sys.SysUser;
+import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
 import com.springboot.admin.service.*;
 import com.springboot.admin.utils.JwtUtil;
 import jakarta.annotation.Resource;
@@ -19,7 +18,6 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Slf4j
@@ -131,19 +129,43 @@ public class AuthServiceServiceImpl implements IAuthService {
                             .doOnSuccess(v -> log.info("刷新令牌 {} 已移除，用户登出成功", refreshToken));
                 });
     }
+
+
+    /**
+     * 根据 Token 获取用户信息
+     *
+     * 用途：
+     * - 前端调用 /userInfo 接口时，后端通过解析 Token 获取用户信息。
+     * - 返回用户的基本信息、角色列表、权限列表、菜单树。
+     *
+     * 流程：
+     * 1. 解析 Token，获取用户名。
+     * 2. 查询用户基本信息。
+     * 3. 查询用户角色列表。
+     * 4. 查询用户权限列表。
+     * 5. 查询用户菜单树。
+     * 6. 聚合结果，组装成 UserInfoDTO。
+     *
+     * 日志：
+     * - 每一步都打印日志，方便排查问题。
+     * - 包括 Token 解析结果、用户信息、角色列表、权限列表、菜单树、最终组装结果。
+     *
+     * @param token 前端传入的 JWT Token
+     * @return Mono<UserInfoDTO> 响应式单对象，包含用户信息、角色、权限、菜单树
+     */
     @Override
     public Mono<UserInfoDTO> getUserInfoByToken(String token) {
         // 1. 解析 token 获取 Claims
         return jwtUtil.parseToken(token)
                 .flatMap(claims -> {
                     String username = claims.getSubject();
-                    log.info("开始获取用户信息，username={}", username);
+                    log.info("[Step1] 成功解析 Token，username={}", username);
 
                     // 2. 查询用户信息
                     return sysUserService.getUserByUsername(username)
                             .switchIfEmpty(Mono.error(new BusinessException("0100104", "用户不存在")))
                             .flatMap(user -> {
-                                log.info("用户信息: {}", user);
+                                log.info("[Step2] 查询到用户信息: {}", user);
 
                                 // 3. 查询角色 —— 使用 flatMap 避免 null
                                 Mono<List<String>> rolesMono = sysRoleService.listRolesByUserId(user.getId())
@@ -154,48 +176,30 @@ public class AuthServiceServiceImpl implements IAuthService {
                                             return Mono.just(role.getRoleCode());
                                         })
                                         .collectList()
-                                        .doOnNext(roles -> log.info("角色列表: {}", roles));
+                                        .doOnNext(roles -> log.info("[Step3] 角色列表: {}", roles));
 
                                 // 4. 查询权限 —— 使用 flatMap 避免 null
                                 Mono<List<String>> permissionsMono = sysPermissionService.listPermissionsByUserId(user.getId())
                                         .flatMap(permission -> {
-                                            log.info("权限列表permission: {}", permission);
                                             if (permission == null || permission.getPermissionCode() == null) {
                                                 return Mono.empty();
                                             }
                                             return Mono.just(permission.getPermissionCode());
                                         })
                                         .collectList()
-                                        .doOnNext(perms -> log.info("权限列表: {}", perms));
+                                        .doOnNext(perms -> log.info("[Step4] 权限列表: {}", perms));
 
-                                // 5. 查询菜单 —— 使用 flatMap 避免 null
-                                Mono<List<MenuDTO>> menusMono = sysMenuService.getMenuListByUserId(user.getId())
-                                        .flatMap(menu -> {
-                                            if (menu == null) {
-                                                return Mono.empty();
-                                            }
-                                            return Mono.just(convertToMenuDTO(menu));
-                                        })
+                                // 5. 查询菜单 —— 返回树形结构
+                                Mono<List<SysMenuTreeVO>> menusMono = sysMenuService.getMenuTreeByUserId(user.getId())
                                         .collectList()
-                                        .doOnNext(menus -> log.info("菜单列表: {}", menus));
+                                        .defaultIfEmpty(List.of())
+                                        .doOnNext(menus -> log.info("[Step5] 菜单树: {}", menus));
 
                                 // 6. 聚合结果
                                 return Mono.zip(rolesMono, permissionsMono, menusMono)
                                         .map(tuple -> {
-                                            List<String> roles = Optional.ofNullable(tuple.getT1()).orElse(List.of());
-                                            List<String> permissions = Optional.ofNullable(tuple.getT2()).orElse(List.of());
-                                            List<MenuDTO> menus = Optional.ofNullable(tuple.getT3()).orElse(List.of());
-
-                                            UserInfoDTO dto = new UserInfoDTO();
-                                            dto.setUserId(user.getId());
-                                            dto.setUsername(user.getUsername());
-                                            dto.setNickname(user.getNickname());
-                                            dto.setAvatar(user.getAvatar());
-                                            dto.setRoles(roles);
-                                            dto.setPermissions(permissions);
-                                            dto.setMenus(menus);
-
-                                            log.info("最终组装的 UserInfoDTO: {}", dto);
+                                            UserInfoDTO dto = buildUserInfoDTO(user, tuple.getT1(), tuple.getT2(), tuple.getT3());
+                                            log.info("[Step6] 最终组装的 UserInfoDTO: {}", dto);
                                             return dto;
                                         });
                             });
@@ -206,33 +210,31 @@ public class AuthServiceServiceImpl implements IAuthService {
                 });
     }
 
-
-
-
     /**
-     * SysMenu 转换为 MenuDTO
+     * 构建 UserInfoDTO
+     *
+     * 用途：
+     * - 将用户基本信息、角色列表、权限列表、菜单树组装成一个统一的 DTO。
+     * - 返回给前端，用于渲染用户信息和动态路由。
+     *
+     * 日志：
+     * - 在调用处打印最终组装结果。
+     *
+     * @param user 用户实体对象
+     * @param roles 用户角色列表
+     * @param permissions 用户权限列表
+     * @param menus 用户菜单树
+     * @return UserInfoDTO 用户信息 DTO
      */
-    private MenuDTO convertToMenuDTO(SysMenu menu) {
-        MenuDTO dto = new MenuDTO();
-        dto.setId(menu.getId());
-        dto.setPath(menu.getMenuPath());
-        dto.setComponent(menu.getMenuComponent());
-        dto.setParentId(menu.getMenuParentId());
-        dto.setType(menu.getMenuType());
-        dto.setPermission(menu.getMenuPermission());
-
-        // 构建 meta 信息
-        MetaDTO meta = new MetaDTO();
-        meta.setTitle(menu.getMenuName());       // 菜单标题
-        meta.setIcon(menu.getMenuIcon());        // 菜单图标
-        meta.setVisible(menu.getMenuVisible() != null && menu.getMenuVisible() == 1);// 是否显示
-
-        // 如果你有角色和权限的关联，可以在这里填充
-        // meta.setRoles(...);
-        // meta.setPermissions(...);
-
-        dto.setMeta(meta);
-
+    private UserInfoDTO buildUserInfoDTO(SysUser user, List<String> roles, List<String> permissions, List<SysMenuTreeVO> menus) {
+        UserInfoDTO dto = new UserInfoDTO();
+        dto.setUserId(user.getId());
+        dto.setUsername(user.getUsername());
+        dto.setNickname(user.getNickname());
+        dto.setAvatar(user.getAvatar());
+        dto.setRoles(roles);
+        dto.setPermissions(permissions);
+        dto.setMenus(menus);
         return dto;
     }
 

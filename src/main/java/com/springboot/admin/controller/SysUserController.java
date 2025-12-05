@@ -2,7 +2,7 @@ package com.springboot.admin.controller;
 
 import com.springboot.admin.common.ApiResult;
 import com.springboot.admin.common.ApiResultCode;
-import com.springboot.admin.model.dto.user.UserDTO;
+import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.entity.sys.SysUser;
 import com.springboot.admin.model.vo.user.UserVO;
 import com.springboot.admin.service.ISysUserService;
@@ -56,8 +56,8 @@ public class SysUserController {
     }
     @PostMapping("/create")
     @Operation(summary = "新增用户")
-    public Mono<ApiResult<Long>> addUser(@RequestBody UserDTO userDTO) {
-        return userService.addUser(userDTO)
+    public Mono<ApiResult<Long>> addUser(@RequestBody SysUserDTO sysUserDTO) {
+        return userService.addUser(sysUserDTO)
                 // 假设 service 返回的是新用户的 ID
                 .map(ApiResult::successResult)
                 .onErrorResume(e -> {
@@ -69,8 +69,8 @@ public class SysUserController {
 
     @PutMapping("/update")
     @Operation(summary = "更新用户信息")
-    public Mono<ApiResult<Long>> updateUser(@RequestBody UserDTO userDTO) {
-        return userService.updateUser(userDTO)
+    public Mono<ApiResult<Long>> updateUser(@RequestBody SysUserDTO sysUserDTO) {
+        return userService.updateUser(sysUserDTO)
                 // 假设 service 返回的是更新成功的记录数 (int)
                 .map(ApiResult::successResult)
                 .onErrorResume(e -> {
