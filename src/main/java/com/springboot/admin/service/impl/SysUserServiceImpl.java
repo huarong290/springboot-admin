@@ -4,7 +4,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.springboot.admin.convert.SysUserConvert;
 import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.entity.sys.SysUser;
-import com.springboot.admin.model.vo.user.UserVO;
+import com.springboot.admin.model.vo.user.SysUserVO;
 import com.springboot.admin.repository.custom.SysUserRepositoryCustom;
 import com.springboot.admin.repository.single.SysUserRepository;
 import com.springboot.admin.service.ISysUserService;
@@ -52,8 +52,8 @@ public class SysUserServiceImpl implements ISysUserService {
      * @return 用户对象 (Mono<SysUser>)
      */
     @Override
-    public Mono<SysUser> getUserById(Long id) {
-        return userRepository.findById(id);
+    public Mono<SysUserVO> getUserById(Long id) {
+        return userRepository.findById(id).map(userConvert::toVO);
     }
 
     /**
@@ -63,8 +63,8 @@ public class SysUserServiceImpl implements ISysUserService {
      * @return 用户对象 (Mono<SysUser>)
      */
     @Override
-    public Mono<SysUser> getUserByUsername(String username) {
-        return userRepository.findByUsername(username);
+    public Mono<SysUserDTO> getUserByUsername(String username) {
+        return userRepository.findByUsername(username).map(userConvert::toDTO);
     }
 
     /**
@@ -108,11 +108,11 @@ public class SysUserServiceImpl implements ISysUserService {
      * @return 用户列表 (Flux<SysUser>)
      */
     @Override
-    public Flux<UserVO> getSysUserList() {
+    public Flux<SysUserVO> getSysUserList() {
         return userRepository.findAll()
                 .doOnNext(user -> log.info("查询到用户: {}", JSONObject.toJSONString(user)))
                 .map(user -> {
-                    UserVO vo = userConvert.toVO(user);
+                    SysUserVO vo = userConvert.toVO(user);
                     log.info("转换后的VO: {}", vo);
                     return vo;
                 });
@@ -161,8 +161,8 @@ public class SysUserServiceImpl implements ISysUserService {
      * @return 用户集合 (Flux<SysUser>)
      */
     @Override
-    public Flux<SysUser> listUsersByDeptId(Long deptId) {
-        return userRepositoryCustom.findUsersByDeptId(deptId);
+    public Flux<SysUserVO> listUsersByDeptId(Long deptId) {
+        return userRepositoryCustom.findUsersByDeptId(deptId).map(userConvert::toVO);
     }
 
     //    /**

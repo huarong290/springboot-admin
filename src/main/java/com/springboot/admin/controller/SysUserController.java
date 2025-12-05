@@ -3,8 +3,7 @@ package com.springboot.admin.controller;
 import com.springboot.admin.common.ApiResult;
 import com.springboot.admin.common.ApiResultCode;
 import com.springboot.admin.model.dto.user.SysUserDTO;
-import com.springboot.admin.model.entity.sys.SysUser;
-import com.springboot.admin.model.vo.user.UserVO;
+import com.springboot.admin.model.vo.user.SysUserVO;
 import com.springboot.admin.service.ISysUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,7 +34,7 @@ public class SysUserController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "根据用户ID查询用户信息")
-    public Mono<ApiResult<SysUser>> getUserById(@PathVariable Long id) {
+    public Mono<ApiResult<SysUserVO>> getUserById(@PathVariable Long id) {
         return userService.getUserById(id)
                 .map(ApiResult::successResult)
                 .switchIfEmpty(Mono.just(ApiResult.failResult(ApiResultCode.NOT_FOUND, "用户不存在")));
@@ -49,7 +48,7 @@ public class SysUserController {
      */
     @GetMapping("/username/{username}")
     @Operation(summary = "根据用户名查询用户信息")
-    public Mono<ApiResult<SysUser>> getUserByUsername(@PathVariable String username) {
+    public Mono<ApiResult<SysUserDTO>> getUserByUsername(@PathVariable String username) {
         return userService.getUserByUsername(username)
                 .map(ApiResult::successResult)
                 .switchIfEmpty(Mono.just(ApiResult.failResult(ApiResultCode.NOT_FOUND, "用户不存在")));
@@ -146,7 +145,7 @@ public class SysUserController {
      */
     @GetMapping("/list")
     @Operation(summary = "查询所有用户")
-    public Flux<UserVO> getSysUserList() {
+    public Flux<SysUserVO> getSysUserList() {
         return userService.getSysUserList();
     }
 
@@ -171,7 +170,7 @@ public class SysUserController {
      */
     @GetMapping("/dept/{deptId}")
     @Operation(summary = "根据部门ID查询用户列表")
-    public Flux<SysUser> listUsersByDeptId(@PathVariable Long deptId) {
+    public Flux<SysUserVO> listUsersByDeptId(@PathVariable Long deptId) {
         return userService.listUsersByDeptId(deptId);
     }
 }
