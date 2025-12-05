@@ -6,8 +6,6 @@ import com.springboot.admin.model.dto.UserLoginReqDTO;
 import com.springboot.admin.model.dto.user.UserInfoDTO;
 import reactor.core.publisher.Mono;
 
-import java.util.Optional;
-
 public interface IAuthService {
     /**
      * 用户登录

@@ -4,6 +4,7 @@ import com.springboot.admin.model.entity.sys.SysMenu;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.Optional;
 
@@ -42,6 +43,7 @@ public class SysMenuRepositoryCustom {
                     menu.setMenuPermission(row.get("menu_permission", String.class));
                     menu.setMenuSort(row.get("menu_sort", Integer.class));
                     menu.setMenuVisible(row.get("menu_visible", Integer.class));
+                    menu.setMenuEnabled(row.get("menu_enabled", Integer.class));
                     menu.setDeleteFlag(row.get("delete_flag", Integer.class));
                     menu.setCreateBy(row.get("create_by", String.class));
                     menu.setCreateTime(
@@ -65,7 +67,7 @@ public class SysMenuRepositoryCustom {
      * @param roleId 角色ID
      * @return Flux<SysMenu> 响应式流，返回该角色拥有的菜单集合
      */
-    public Flux<SysMenu> findMenusByRoleId(Long roleId) {
+    public Flux<SysMenu> getMenuListByRoleId(Long roleId) {
         String sql = "SELECT m.* FROM sys_menu m " +
                 "INNER JOIN sys_role_menu rm ON m.id = rm.menu_id " +
                 "WHERE rm.role_id = ? AND m.delete_flag = 0";
@@ -84,6 +86,7 @@ public class SysMenuRepositoryCustom {
                     menu.setMenuPermission(row.get("menu_permission", String.class));
                     menu.setMenuSort(row.get("menu_sort", Integer.class));
                     menu.setMenuVisible(row.get("menu_visible", Integer.class));
+                    menu.setMenuEnabled(row.get("menu_enabled", Integer.class));
                     menu.setDeleteFlag(row.get("delete_flag", Integer.class));
                     menu.setCreateBy(row.get("create_by", String.class));
                     menu.setCreateTime(
@@ -101,4 +104,20 @@ public class SysMenuRepositoryCustom {
                 })
                 .all();
     }
+
+
+    /**
+     * 删除单个菜单
+     *
+     * @param id 菜单ID
+     * @return Mono<Integer> 返回受影响的行数
+     */
+    public Mono<Long> deleteMenuById(Long id) {
+        String sql = "DELETE FROM sys_menu WHERE id = ?";
+        return client.sql(sql)
+                .bind(0, id)
+                .fetch()
+                .rowsUpdated();
+    }
+
 }

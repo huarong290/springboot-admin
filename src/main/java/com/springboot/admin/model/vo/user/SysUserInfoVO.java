@@ -1,18 +1,16 @@
-package com.springboot.admin.model.dto.user;
+package com.springboot.admin.model.vo.user;
 
-
-import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
+import com.springboot.admin.model.vo.menu.SysMenuVO;
 import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
-
 /**
- * 用户信息 DTO
+ * 用户信息 VO
  * 用于在用户登录成功后，返回用户的基本信息、角色、权限、菜单等数据
  */
 @Data
-public class UserInfoDTO {
+public class SysUserInfoVO {
 
     /**
      * 用户ID
@@ -51,10 +49,11 @@ public class UserInfoDTO {
      * 示例：["sys:user:add", "sys:user:edit"]
      */
     private List<String> permissions= new ArrayList<>();
+
     /**
-     * 用户菜单列表（树形结构）
+     * 用户菜单列表
      * 从 sys_menu 表中查询，返回树形结构
      * 示例：系统管理 -> 用户管理、角色管理
      */
-    private List<SysMenuTreeVO> menus = new ArrayList<>();
+    private List<SysMenuVO> menus= new ArrayList<>();
 }

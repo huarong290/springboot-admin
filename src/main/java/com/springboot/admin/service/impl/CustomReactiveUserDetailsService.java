@@ -1,7 +1,7 @@
 package com.springboot.admin.service.impl;
 
-import com.springboot.admin.model.entity.sys.SysRole;
 import com.springboot.admin.model.entity.sys.SysUser;
+import com.springboot.admin.model.vo.role.SysRoleVO;
 import com.springboot.admin.service.ISysRoleService;
 import com.springboot.admin.service.ISysUserService;
 import org.springframework.security.core.GrantedAuthority;
@@ -33,7 +33,7 @@ public class CustomReactiveUserDetailsService implements ReactiveUserDetailsServ
                 .switchIfEmpty(Mono.error(new UsernameNotFoundException("用户不存在")))
                 .flatMap(user ->
                         iSysRoleService.listRolesByUserId(user.getId())
-                                .map(SysRole::getRoleCode)
+                                .map(SysRoleVO::getRoleCode)
                                 .map(roleCode -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + roleCode))
                                 .collectList()
                                 .map(authorities -> buildUserDetails(user, authorities))

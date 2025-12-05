@@ -5,6 +5,7 @@ import com.springboot.admin.model.entity.sys.SysRole;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * 自定义角色仓库类
@@ -90,5 +91,152 @@ public class SysRoleRepositoryCustom {
                     return role;
                 }).all();
     }
+    /**
+     * 更新角色信息
+     *
+     * 用途：
+     * - 后台管理：修改角色名称、编码、描述、启用状态等
+     *
+     * SQL逻辑：
+     *  - 使用 UPDATE 语句更新 sys_role 表
+     *  - 过滤条件：id = ? 且 delete_flag = 0
+     *
+     * @param sysRole 角色实体对象（包含需要更新的字段）
+     * @return Mono<Long> 响应式单对象，返回更新成功的记录数
+     */
+    public Mono<Long> updateRole(SysRole sysRole) {
+        String sql = "UPDATE sys_role SET " +
+                "role_name = ?, " +
+                "role_code = ?, " +
+                "role_description = ?, " +
+                "update_by = ?, " +
+                "update_time = CURRENT_TIMESTAMP " +
+                "WHERE id = ? AND delete_flag = 0";
+
+        return client.sql(sql)
+                // 按顺序绑定参数
+                .bind(0, sysRole.getRoleName())
+                .bind(1, sysRole.getRoleCode())
+                .bind(2, sysRole.getRoleDescription())
+                .bind(3, sysRole.getUpdateBy() != null ? sysRole.getUpdateBy() : "system")
+                .bind(4, sysRole.getId())
+                // 执行更新
+                .fetch()
+                .rowsUpdated()
+                // 返回更新的记录数（通常为 1）
+                .map(Long::valueOf);
+    }
+    /**
+     * 物理删除角色（彻底删除）
+     *
+     * 用途：
+     * - 特殊场景：需要彻底清除角色数据（例如测试数据清理）
+     *
+     * SQL逻辑：
+     *  - 使用 DELETE 语句直接删除 sys_role 表中的记录
+     *  - 过滤条件：id = ?
+     *
+     * @param id 角色ID
+     * @return Mono<Long> 响应式单对象，返回删除成功的记录数（通常为 1）
+     */
+    public Mono<Long> deleteRolePhysicallyById(Long id) {
+        String sql = "DELETE FROM sys_role WHERE id = ?";
+
+        return client.sql(sql)
+                .bind(0, id)
+                .fetch()
+                .rowsUpdated()
+                .map(Long::valueOf);
+    }
+    /**
+     * 删除角色
+     *
+     * 用途：
+     * - 后台管理：逻辑删除（推荐，保留数据用于审计）
+     * - 特殊场景：物理删除（彻底清除数据，例如测试数据清理）
+     *
+     * @param id 角色ID
+     * @param logicalDelete 是否逻辑删除
+     *                      true  = 逻辑删除（delete_flag = 1）
+     *                      false = 物理删除（DELETE）
+     * @return Mono<Long> 响应式单对象，返回删除成功的记录数（通常为 1）
+     */
+    public Mono<Long> deleteRoleById(Long id, boolean logicalDelete) {
+        if (logicalDelete) {
+            // 逻辑删除：更新 delete_flag = 1
+            String sql = "UPDATE sys_role SET " +
+                    "delete_flag = 1, " +
+                    "update_by = 'system', " +
+                    "update_time = CURRENT_TIMESTAMP " +
+                    "WHERE id = ? AND delete_flag = 0";
+
+            return client.sql(sql)
+                    .bind(0, id)
+                    .fetch()
+                    .rowsUpdated()
+                    .map(Long::valueOf);
+        } else {
+            // 物理删除：直接 DELETE
+            String sql = "DELETE FROM sys_role WHERE id = ?";
+
+            return client.sql(sql)
+                    .bind(0, id)
+                    .fetch()
+                    .rowsUpdated()
+                    .map(Long::valueOf);
+        }
+    }
+
+    /**
+     * 批量删除角色
+     *
+     * 用途：
+     * - 后台管理：逻辑删除（推荐，保留数据用于审计）
+     * - 特殊场景：物理删除（彻底清除数据，例如测试数据清理）
+     *
+     * @param ids 角色ID集合
+     * @param logicalDelete 是否逻辑删除
+     *                      true  = 逻辑删除（delete_flag = 1）
+     *                      false = 物理删除（DELETE）
+     * @return Mono<Long> 响应式单对象，返回删除成功的记录数
+     */
+    public Mono<Long> deleteRolesByIds(Iterable<Long> ids, boolean logicalDelete) {
+        StringBuilder sql;
+
+        if (logicalDelete) {
+            // 逻辑删除：更新 delete_flag = 1
+            sql = new StringBuilder("UPDATE sys_role SET " +
+                    "delete_flag = 1, " +
+                    "update_by = 'system', " +
+                    "update_time = CURRENT_TIMESTAMP " +
+                    "WHERE delete_flag = 0 AND id IN (");
+        } else {
+            // 物理删除：直接 DELETE
+            sql = new StringBuilder("DELETE FROM sys_role WHERE id IN (");
+        }
+
+        // 构建占位符 (?, ?, ?)
+        int size = 0;
+        for (Long id : ids) {
+            if (size > 0) {
+                sql.append(", ");
+            }
+            sql.append("?");
+            size++;
+        }
+        sql.append(")");
+
+        DatabaseClient.GenericExecuteSpec spec = client.sql(sql.toString());
+        int index = 0;
+        for (Long id : ids) {
+            spec = spec.bind(index++, id);
+        }
+
+        return spec.fetch()
+                .rowsUpdated()
+                .map(Long::valueOf);
+    }
+
+
 }
 

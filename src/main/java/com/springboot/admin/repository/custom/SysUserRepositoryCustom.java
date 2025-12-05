@@ -1,6 +1,6 @@
 package com.springboot.admin.repository.custom;
 
-import com.springboot.admin.model.dto.user.UserDTO;
+import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.entity.sys.SysRole;
 import com.springboot.admin.model.entity.sys.SysUser;
 import lombok.Getter;
@@ -110,7 +110,7 @@ public class SysUserRepositoryCustom {
     /**
      * 更新用户，返回更新成功的记录数
      */
-    public Mono<Long> updateUser(UserDTO dto, String encodedPassword) {
+    public Mono<Long> updateUser(SysUserDTO dto, String encodedPassword) {
         String sql = """
         UPDATE sys_user
         SET username = ?,
@@ -138,7 +138,9 @@ public class SysUserRepositoryCustom {
                 .bind(8, dto.getAvatar())
                 .bind(9, dto.getId())
                 .fetch()
-                .rowsUpdated();
+                .rowsUpdated()
+                // 返回更新的记录数（通常为 1）
+                .map(Long::valueOf);
     }
 
 
