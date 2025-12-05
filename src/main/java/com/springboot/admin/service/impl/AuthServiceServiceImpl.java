@@ -5,8 +5,8 @@ import com.springboot.admin.exception.BusinessException;
 import com.springboot.admin.model.dto.TokenRefreshReqDTO;
 import com.springboot.admin.model.dto.TokenResDTO;
 import com.springboot.admin.model.dto.UserLoginReqDTO;
+import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.dto.user.UserInfoDTO;
-import com.springboot.admin.model.entity.sys.SysUser;
 import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
 import com.springboot.admin.service.*;
 import com.springboot.admin.utils.JwtUtil;
@@ -220,18 +220,18 @@ public class AuthServiceServiceImpl implements IAuthService {
      * 日志：
      * - 在调用处打印最终组装结果。
      *
-     * @param user 用户实体对象
+     * @param sysUserDTO 用户实体对象
      * @param roles 用户角色列表
      * @param permissions 用户权限列表
      * @param menus 用户菜单树
      * @return UserInfoDTO 用户信息 DTO
      */
-    private UserInfoDTO buildUserInfoDTO(SysUser user, List<String> roles, List<String> permissions, List<SysMenuTreeVO> menus) {
+    private UserInfoDTO buildUserInfoDTO(SysUserDTO sysUserDTO, List<String> roles, List<String> permissions, List<SysMenuTreeVO> menus) {
         UserInfoDTO dto = new UserInfoDTO();
-        dto.setUserId(user.getId());
-        dto.setUsername(user.getUsername());
-        dto.setNickname(user.getNickname());
-        dto.setAvatar(user.getAvatar());
+        dto.setUserId(sysUserDTO.getId());
+        dto.setUsername(sysUserDTO.getUsername());
+        dto.setNickname(sysUserDTO.getNickname());
+        dto.setAvatar(sysUserDTO.getAvatar());
         dto.setRoles(roles);
         dto.setPermissions(permissions);
         dto.setMenus(menus);

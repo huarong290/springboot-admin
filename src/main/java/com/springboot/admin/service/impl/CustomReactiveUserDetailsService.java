@@ -1,6 +1,6 @@
 package com.springboot.admin.service.impl;
 
-import com.springboot.admin.model.entity.sys.SysUser;
+import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.vo.role.SysRoleVO;
 import com.springboot.admin.service.ISysRoleService;
 import com.springboot.admin.service.ISysUserService;
@@ -40,7 +40,7 @@ public class CustomReactiveUserDetailsService implements ReactiveUserDetailsServ
                 );
     }
 
-    private UserDetails buildUserDetails(SysUser user, List<GrantedAuthority> authorities) {
+    private UserDetails buildUserDetails(SysUserDTO user, List<GrantedAuthority> authorities) {
         return withUsername(user.getUsername())
                 .password(user.getPassword())
                 .authorities(authorities)

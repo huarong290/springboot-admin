@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  * 用于接口返回时裁剪敏感字段
  */
 @Data
-public class UserVO {
+public class SysUserVO {
 
     @Schema(description = "用户ID")
     private Long id;

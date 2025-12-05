@@ -1,8 +1,7 @@
 package com.springboot.admin.service;
 
 import com.springboot.admin.model.dto.user.SysUserDTO;
-import com.springboot.admin.model.entity.sys.SysUser;
-import com.springboot.admin.model.vo.user.UserVO;
+import com.springboot.admin.model.vo.user.SysUserVO;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -18,7 +17,7 @@ public interface ISysUserService {
      * @param id 用户ID
      * @return Mono<SysUser> 响应式单对象，可能为空
      */
-    Mono<SysUser> getUserById(Long id);
+    Mono<SysUserVO> getUserById(Long id);
 
     /**
      * 根据用户名查询用户信息
@@ -26,7 +25,7 @@ public interface ISysUserService {
      * @param username 用户名
      * @return Mono<SysUser> 响应式单对象，可能为空
      */
-    Mono<SysUser> getUserByUsername(String username);
+    Mono<SysUserDTO> getUserByUsername(String username);
 
     /**
      * 新增用户
@@ -65,7 +64,7 @@ public interface ISysUserService {
      *
      * @return Flux<SysUser> 响应式流，返回多个用户对象
      */
-    Flux<UserVO> getSysUserList();
+    Flux<SysUserVO> getSysUserList();
 
     /**
      * 判断用户名是否存在
@@ -82,7 +81,7 @@ public interface ISysUserService {
      * @return 用户集合 (Flux<SysUser>)
      */
 
-    Flux<SysUser> listUsersByDeptId(Long deptId);
+    Flux<SysUserVO> listUsersByDeptId(Long deptId);
 //    /**
 //     * 根据用户ID查询菜单列表
 //     *
