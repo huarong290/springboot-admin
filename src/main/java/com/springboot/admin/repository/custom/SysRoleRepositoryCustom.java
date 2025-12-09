@@ -82,6 +82,19 @@ public class SysRoleRepositoryCustom {
                     role.setId(row.get("id", Long.class));
                     role.setRoleName(row.get("role_name", String.class));
                     role.setRoleCode(row.get("role_code", String.class));
+                    role.setRoleDescription(row.get("role_description", String.class));
+                    role.setRoleStatus(row.get("role_status", Integer.class));
+                    role.setDeleteFlag(row.get("delete_flag", Integer.class));
+                    role.setCreateTime(
+                            Optional.ofNullable(row.get("create_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
+                    role.setUpdateTime(
+                            Optional.ofNullable(row.get("update_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
                     return role;
                 }).all();
     }
@@ -102,6 +115,19 @@ public class SysRoleRepositoryCustom {
                     role.setId(row.get("id", Long.class));
                     role.setRoleName(row.get("role_name", String.class));
                     role.setRoleCode(row.get("role_code", String.class));
+                    role.setRoleDescription(row.get("role_description", String.class));
+                    role.setRoleStatus(row.get("role_status", Integer.class));
+                    role.setDeleteFlag(row.get("delete_flag", Integer.class));
+                    role.setCreateTime(
+                            Optional.ofNullable(row.get("create_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
+                    role.setUpdateTime(
+                            Optional.ofNullable(row.get("update_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
                     return role;
                 }).all();
     }
