@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+
 /**
  * 用户管理 Controller
  * 提供用户的增删改查接口
@@ -32,7 +34,7 @@ public class SysUserController {
      * @param id 用户ID
      * @return 返回用户对象，如果不存在则返回 NOT_FOUND
      */
-    @GetMapping("/{id}")
+    @GetMapping("/getUserById/{id}")
     @Operation(summary = "根据用户ID查询用户信息")
     public Mono<ApiResult<SysUserVO>> getUserById(@PathVariable Long id) {
         return userService.getUserById(id)
@@ -46,14 +48,14 @@ public class SysUserController {
      * @param username 用户名
      * @return 返回用户对象，如果不存在则返回 NOT_FOUND
      */
-    @GetMapping("/username/{username}")
+    @GetMapping("/getUserByUsername/{username}")
     @Operation(summary = "根据用户名查询用户信息")
     public Mono<ApiResult<SysUserDTO>> getUserByUsername(@PathVariable String username) {
         return userService.getUserByUsername(username)
                 .map(ApiResult::successResult)
                 .switchIfEmpty(Mono.just(ApiResult.failResult(ApiResultCode.NOT_FOUND, "用户不存在")));
     }
-    @PostMapping("/create")
+    @PostMapping("/addUser")
     @Operation(summary = "新增用户")
     public Mono<ApiResult<Long>> addUser(@RequestBody SysUserDTO sysUserDTO) {
         return userService.addUser(sysUserDTO)
@@ -66,7 +68,7 @@ public class SysUserController {
     }
 
 
-    @PutMapping("/update")
+    @PutMapping("/updateUser")
     @Operation(summary = "更新用户信息")
     public Mono<ApiResult<Long>> updateUser(@RequestBody SysUserDTO sysUserDTO) {
         return userService.updateUser(sysUserDTO)
@@ -115,7 +117,7 @@ public class SysUserController {
 
 
 
-    @DeleteMapping("/delete/{id}")
+    @DeleteMapping("/deleteUser/{id}")
     @Operation(summary = "删除用户")
     public Mono<ApiResult<Long>> deleteUser(@PathVariable Long id) {
         return userService.deleteUser(id)
@@ -126,7 +128,7 @@ public class SysUserController {
                 });
     }
 
-    @DeleteMapping("/deleteBatch")
+    @DeleteMapping("/deleteUsers")
     @Operation(summary = "批量删除用户")
     public Mono<ApiResult<Long>> deleteUsers(@RequestBody Iterable<Long> ids) {
         return userService.deleteUsers(ids)
@@ -143,10 +145,10 @@ public class SysUserController {
      *
      * @return 返回用户列表（Flux 流）
      */
-    @GetMapping("/list")
+    @GetMapping("/getSysUserList")
     @Operation(summary = "查询所有用户")
-    public Flux<SysUserVO> getSysUserList() {
-        return userService.getSysUserList();
+    public Mono<ApiResult<List<SysUserVO>>> getSysUserList() {
+        return userService.getSysUserList().collectList().map(ApiResult::successResult);
     }
 
     /**
@@ -155,7 +157,7 @@ public class SysUserController {
      * @param username 用户名
      * @return 返回 true/false
      */
-    @GetMapping("/exists/{username}")
+    @GetMapping("/existsByUsername/{username}")
     @Operation(summary = "判断用户名是否存在")
     public Mono<ApiResult<Boolean>> existsByUsername(@PathVariable String username) {
         return userService.existsByUsername(username)
@@ -168,9 +170,9 @@ public class SysUserController {
      * @param deptId 部门ID
      * @return 返回该部门下的用户集合
      */
-    @GetMapping("/dept/{deptId}")
+    @GetMapping("/listUsersByDeptId/{deptId}")
     @Operation(summary = "根据部门ID查询用户列表")
-    public Flux<SysUserVO> listUsersByDeptId(@PathVariable Long deptId) {
-        return userService.listUsersByDeptId(deptId);
+    public Mono<ApiResult<List<SysUserVO>>> listUsersByDeptId(@PathVariable Long deptId) {
+        return userService.listUsersByDeptId(deptId).collectList().map(ApiResult::successResult);
     }
 }

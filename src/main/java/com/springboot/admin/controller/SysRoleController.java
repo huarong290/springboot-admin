@@ -101,17 +101,20 @@ public class SysRoleController {
      */
     @GetMapping("/getRoleList")
     @Logable(logRequest = true, logResponse = true)
-    public Flux<SysRoleVO> getRoleList() {
-        return roleService.getRoleList();
+    public Mono<ApiResult<List<SysRoleVO>>> getRoleList() {
+        return roleService.getRoleList()
+                .collectList() // 将 Flux<SysRoleVO> 收集成 List<SysRoleVO>
+                .map(ApiResult::successResult); // 用统一的 ApiResult 包裹整个列表
     }
+
 
     /**
      * 根据用户ID查询角色列表
      */
     @GetMapping("/listRolesByUserId/{userId}")
     @Logable(logRequest = true, logResponse = true)
-    public Flux<SysRoleVO> listRolesByUserId(@PathVariable Long userId) {
-        return roleService.listRolesByUserId(userId);
+    public Mono<ApiResult<List<SysRoleVO>>> listRolesByUserId(@PathVariable Long userId) {
+        return roleService.listRolesByUserId(userId).collectList().map(ApiResult::successResult);
     }
 
     /**
@@ -129,8 +132,8 @@ public class SysRoleController {
      */
     @GetMapping("/findRolesByPermissionId/{permissionId}")
     @Logable(logRequest = true, logResponse = true)
-    public Flux<SysRoleVO> findRolesByPermissionId(@PathVariable Long permissionId) {
-        return roleService.findRolesByPermissionId(permissionId);
+    public Mono<ApiResult<List<SysRoleVO>>> findRolesByPermissionId(@PathVariable Long permissionId) {
+        return roleService.findRolesByPermissionId(permissionId).collectList().map(ApiResult::successResult);
     }
 
     /**
@@ -138,8 +141,8 @@ public class SysRoleController {
      */
     @GetMapping("/listRolesByMenuId/{menuId}")
     @Logable(logRequest = true, logResponse = true)
-    public Flux<SysRoleVO> listRolesByMenuId(@PathVariable Long menuId) {
-        return roleService.listRolesByMenuId(menuId);
+    public Mono<ApiResult<List<SysRoleVO>>> listRolesByMenuId(@PathVariable Long menuId) {
+        return roleService.listRolesByMenuId(menuId).collectList().map(ApiResult::successResult);
     }
 }
 
