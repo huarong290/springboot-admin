@@ -40,6 +40,7 @@ jwt:
 
 # 日志配置
 logging:
+  debugMode: true
   level:
     root: INFO
     org.springframework.web: DEBUG
