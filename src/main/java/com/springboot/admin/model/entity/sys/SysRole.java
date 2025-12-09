@@ -35,6 +35,12 @@ public class SysRole {
      */
     @Column("role_description")
     private String roleDescription;
+    /**
+     * 是否启用
+     * 1 = 启用，0 = 禁用
+     */
+    @Column("role_enabled")
+    private Integer roleEnabled;
 
     /**
      * 是否删除
