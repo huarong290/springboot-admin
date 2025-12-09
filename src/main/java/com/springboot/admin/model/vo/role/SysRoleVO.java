@@ -49,7 +49,7 @@ public class SysRoleVO {
      * 1 = 启用，0 = 禁用
      */
     @Schema(description = "是否启用:1-启用 0-禁用")
-    private Integer roleEnabled;
+    private Integer roleStatus;
 
     /**
      * 创建时间

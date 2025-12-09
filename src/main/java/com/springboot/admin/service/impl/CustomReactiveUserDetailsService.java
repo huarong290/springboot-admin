@@ -47,7 +47,7 @@ public class CustomReactiveUserDetailsService implements ReactiveUserDetailsServ
                 .accountExpired(false)
                 .accountLocked(false)
                 .credentialsExpired(false)
-                .disabled(user.getEnabled() != null && user.getEnabled() == 0)
+                .disabled(user.getStatus() != null && user.getStatus() == 0)
                 .build();
     }
 

@@ -85,7 +85,7 @@ public interface SysMenuConvert {
         treeVO.setMenuPermission(vo.getMenuPermission());
         treeVO.setMenuSort(vo.getMenuSort());
         treeVO.setMenuVisible(vo.getMenuVisible());
-        treeVO.setMenuEnabled(vo.getMenuEnabled());
+        treeVO.setMenuStatus(vo.getMenuStatus());
         treeVO.setCreateTime(vo.getCreateTime());
         treeVO.setUpdateTime(vo.getUpdateTime());
 

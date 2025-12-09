@@ -43,7 +43,7 @@ public class SysMenuRepositoryCustom {
                     menu.setMenuPermission(row.get("menu_permission", String.class));
                     menu.setMenuSort(row.get("menu_sort", Integer.class));
                     menu.setMenuVisible(row.get("menu_visible", Integer.class));
-                    menu.setMenuEnabled(row.get("menu_enabled", Integer.class));
+                    menu.setMenuStatus(row.get("menu_status", Integer.class));
                     menu.setDeleteFlag(row.get("delete_flag", Integer.class));
                     menu.setCreateBy(row.get("create_by", String.class));
                     menu.setCreateTime(
@@ -86,7 +86,7 @@ public class SysMenuRepositoryCustom {
                     menu.setMenuPermission(row.get("menu_permission", String.class));
                     menu.setMenuSort(row.get("menu_sort", Integer.class));
                     menu.setMenuVisible(row.get("menu_visible", Integer.class));
-                    menu.setMenuEnabled(row.get("menu_enabled", Integer.class));
+                    menu.setMenuStatus(row.get("menu_status", Integer.class));
                     menu.setDeleteFlag(row.get("delete_flag", Integer.class));
                     menu.setCreateBy(row.get("create_by", String.class));
                     menu.setCreateTime(

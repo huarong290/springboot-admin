@@ -55,9 +55,13 @@ public class SysUser {
 
     /**
      * 是否启用
+     * <p>
+     * 控制菜单是否可用。
+     * 1 = 启用，0 = 禁用。
+     * 示例：1（启用）、0（禁用）
      */
-    @Column("enabled")
-    private Integer enabled;
+    @Column("status")
+    private Integer status;
 
     /**
      * 所属部门ID

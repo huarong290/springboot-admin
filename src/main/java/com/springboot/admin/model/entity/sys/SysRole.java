@@ -39,8 +39,8 @@ public class SysRole {
      * 是否启用
      * 1 = 启用，0 = 禁用
      */
-    @Column("role_enabled")
-    private Integer roleEnabled;
+    @Column("role_status")
+    private Integer roleStatus;
 
     /**
      * 是否删除

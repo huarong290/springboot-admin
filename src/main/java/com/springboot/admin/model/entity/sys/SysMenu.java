@@ -78,8 +78,8 @@ public class SysMenu {
      * 1 = 启用，0 = 禁用。
      * 示例：1（启用）、0（禁用）
      */
-    @Column("menu_enabled")
-    private Integer menuEnabled;
+    @Column("menu_status")
+    private Integer menuStatus;
 
     /**
      * 是否删除
