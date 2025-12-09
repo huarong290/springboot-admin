@@ -31,7 +31,7 @@ public class SysUserVO {
     private String avatar;
 
     @Schema(description = "是否启用")
-    private Integer enabled;
+    private Integer status;
 
     @Schema(description = "部门ID")
     private Long deptId;

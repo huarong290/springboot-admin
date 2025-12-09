@@ -35,7 +35,7 @@ public class SysUserDTO {
     private String nickname;
 
     @Schema(description = "是否启用")
-    private Integer enabled;
+    private Integer status;
 
     /**
      * 用户头像 URL

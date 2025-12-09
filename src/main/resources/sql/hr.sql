@@ -8,7 +8,7 @@ CREATE TABLE `sys_org` (
   `org_code` varchar(50) NOT NULL COMMENT '组织编码，唯一',
   `org_type` varchar(50) DEFAULT NULL COMMENT '组织类型（集团/公司/事业部等）',
   `org_sort` int NOT NULL DEFAULT '0' COMMENT '排序值',
-  `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '状态：1=启用，0=禁用',
+  `status` tinyint(5) NOT NULL DEFAULT '1' COMMENT '状态：1=启用，0=禁用',
   `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
   `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -31,7 +31,7 @@ CREATE TABLE `sys_dept` (
   `leader` varchar(64) DEFAULT NULL COMMENT '部门负责人',
   `phone` varchar(20) DEFAULT NULL COMMENT '联系电话',
   `email` varchar(100) DEFAULT NULL COMMENT '部门邮箱',
-  `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '状态：1=启用，0=禁用',
+  `status` tinyint(5) NOT NULL DEFAULT '1' COMMENT '状态：1=启用，0=禁用',
   `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
   `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -53,7 +53,7 @@ CREATE TABLE `sys_user` (
   `email` varchar(100) DEFAULT '' COMMENT '邮箱地址',
   `phone` varchar(20) DEFAULT '' COMMENT '手机号',
   `avatar` varchar(255) DEFAULT '' COMMENT '用户头像URL',
-  `enabled` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否启用',
+  `status` tinyint(5) NOT NULL DEFAULT '1' COMMENT '是否启用',
   `dept_id` bigint DEFAULT NULL COMMENT '所属部门ID',
   `org_id` bigint DEFAULT NULL COMMENT '所属组织ID',
   `last_login_time` datetime DEFAULT NULL COMMENT '上次登录时间',
@@ -76,6 +76,7 @@ CREATE TABLE `sys_role` (
   `role_name` varchar(50) NOT NULL COMMENT '角色名称',
   `role_code` varchar(50) NOT NULL COMMENT '角色编码',
   `role_description` varchar(255) DEFAULT '' COMMENT '角色描述',
+  `role_status` tinyint(5) NOT NULL DEFAULT '1' COMMENT '是否启用',
   `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
   `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -99,6 +100,7 @@ CREATE TABLE `sys_menu` (
   `menu_permission` varchar(100) DEFAULT '' COMMENT '权限标识',
   `menu_sort` int NOT NULL DEFAULT '0' COMMENT '排序值',
   `menu_visible` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否显示',
+  `menu_status` tinyint(5) NOT NULL DEFAULT '1' COMMENT '是否启用',
   `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
   `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -115,6 +117,7 @@ CREATE TABLE `sys_permission` (
   `permission_code` varchar(100) NOT NULL COMMENT '权限编码',
   `permission_name` varchar(100) NOT NULL COMMENT '权限名称',
   `permission_type` tinyint NOT NULL DEFAULT '1' COMMENT '权限类型：1=接口权限，2=数据权限',
+  `permission_status` tinyint(5) NOT NULL DEFAULT '1' COMMENT '是否启用',
   `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
   `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -195,9 +198,9 @@ VALUES
 
 INSERT INTO `sys_user` (`id`, `username`, `password`, `nickname`, `email`, `phone`, `avatar`, `enabled`, `dept_id`, `org_id`)
 VALUES
-(1, 'admin', 'hashed_password_admin', '系统管理员', 'admin@example.com', '13800000000', '', 1, 1, 1),
-(2, 'zhangsan', 'hashed_password_zhangsan', '张三', 'zhangsan@example.com', '13800000001', '', 1, 2, 1),
-(3, 'lisi', 'hashed_password_lisi', '李四', 'lisi@example.com', '13800000002', '', 1, 3, 2);
+(1, 'admin', '$2a$10$WWfiAZKieNynjwbyAxWSK.aAo0OfBpDYOLj03ksJV/C1hD4zwG03m', '系统管理员', 'admin@example.com', '13800000000', '', 1, 1, 1),
+(2, 'zhangsan', '$2a$10$WWfiAZKieNynjwbyAxWSK.aAo0OfBpDYOLj03ksJV/C1hD4zwG03m', '张三', 'zhangsan@example.com', '13800000001', '', 1, 2, 1),
+(3, 'lisi', '$2a$10$WWfiAZKieNynjwbyAxWSK.aAo0OfBpDYOLj03ksJV/C1hD4zwG03m', '李四', 'lisi@example.com', '13800000002', '', 1, 3, 2);
 
 INSERT INTO `sys_role` (`id`, `role_name`, `role_code`, `role_description`)
 VALUES

@@ -87,7 +87,7 @@ public class SysUserRepositoryCustom {
      */
     public Mono<Long> insertUser(SysUser user) {
         String sql = """
-        INSERT INTO sys_user (username, password, email, phone, dept_id, org_id, nickname, enabled, avatar, create_time, update_time)
+        INSERT INTO sys_user (username, password, email, phone, dept_id, org_id, nickname, status, avatar, create_time, update_time)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         """;
 
@@ -99,7 +99,7 @@ public class SysUserRepositoryCustom {
                 .bind(4, user.getDeptId())
                 .bind(5, user.getOrgId())
                 .bind(6, user.getNickname())
-                .bind(7, user.getEnabled())
+                .bind(7, user.getStatus())
                 .bind(8, user.getAvatar())
                 .filter(statement -> statement.returnGeneratedValues("id"))
                 .fetch()
@@ -134,7 +134,7 @@ public class SysUserRepositoryCustom {
                 .bind(4, dto.getDeptId())
                 .bind(5, dto.getOrgId())
                 .bind(6, dto.getNickname())
-                .bind(7, dto.getEnabled())
+                .bind(7, dto.getStatus())
                 .bind(8, dto.getAvatar())
                 .bind(9, dto.getId())
                 .fetch()

@@ -49,7 +49,11 @@ public class SysOrg {
     private Integer orgSort;
 
     /**
-     * 状态：1=启用，0=禁用
+     * 是否启用
+     * <p>
+     * 控制是否可用。
+     * 1 = 启用，0 = 禁用。
+     * 示例：1（启用）、0（禁用）
      */
     @Column("status")
     private Integer status;

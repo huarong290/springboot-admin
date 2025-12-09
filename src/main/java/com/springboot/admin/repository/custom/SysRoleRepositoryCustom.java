@@ -48,7 +48,7 @@ public class SysRoleRepositoryCustom {
                     role.setRoleName(row.get("role_name", String.class));
                     role.setRoleCode(row.get("role_code", String.class));
                     role.setRoleDescription(row.get("role_description", String.class));
-                    role.setRoleEnabled(row.get("role_enabled", Integer.class));
+                    role.setRoleStatus(row.get("role_status", Integer.class));
                     role.setDeleteFlag(row.get("delete_flag", Integer.class));
                     role.setCreateTime(
                             Optional.ofNullable(row.get("create_time", java.time.ZonedDateTime.class))

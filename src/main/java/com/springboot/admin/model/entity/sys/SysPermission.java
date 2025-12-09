@@ -35,7 +35,15 @@ public class SysPermission {
      */
     @Column("permission_type")
     private Integer permissionType;
-
+    /**
+     * 是否启用
+     * <p>
+     * 控制权限是否可用。
+     * 1 = 启用，0 = 禁用。
+     * 示例：1（启用）、0（禁用）
+     */
+    @Column("status")
+    private Integer status;
     /**
      * 是否删除
      */
