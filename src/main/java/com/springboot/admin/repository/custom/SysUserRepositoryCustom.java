@@ -172,4 +172,25 @@ public class SysUserRepositoryCustom {
                 .rowsUpdated();
     }
 
+
+    /**
+     * 根据用户名查询用户列表
+     *
+     * @param username 用户名
+     * @return Flux<SysUser> 响应式流，返回该部门下的用户集合
+     */
+    public Mono<SysUser> findByUsername(String username) {
+        String sql = "SELECT u.* FROM sys_user u WHERE u.username = ? AND u.delete_flag = 0";
+
+        return client.sql(sql)
+                .bind(0, username)
+                .map((row, meta) -> {
+                    SysUser user = new SysUser();
+                    user.setId(row.get("id", Long.class));
+                    user.setUsername(row.get("username", String.class));
+                    user.setNickname(row.get("nickname", String.class));
+                    user.setEmail(row.get("email", String.class));
+                    return user;
+                });
+    }
 }
