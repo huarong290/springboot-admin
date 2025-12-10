@@ -64,7 +64,7 @@ public class SysUserServiceImpl implements ISysUserService {
      */
     @Override
     public Mono<SysUserDTO> getUserByUsername(String username) {
-        return userRepository.findByUsername(username).map(userConvert::toDTO);
+        return userRepositoryCustom.findByUsername(username).map(userConvert::toDTO);
     }
 
     /**
