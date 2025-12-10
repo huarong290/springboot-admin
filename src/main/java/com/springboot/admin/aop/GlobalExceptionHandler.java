@@ -8,8 +8,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.support.WebExchangeBindException;
 import org.springframework.web.reactive.resource.NoResourceFoundException;
 import reactor.core.publisher.Mono;
+
+import java.lang.reflect.InaccessibleObjectException;
 
 @Slf4j
 @RestControllerAdvice
@@ -32,8 +35,22 @@ public class GlobalExceptionHandler {
         log.error("基础异常: code={}, message={}", e.getCode(), e.getMessage());
         return Mono.just(ApiResult.failResult(e.getCode(), e.getMessage()));
     }
+
     /**
-     * ⚠️ 静态资源找不到时，直接返回 404，不包装成 JSON
+     * 参数校验异常处理
+     */
+    @ExceptionHandler(WebExchangeBindException.class)
+    public Mono<ApiResult<Void>> handleValidationException(WebExchangeBindException e) {
+        String errorMsg = e.getAllErrors().stream()
+                .map(objectError -> objectError.getDefaultMessage())
+                .findFirst()
+                .orElse(ApiResultCode.BAD_REQUEST.getMessage());
+        log.warn("参数校验异常: {}", errorMsg);
+        return Mono.just(ApiResult.failResult(ApiResultCode.BAD_REQUEST.getCode(), errorMsg));
+    }
+
+    /**
+     * 静态资源找不到时，直接返回 404，不包装成 JSON
      */
     @ExceptionHandler(NoResourceFoundException.class)
     public Mono<ResponseEntity<Void>> handleNoResourceFound(NoResourceFoundException e) {
@@ -41,11 +58,20 @@ public class GlobalExceptionHandler {
         return Mono.just(ResponseEntity.notFound().build());
     }
     /**
+     * 处理 JDK 模块化反射访问异常
+     */
+    @ExceptionHandler(InaccessibleObjectException.class)
+    public Mono<ApiResult<Void>> handleInaccessibleObjectException(InaccessibleObjectException e) {
+        log.error("反射访问异常: {}", e.getMessage(), e);
+        return Mono.just(ApiResult.failResult(ApiResultCode.INTERNAL_SERVER_ERROR.getCode(),
+                "系统内部错误：反射访问受限，请检查 JVM 启动参数 --add-opens 配置"));
+    }
+    /**
      * 处理其他未捕获异常
      */
     @ExceptionHandler(Exception.class)
     public Mono<ApiResult<Void>> handleException(Exception e) {
         log.error("系统异常: {}", e.getMessage(), e);
-        return Mono.just(ApiResult.failResult(ApiResultCode.FAILED.getCode(), "系统错误，请联系管理员"));
+        return Mono.just(ApiResult.failResult(ApiResultCode.INTERNAL_SERVER_ERROR));
     }
 }

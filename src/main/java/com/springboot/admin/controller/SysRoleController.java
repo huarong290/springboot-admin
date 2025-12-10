@@ -5,6 +5,8 @@ import com.springboot.admin.common.ApiResult;
 import com.springboot.admin.model.dto.role.SysRoleDTO;
 import com.springboot.admin.model.vo.role.SysRoleVO;
 import com.springboot.admin.service.ISysRoleService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -21,7 +23,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/role")
-
+@Tag(name = "角色管理", description = "角色增删改查及关联查询接口")
 public class SysRoleController {
     @Autowired
     private  ISysRoleService roleService;
@@ -30,6 +32,7 @@ public class SysRoleController {
      * 根据角色ID查询角色信息
      */
     @GetMapping("getRoleById/{id}")
+    @Operation(summary = "根据角色ID查询角色信息")
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<SysRoleVO>> getRoleById(@PathVariable Long id) {
         return roleService.getRoleById(id)
@@ -40,6 +43,7 @@ public class SysRoleController {
      * 根据角色编码查询角色信息
      */
     @GetMapping("/getRoleByCode/{roleCode}")
+    @Operation(summary = "根据角色编码查询角色信息")
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<SysRoleVO>> getRoleByCode(@PathVariable String roleCode) {
         return roleService.getRoleByCode(roleCode)
@@ -50,6 +54,7 @@ public class SysRoleController {
      * 新增角色
      */
     @PostMapping("/addRole")
+    @Operation(summary = "新增角色")
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<Long>> addRole(@RequestBody SysRoleDTO roleDTO) {
         return roleService.addRole(roleDTO)
@@ -60,6 +65,7 @@ public class SysRoleController {
      * 更新角色信息
      */
     @PutMapping("/updateRole")
+    @Operation(summary = "更新角色信息")
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<Long>> updateRole(@RequestBody SysRoleDTO roleDTO) {
         return roleService.updateRole(roleDTO)
@@ -70,6 +76,7 @@ public class SysRoleController {
      * 删除角色
      */
     @DeleteMapping("deleteRole/{id}")
+    @Operation(summary = "删除角色")
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<Long>> deleteRole(@PathVariable Long id) {
         return roleService.deleteRole(id)
@@ -80,6 +87,7 @@ public class SysRoleController {
      * 批量删除角色（逻辑删除）
      */
     @DeleteMapping("/deleteRoles")
+    @Operation(summary = "批量逻辑删除角色")
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<Long>> deleteRoles(@RequestBody List<Long> ids) {
         return roleService.deleteRolesByIds(ids)
@@ -91,6 +99,7 @@ public class SysRoleController {
      */
     @DeleteMapping("/deleteRolesPhysically")
     @Logable(logRequest = true, logResponse = true)
+    @Operation(summary = "批量物理删除角色")
     public Mono<ApiResult<Long>> deleteRolesPhysically(@RequestBody List<Long> ids) {
         return roleService.deleteRolesPhysicallyByIds(ids)
                 .map(ApiResult::successResult);
@@ -100,6 +109,7 @@ public class SysRoleController {
      * 查询所有角色
      */
     @GetMapping("/getRoleList")
+    @Operation(summary = "查询所有角色")
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<List<SysRoleVO>>> getRoleList() {
         return roleService.getRoleList()
@@ -112,6 +122,7 @@ public class SysRoleController {
      * 根据用户ID查询角色列表
      */
     @GetMapping("/listRolesByUserId/{userId}")
+    @Operation(summary = "根据用户ID查询角色列表")
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<List<SysRoleVO>>> listRolesByUserId(@PathVariable Long userId) {
         return roleService.listRolesByUserId(userId).collectList().map(ApiResult::successResult);
@@ -121,6 +132,7 @@ public class SysRoleController {
      * 判断角色是否存在
      */
     @GetMapping("/existsByRoleCode/{roleCode}")
+    @Operation(summary = "判断角色是否存在")
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<Boolean>> existsByRoleCode(@PathVariable String roleCode) {
         return roleService.existsByRoleCode(roleCode)
@@ -131,6 +143,7 @@ public class SysRoleController {
      * 根据权限ID查询角色列表
      */
     @GetMapping("/findRolesByPermissionId/{permissionId}")
+    @Operation(summary = "根据权限ID查询角色列表")
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<List<SysRoleVO>>> findRolesByPermissionId(@PathVariable Long permissionId) {
         return roleService.findRolesByPermissionId(permissionId).collectList().map(ApiResult::successResult);
@@ -140,6 +153,7 @@ public class SysRoleController {
      * 根据菜单ID查询角色列表
      */
     @GetMapping("/listRolesByMenuId/{menuId}")
+    @Operation(summary = "根据菜单ID查询角色列表")
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<List<SysRoleVO>>> listRolesByMenuId(@PathVariable Long menuId) {
         return roleService.listRolesByMenuId(menuId).collectList().map(ApiResult::successResult);
