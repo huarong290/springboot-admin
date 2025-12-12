@@ -1,6 +1,7 @@
 package com.springboot.admin.aop;
 
-import com.alibaba.fastjson2.JSON;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.springboot.admin.annotation.Logable;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -23,10 +24,7 @@ import java.util.UUID;
 @Component
 public class LogAspect {
 
-    // 可以通过配置文件或环境变量控制调试模式
-    private static final boolean DEBUG_MODE = Boolean.parseBoolean(
-            System.getProperty("log.debugMode", "false")
-    );
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     @Pointcut("@annotation(com.springboot.admin.annotation.Logable)")
     public void logableMethods() {}
@@ -57,7 +55,7 @@ public class LogAspect {
                 }
             }
             log.info("➡️ [{}] 调用方法：{}.{}()", UUID.randomUUID(), className, methodName);
-            log.info("📥 入参：{}", JSON.toJSONString(filteredParams));
+            log.info("📥 入参：{}", safeToJson(filteredParams));
         }
 
         Object result;
@@ -68,23 +66,15 @@ public class LogAspect {
             if (loggable.logResponse() && !isSkippableType(result)) {
                 if (result instanceof Mono) {
                     return ((Mono<?>) result)
-                            .doOnNext(r -> log.info("📤 出参数据：{}", JSON.toJSONString(r)))
+                            .doOnNext(r -> log.info("📤 出参数据：{}", safeToJson(r)))
                             .doOnError(e -> log.error("❌ 异常：{}.{}() 出参错误：{}", className, methodName, e.getMessage(), e));
                 } else if (result instanceof Flux) {
-                    if (DEBUG_MODE) {
-                        // 调试模式：收集成 List 打印完整数据
-                        return ((Flux<?>) result)
-                                .collectList()
-                                .doOnNext(list -> log.info("📤 出参数据：{}", JSON.toJSONString(list)))
-                                .doOnError(e -> log.error("❌ 异常：{}.{}() 出参错误：{}", className, methodName, e.getMessage(), e));
-                    } else {
-                        // 生产模式：只打印类型信息
-                        log.info("📤 出参：Flux<{}>", result.getClass().getSimpleName());
-                        return result;
-                    }
+                    return ((Flux<?>) result)
+                            .collectList()
+                            .doOnNext(list -> log.info("📤 出参数据：{}", safeToJson(list)))
+                            .doOnError(e -> log.error("❌ 异常：{}.{}() 出参错误：{}", className, methodName, e.getMessage(), e));
                 } else {
-                    // 非响应式对象
-                    log.info("📤 出参：{}", JSON.toJSONString(result));
+                    log.info("📤 出参：{}", safeToJson(result));
                 }
             }
         } catch (Throwable ex) {
@@ -100,7 +90,11 @@ public class LogAspect {
                 obj instanceof MultipartFile[];
     }
 
-    private boolean isDebugMode() {
-        return DEBUG_MODE;
+    private String safeToJson(Object obj) {
+        try {
+            return mapper.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            return String.valueOf(obj);
+        }
     }
 }

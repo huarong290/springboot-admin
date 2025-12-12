@@ -18,4 +18,6 @@ public @interface Logable {
      * 是否打印入参
      */
     boolean logRequest() default true;
+
+    boolean safeSerialize() default true; // 新增：安全序列化
 }

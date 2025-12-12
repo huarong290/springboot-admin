@@ -9,6 +9,8 @@ import com.springboot.admin.model.dto.TokenRefreshReqDTO;
 import com.springboot.admin.model.dto.TokenResDTO;
 import com.springboot.admin.model.dto.UserLoginReqDTO;
 import com.springboot.admin.model.dto.user.UserInfoDTO;
+import com.springboot.admin.model.vo.menu.MetaVO;
+import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
 import com.springboot.admin.service.IAuthService;
 import com.springboot.admin.service.ICaptchaService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +22,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -110,5 +114,25 @@ public class AuthController {
                 .map(ApiResult::successResult)
                 .onErrorResume(e -> Mono.just(ApiResult.failResult(ApiResultCode.FAILED, "获取用户信息失败")));
     }
+    @GetMapping("/userInfoStep5")
+    @Operation(summary = "测试用户信息 Step5", description = "返回完整菜单结构")
+    public Mono<ApiResult<UserInfoDTO>> getUserInfoStep5() {
+        SysMenuTreeVO menu = new SysMenuTreeVO();
+        menu.setId(100L);
+        menu.setMenuName("测试菜单");
+        menu.setChildren(List.of()); // 空 children
+        menu.setMeta(new MetaVO());
+
+        UserInfoDTO dto = new UserInfoDTO();
+        dto.setUserId(1L);
+        dto.setUsername("testUser");
+        dto.setNickname("测试用户");
+        dto.setAvatar("https://example.com/avatar.png");
+        dto.setRoles(List.of("ADMIN"));
+        dto.setPermissions(List.of("sys:user:add"));
+        dto.setMenus(List.of(menu));
+        return Mono.just(ApiResult.successResult(dto));
+    }
+
 
 }
