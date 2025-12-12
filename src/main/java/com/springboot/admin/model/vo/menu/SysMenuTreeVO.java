@@ -84,11 +84,14 @@ public class SysMenuTreeVO {
     @Schema(description = "是否启用:1-启用 0-禁用")
     private Integer menuStatus;
 
+
     /**
      * 子菜单列表
      * 用于构建树形结构
+     *
+     * 使用 @Schema(implementation = SysMenuTreeVO.class) 避免 Swagger 在解析 List 泛型时触发反射异常。
      */
-    @Schema(description = "子菜单列表")
+    @Schema(description = "子菜单列表", implementation = SysMenuTreeVO.class)
     private List<SysMenuTreeVO> children = new ArrayList<>();
 
     /**

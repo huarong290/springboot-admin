@@ -2,6 +2,7 @@ package com.springboot.admin.model.dto.user;
 
 
 import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.ArrayList;
@@ -56,5 +57,6 @@ public class UserInfoDTO {
      * 从 sys_menu 表中查询，返回树形结构
      * 示例：系统管理 -> 用户管理、角色管理
      */
+    @Schema(description = "用户菜单列表", implementation = SysMenuTreeVO.class)
     private List<SysMenuTreeVO> menus = new ArrayList<>();
 }
