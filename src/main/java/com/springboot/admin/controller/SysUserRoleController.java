@@ -2,7 +2,10 @@ package com.springboot.admin.controller;
 
 import com.springboot.admin.annotation.Logable;
 import com.springboot.admin.common.ApiResult;
+import com.springboot.admin.model.dto.userrole.SysUserRoleDTO;
 import com.springboot.admin.model.entity.sys.SysUserRole;
+import com.springboot.admin.model.vo.rolemenu.SysRoleMenuVO;
+import com.springboot.admin.model.vo.userrole.SysUserRoleVO;
 import com.springboot.admin.service.ISysUserRoleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,7 +34,7 @@ public class SysUserRoleController {
     @GetMapping("/getRolesByUserId/{userId}")
     @Operation(summary = "根据用户ID查询角色关联关系")
     @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<List<SysUserRole>>> getRolesByUserId(@PathVariable Long userId) {
+    public Mono<ApiResult<List<SysUserRoleVO>>> getRolesByUserId(@PathVariable Long userId) {
         return userRoleService.getRolesByUserId(userId)
                 .collectList()
                 .map(ApiResult::successResult);
@@ -40,16 +43,16 @@ public class SysUserRoleController {
     @PostMapping("/addUserRole")
     @Operation(summary = "新增用户角色关联")
     @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<SysUserRole>> addUserRole(@RequestBody SysUserRole userRole) {
-        return userRoleService.addUserRole(userRole)
+    public Mono<ApiResult<Long>> addUserRole(@RequestBody SysUserRoleDTO sysUserRoleDTO) {
+        return userRoleService.addUserRole(sysUserRoleDTO)
                 .map(ApiResult::successResult);
     }
 
     @DeleteMapping("/deleteUserRole/{id}")
     @Operation(summary = "删除用户角色关联")
     @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<Void>> deleteUserRole(@PathVariable Long id) {
-        return userRoleService.deleteUserRole(id)
-                .thenReturn(ApiResult.successResult("删除成功", null));
+    public Mono<ApiResult<Long>> deleteUserRole(@PathVariable Long id) {
+        return userRoleService.deleteUserRole(id).map(ApiResult::successResult);
+
     }
 }

@@ -1,6 +1,8 @@
 package com.springboot.admin.service;
 
+import com.springboot.admin.model.dto.permission.SysPermissionDTO;
 import com.springboot.admin.model.entity.sys.SysPermission;
+import com.springboot.admin.model.vo.permission.SysPermissionVO;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -17,23 +19,23 @@ public interface ISysPermissionService {
      * @param id 权限点ID
      * @return Mono<SysPermission> 响应式单对象
      */
-    Mono<SysPermission> getPermissionById(Long id);
+    Mono<SysPermissionVO> getPermissionById(Long id);
 
     /**
      * 新增权限点
      *
-     * @param permission 权限点对象
+     * @param sysPermissionDTO 权限点对象
      * @return Mono<SysPermission> 响应式单对象，返回保存后的实体
      */
-    Mono<SysPermission> addPermission(SysPermission permission);
+    Mono<Long> addPermission(SysPermissionDTO sysPermissionDTO);
 
     /**
      * 更新权限点信息
      *
-     * @param permission 权限点对象
+     * @param sysPermissionDTO 权限点对象
      * @return Mono<SysPermission> 响应式单对象，返回更新后的实体
      */
-    Mono<SysPermission> updatePermission(SysPermission permission);
+    Mono<Long> updatePermission(SysPermissionDTO sysPermissionDTO);
 
     /**
      * 删除权限点
@@ -41,14 +43,14 @@ public interface ISysPermissionService {
      * @param id 权限点ID
      * @return Mono<Void> 响应式空对象，表示删除完成
      */
-    Mono<Void> deletePermission(Long id);
+    Mono<Long> deletePermission(Long id);
 
     /**
      * 查询所有权限点
      *
      * @return Flux<SysPermission> 响应式流，返回多个权限点对象
      */
-    Flux<SysPermission> getPermissionList();
+    Flux<SysPermissionVO> getPermissionList();
 
     /**
      * 判断权限编码是否存在
@@ -63,12 +65,12 @@ public interface ISysPermissionService {
      *@param userId 用户id
      * @return Flux<SysPermission> 响应式流，返回多个权限点对象
      */
-    Flux<SysPermission> listPermissionsByUserId(Long userId);
+    Flux<SysPermissionVO> listPermissionsByUserId(Long userId);
     /**
      * 查询所有权限点
      *@param roleId 用户id
      * @return Flux<SysPermission> 响应式流，返回多个权限点对象
      */
-    Flux<SysPermission> listPermissionsByRoleId(Long roleId);
+    Flux<SysPermissionVO> listPermissionsByRoleId(Long roleId);
 }
 
