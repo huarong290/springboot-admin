@@ -9,6 +9,10 @@ import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
+import java.util.Locale;
+import java.util.Optional;
+
 /**
  * 自定义用户仓库类
  *
@@ -174,10 +178,10 @@ public class SysUserRepositoryCustom {
 
 
     /**
-     * 根据用户名查询用户列表
+     * 根据用户名查询单个用户
      *
      * @param username 用户名
-     * @return Flux<SysUser> 响应式流，返回该部门下的用户集合
+     * @return Mono<SysUser> 响应式流，返回该用户
      */
     public Mono<SysUser> findByUsername(String username) {
         String sql = "SELECT u.* FROM sys_user u WHERE u.username = ? AND u.delete_flag = 0";
@@ -190,7 +194,20 @@ public class SysUserRepositoryCustom {
                     user.setUsername(row.get("username", String.class));
                     user.setNickname(row.get("nickname", String.class));
                     user.setEmail(row.get("email", String.class));
+                    user.setPhone(row.get("phone", String.class));
+                    user.setDeptId(row.get("dept_id", Long.class));
+                    user.setOrgId(row.get("org_id", Long.class));
+                    user.setPassword(row.get("password", String.class));
+                    user.setAvatar(row.get("avatar", String.class));
+                    user.setStatus(row.get("status", Integer.class));
+                    user.setCreateTime(
+                            Optional.ofNullable(row.get("last_login_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
                     return user;
-                });
+                })
+                .one(); // 返回单个结果
     }
+
 }

@@ -4,6 +4,7 @@ import com.springboot.admin.model.entity.sys.SysRoleMenu;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * 自定义角色菜单关联 Repository
@@ -40,5 +41,45 @@ public class SysRoleMenuRepositoryCustom {
                 })
                 .all();
     }
+
+    /**
+     * 删除角色菜单关联
+     *
+     * 用途：
+     * - 后台管理：逻辑删除（推荐，保留数据用于审计）
+     * - 特殊场景：物理删除（彻底清除数据，例如测试数据清理）
+     *
+     * @param id 角色菜单关联ID
+     * @param logicalDelete 是否逻辑删除
+     *                      true  = 逻辑删除（delete_flag = 1）
+     *                      false = 物理删除（DELETE）
+     * @return Mono<Long> 响应式单对象，返回删除成功的记录数（通常为 1）
+     */
+    public Mono<Long> deleteRoleMenuById(Long id, boolean logicalDelete) {
+        if (logicalDelete) {
+            // 逻辑删除：更新 delete_flag = 1
+            String sql = "UPDATE sys_role_menu SET " +
+                    "delete_flag = 1, " +
+                    "update_by = 'system', " +
+                    "update_time = CURRENT_TIMESTAMP " +
+                    "WHERE id = ? AND delete_flag = 0";
+
+            return client.sql(sql)
+                    .bind(0, id)
+                    .fetch()
+                    .rowsUpdated()
+                    .map(Long::valueOf);
+        } else {
+            // 物理删除：直接 DELETE
+            String sql = "DELETE FROM sys_role_menu WHERE id = ?";
+
+            return client.sql(sql)
+                    .bind(0, id)
+                    .fetch()
+                    .rowsUpdated()
+                    .map(Long::valueOf);
+        }
+    }
+
 }
 

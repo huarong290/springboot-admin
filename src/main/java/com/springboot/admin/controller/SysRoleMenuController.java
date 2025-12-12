@@ -2,7 +2,9 @@ package com.springboot.admin.controller;
 
 import com.springboot.admin.annotation.Logable;
 import com.springboot.admin.common.ApiResult;
+import com.springboot.admin.model.dto.rolemenu.SysRoleMenuDTO;
 import com.springboot.admin.model.entity.sys.SysRoleMenu;
+import com.springboot.admin.model.vo.rolemenu.SysRoleMenuVO;
 import com.springboot.admin.service.ISysRoleMenuService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,7 +34,7 @@ public class SysRoleMenuController {
     @GetMapping("/getMenusByRoleId/{roleId}")
     @Operation(summary = "根据角色ID查询菜单关联关系")
     @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<List<SysRoleMenu>>> getMenusByRoleId(@PathVariable Long roleId) {
+    public Mono<ApiResult<List<SysRoleMenuVO>>> getMenusByRoleId(@PathVariable Long roleId) {
         return roleMenuService.getMenusByRoleId(roleId)
                 .collectList()
                 .map(ApiResult::successResult);
@@ -41,15 +43,15 @@ public class SysRoleMenuController {
     @PostMapping("/addRoleMenu")
     @Operation(summary = "新增角色菜单关联")
     @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<SysRoleMenu>> addRoleMenu(@RequestBody SysRoleMenu roleMenu) {
-        return roleMenuService.addRoleMenu(roleMenu)
+    public Mono<ApiResult<Long>> addRoleMenu(@RequestBody SysRoleMenuDTO sysRoleMenuDTO) {
+        return roleMenuService.addRoleMenu(sysRoleMenuDTO)
                 .map(ApiResult::successResult);
     }
 
     @DeleteMapping("/deleteRoleMenu/{id}")
     @Operation(summary = "删除角色菜单关联")
     @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<Void>> deleteRoleMenu(@PathVariable Long id) {
+    public Mono<ApiResult<Long>> deleteRoleMenu(@PathVariable Long id) {
         return roleMenuService.deleteRoleMenu(id)
                 .thenReturn(ApiResult.successResult("删除成功", null));
     }
@@ -57,7 +59,7 @@ public class SysRoleMenuController {
     @GetMapping("/getRoleMenuList")
     @Operation(summary = "查询所有角色菜单关联")
     @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<List<SysRoleMenu>>> getRoleMenuList() {
+    public Mono<ApiResult<List<SysRoleMenuVO>>> getRoleMenuList() {
         return roleMenuService.getRoleMenuList()
                 .collectList()
                 .map(ApiResult::successResult);
