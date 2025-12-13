@@ -55,8 +55,8 @@ public class SysOrg {
      * 1 = 启用，0 = 禁用。
      * 示例：1（启用）、0（禁用）
      */
-    @Column("status")
-    private Integer status;
+    @Column("org_status")
+    private Integer orgStatus;
 
     /**
      * 是否删除
