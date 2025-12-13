@@ -26,7 +26,7 @@ public class SysPermissionDTO {
     private Integer permissionType;
 
     @Schema(description = "是否启用：1=启用，0=禁用")
-    private Integer status;
+    private Integer permissionStatus;
 
     @Schema(description = "是否删除：1=删除，0=未删除")
     private Integer deleteFlag;

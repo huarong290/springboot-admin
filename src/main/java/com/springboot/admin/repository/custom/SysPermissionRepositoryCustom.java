@@ -35,7 +35,7 @@ public class SysPermissionRepositoryCustom {
                     p.setPermissionCode(row.get("permission_code", String.class));
                     p.setPermissionName(row.get("permission_name", String.class));
                     p.setPermissionType(row.get("permission_type", Integer.class));
-                    p.setStatus(row.get("status", Integer.class));
+                    p.setPermissionStatus(row.get("permission_status", Integer.class));
                     p.setDeleteFlag(row.get("delete_flag", Integer.class));
                     p.setCreateBy(row.get("create_by", String.class));
                     p.setCreateTime(row.get("create_time", java.time.ZonedDateTime.class).toLocalDateTime());
@@ -65,7 +65,7 @@ public class SysPermissionRepositoryCustom {
                     p.setPermissionCode(row.get("permission_code", String.class));
                     p.setPermissionName(row.get("permission_name", String.class));
                     p.setPermissionType(row.get("permission_type", Integer.class));
-                    p.setStatus(row.get("status", Integer.class));
+                    p.setPermissionStatus(row.get("permission_status", Integer.class));
                     p.setDeleteFlag(row.get("delete_flag", Integer.class));
                     p.setCreateBy(row.get("create_by", String.class));
                     p.setCreateTime(row.get("create_time", java.time.ZonedDateTime.class).toLocalDateTime());
@@ -80,14 +80,14 @@ public class SysPermissionRepositoryCustom {
      */
     public Mono<Long> insertPermission(SysPermission sysPermission) {
         String sql = "INSERT INTO sys_permission " +
-                "(permission_code, permission_name, permission_type,status, create_by, update_by) " +
+                "(permission_code, permission_name, permission_type,permission_status, create_by, update_by) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
 
         return client.sql(sql)
                 .bind(0, sysPermission.getPermissionCode())
                 .bind(1, sysPermission.getPermissionName())
                 .bind(2, sysPermission.getPermissionType())
-                .bind(3, sysPermission.getStatus())
+                .bind(3, sysPermission.getPermissionStatus())
                 .bind(4, sysPermission.getCreateBy())
                 .bind(5, sysPermission.getUpdateBy())
                 .filter(statement -> statement.returnGeneratedValues("id"))
@@ -104,7 +104,7 @@ public class SysPermissionRepositoryCustom {
                 "permission_code = ?, " +
                 "permission_name = ?, " +
                 "permission_type = ?, " +
-                "status = ?, " +
+                "permission_status = ?, " +
                 "update_by = ?, " +
                 "update_time = NOW() " +
                 "WHERE id = ?";
@@ -112,7 +112,7 @@ public class SysPermissionRepositoryCustom {
                 .bind(0, sysPermission.getPermissionCode())
                 .bind(1, sysPermission.getPermissionName())
                 .bind(2, sysPermission.getPermissionType())
-                .bind(3, sysPermission.getStatus())
+                .bind(3, sysPermission.getPermissionStatus())
                 .bind(4, sysPermission.getUpdateBy())
                 .bind(5, sysPermission.getId())
                 .fetch()

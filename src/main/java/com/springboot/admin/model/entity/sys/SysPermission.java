@@ -42,8 +42,8 @@ public class SysPermission {
      * 1 = 启用，0 = 禁用。
      * 示例：1（启用）、0（禁用）
      */
-    @Column("status")
-    private Integer status;
+    @Column("permission_status")
+    private Integer permissionStatus;
     /**
      * 是否删除
      */

@@ -69,8 +69,8 @@ public class SysDept {
     /**
      * 状态：1=启用，0=禁用
      */
-    @Column("status")
-    private Integer status;
+    @Column("dept_status")
+    private Integer deptStatus;
 
     /**
      * 是否删除
