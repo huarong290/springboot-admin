@@ -3,6 +3,8 @@ package com.springboot.admin.controller;
 import com.springboot.admin.common.ApiResult;
 import com.springboot.admin.common.ApiResultCode;
 import com.springboot.admin.model.dto.user.SysUserDTO;
+import com.springboot.admin.model.dto.user.SysUserQueryDTO;
+import com.springboot.admin.model.vo.PageResult;
 import com.springboot.admin.model.vo.user.SysUserVO;
 import com.springboot.admin.service.ISysUserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +30,18 @@ public class SysUserController {
     @Autowired
     private ISysUserService userService;
 
+    /**
+     * 分页查询用户列表
+     *
+     * @param query 用户查询参数（继承 PageQuery，包含分页和条件）
+     * @return 返回分页结果：用户列表 + 总数 + 页码信息
+     */
+    @GetMapping("/pageUserList")
+    @Operation(summary = "分页查询用户列表")
+    public Mono<ApiResult<PageResult<SysUserVO>>> pageUserList(SysUserQueryDTO query) {
+        return userService.pageUserList(query).map(ApiResult::successResult);
+
+    }
     /**
      * 根据用户ID查询用户信息
      *
@@ -79,44 +93,6 @@ public class SysUserController {
                     return Mono.just(ApiResult.failResult(ApiResultCode.FAILED, "更新用户失败"));
                 });
     }
-
-
-//    /**
-//     * 新增用户
-//     *
-//     * @param user 用户对象（JSON）
-//     * @return 返回保存后的用户对象
-//     */
-//    @PostMapping("/create")
-//    @Operation(summary = "新增用户")
-//    public Mono<ApiResult<SysUser>> addUser(@RequestBody SysUser user) {
-//        return userService.addUser(user)
-//                .map(ApiResult::successResult)
-//                .onErrorResume(e -> {
-//                    log.error("新增用户失败: {}", e.getMessage(), e);
-//                    return Mono.just(ApiResult.failResult(ApiResultCode.FAILED, "新增用户失败"));
-//                });
-//    }
-
-//    /**
-//     * 更新用户信息
-//     *
-//     * @param user 用户对象（JSON）
-//     * @return 返回更新后的用户对象
-//     */
-//    @PutMapping("/update")
-//    @Operation(summary = "更新用户信息")
-//    public Mono<ApiResult<SysUser>> updateUser(@RequestBody SysUser user) {
-//        return userService.updateUser(user)
-//                .map(ApiResult::successResult)
-//                .onErrorResume(e -> {
-//                    log.error("更新用户失败: {}", e.getMessage(), e);
-//                    return Mono.just(ApiResult.failResult(ApiResultCode.FAILED, "更新用户失败"));
-//                });
-//    }
-
-
-
     @DeleteMapping("/deleteUser/{id}")
     @Operation(summary = "删除用户")
     public Mono<ApiResult<Long>> deleteUser(@PathVariable Long id) {

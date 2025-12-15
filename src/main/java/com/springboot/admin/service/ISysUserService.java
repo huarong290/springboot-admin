@@ -1,6 +1,8 @@
 package com.springboot.admin.service;
 
 import com.springboot.admin.model.dto.user.SysUserDTO;
+import com.springboot.admin.model.dto.user.SysUserQueryDTO;
+import com.springboot.admin.model.vo.PageResult;
 import com.springboot.admin.model.vo.user.SysUserVO;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -12,10 +14,17 @@ import reactor.core.publisher.Mono;
  */
 public interface ISysUserService {
     /**
+     * 根据条件分页查询用户信息
+     *
+     * @param query 分页查询参数
+     * @return Mono<SysUserVO> 响应式单对象，可能为空
+     */
+    Mono<PageResult<SysUserVO>> pageUserList(SysUserQueryDTO query);
+    /**
      * 根据用户ID查询用户信息
      *
      * @param id 用户ID
-     * @return Mono<SysUser> 响应式单对象，可能为空
+     * @return Mono<SysUserVO> 响应式单对象，可能为空
      */
     Mono<SysUserVO> getUserById(Long id);
 
@@ -23,7 +32,7 @@ public interface ISysUserService {
      * 根据用户名查询用户信息
      *
      * @param username 用户名
-     * @return Mono<SysUser> 响应式单对象，可能为空
+     * @return Mono<SysUserDTO> 响应式单对象，可能为空
      */
     Mono<SysUserDTO> getUserByUsername(String username);
 
@@ -39,7 +48,7 @@ public interface ISysUserService {
      * 更新用户信息
      *
      * @param sysUserDTO 用户对象
-     * @return Mono<SysUser> 响应式单对象，返回更新后的实体
+     * @return Mono<Long> 响应式单对象，返回更新后的记录数
      */
     Mono<Long> updateUser(SysUserDTO sysUserDTO);
 
@@ -82,25 +91,5 @@ public interface ISysUserService {
      */
 
     Flux<SysUserVO> listUsersByDeptId(Long deptId);
-//    /**
-//     * 根据用户ID查询菜单列表
-//     *
-//     * @return Flux<SysMenu> 响应式单对象，返回多个菜单对象
-//     */
-//    Flux<SysMenu> listMenusByUserId(Long userId);
-//
-//    /**
-//     * 根据用户ID查询角色列表
-//     *
-//     * @return Flux<SysRole> 响应式单对象，返回多个角色对象
-//     */
-//    Flux<SysRole> listRolesByUserId(Long userId);
-//
-//    /**
-//     * 根据用户ID查询权限列表
-//     *
-//     * @return Flux<SysPermission> 响应式单对象，返回多个权限列对象
-//     */
-//    Flux<SysPermission> listPermissionsByUserId(Long userId);
 }
 
