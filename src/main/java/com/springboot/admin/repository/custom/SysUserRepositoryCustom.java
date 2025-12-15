@@ -1,8 +1,12 @@
 package com.springboot.admin.repository.custom;
 
 import com.springboot.admin.model.dto.user.SysUserDTO;
+import com.springboot.admin.model.dto.user.SysUserQueryDTO;
 import com.springboot.admin.model.entity.sys.SysRole;
 import com.springboot.admin.model.entity.sys.SysUser;
+import com.springboot.admin.model.vo.PageResult;
+import com.springboot.admin.model.vo.user.SysUserVO;
+import com.springboot.admin.utils.R2dbcPageHelperUtil;
 import lombok.Getter;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
@@ -10,7 +14,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -39,7 +45,67 @@ public class SysUserRepositoryCustom {
     public SysUserRepositoryCustom(DatabaseClient client) {
         this.client = client;
     }
+    /**
+     * 分页查询用户列表
+     *
+     * @param query 用户查询参数（包含分页和条件）
+     * @return Mono<PageResult<SysUser>> 分页结果
+     */
+    public Mono<PageResult<SysUserVO>> pageUserList(SysUserQueryDTO query) {
+        StringBuilder baseSql = new StringBuilder("FROM sys_user u WHERE u.delete_flag = 0 ");
 
+        Map<String, Object> params = new HashMap<>();
+        if (query.getUsername() != null && !query.getUsername().isBlank()) {
+            baseSql.append("AND u.username LIKE :username ");
+            params.put("username", "%" + query.getUsername() + "%");
+        }
+        if (query.getEmail() != null && !query.getEmail().isBlank()) {
+            baseSql.append("AND u.email LIKE :email ");
+            params.put("email", "%" + query.getEmail() + "%");
+        }
+        if (query.getPhone() != null && !query.getPhone().isBlank()) {
+            baseSql.append("AND u.phone LIKE :phone ");
+            params.put("phone", "%" + query.getPhone() + "%");
+        }
+        if (query.getDeptId() != null) {
+            baseSql.append("AND u.dept_id = :deptId ");
+            params.put("deptId", query.getDeptId());
+        }
+
+        return R2dbcPageHelperUtil.queryPage(
+                client,
+                baseSql.toString(),
+                params,
+                query.getPage(),
+                query.getSize(),
+                (row, meta) -> {
+                    SysUserVO user = new SysUserVO();
+                    user.setId(row.get("id", Long.class));
+                    user.setUsername(row.get("username", String.class));
+                    user.setNickname(row.get("nickname", String.class));
+                    user.setEmail(row.get("email", String.class));
+                    user.setPhone(row.get("phone", String.class));
+                    user.setDeptId(row.get("dept_id", Long.class));
+                    user.setOrgId(row.get("org_id", Long.class));
+                    user.setStatus(row.get("status", Integer.class));
+                    user.setLastLoginTime(
+                            Optional.ofNullable(row.get("last_login_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
+                    user.setCreateTime(
+                            Optional.ofNullable(row.get("create_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
+                    user.setUpdateTime(
+                            Optional.ofNullable(row.get("update_time", java.time.ZonedDateTime.class))
+                            .map(java.time.ZonedDateTime::toLocalDateTime)
+                            .orElse(null));
+                    return user;
+                }
+        );
+    }
     /**
      * 根据部门ID查询用户列表
      *
@@ -200,7 +266,7 @@ public class SysUserRepositoryCustom {
                     user.setPassword(row.get("password", String.class));
                     user.setAvatar(row.get("avatar", String.class));
                     user.setStatus(row.get("status", Integer.class));
-                    user.setCreateTime(
+                    user.setLastLoginTime(
                             Optional.ofNullable(row.get("last_login_time", java.time.ZonedDateTime.class))
                                     .map(java.time.ZonedDateTime::toLocalDateTime)
                                     .orElse(null)

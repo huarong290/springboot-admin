@@ -3,7 +3,9 @@ package com.springboot.admin.service.impl;
 import com.alibaba.fastjson2.JSONObject;
 import com.springboot.admin.convert.SysUserConvert;
 import com.springboot.admin.model.dto.user.SysUserDTO;
+import com.springboot.admin.model.dto.user.SysUserQueryDTO;
 import com.springboot.admin.model.entity.sys.SysUser;
+import com.springboot.admin.model.vo.PageResult;
 import com.springboot.admin.model.vo.user.SysUserVO;
 import com.springboot.admin.repository.custom.SysUserRepositoryCustom;
 import com.springboot.admin.repository.single.SysUserRepository;
@@ -44,6 +46,11 @@ public class SysUserServiceImpl implements ISysUserService {
     }
 
     /** ---------------- 单表操作 ---------------- */
+
+    @Override
+    public Mono<PageResult<SysUserVO>> pageUserList(SysUserQueryDTO query) {
+        return userRepositoryCustom.pageUserList(query);
+    }
 
     /**
      * 根据用户ID获取用户信息
