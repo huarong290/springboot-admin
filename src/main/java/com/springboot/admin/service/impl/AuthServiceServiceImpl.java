@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -54,34 +55,37 @@ public class AuthServiceServiceImpl implements IAuthService {
     public Mono<TokenResDTO> login(UserLoginReqDTO dto) {
         return sysUserService.getUserByUsername(dto.getUsername())
                 .flatMap(user -> {
-                    log.info("pass={}",passwordEncoder.encode(dto.getPassword()));
+                    log.info("pass={}", passwordEncoder.encode(dto.getPassword()));
                     if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
                         log.warn("用户 {} 登录失败：密码错误", dto.getUsername());
                         return Mono.error(new RuntimeException("用户名或密码错误"));
                     }
 
+                    //  登录成功后更新 lastLoginTime
+                    Mono<Long> updateLoginTimeMono = sysUserService.updateLastLoginTime(user.getId(), LocalDateTime.now());
+
                     Mono<String> accessTokenMono = jwtUtil.generateAccessToken(user.getUsername(), null);
                     Mono<String> refreshTokenMono = jwtUtil.generateRefreshToken(user.getUsername());
 
-                    return Mono.zip(accessTokenMono, refreshTokenMono)
-                            .flatMap(tuple -> {
-                                String accessToken = tuple.getT1();
-                                String refreshToken = tuple.getT2();
+                    //  把更新登录时间放进链里，保证执行
+                    return updateLoginTimeMono.then(
+                            Mono.zip(accessTokenMono, refreshTokenMono)
+                                    .flatMap(tuple -> {
+                                        String accessToken = tuple.getT1();
+                                        String refreshToken = tuple.getT2();
 
-                                // 把存储 RefreshToken 放进响应式链
-                                return redisService.storeRefreshToken(refreshToken, user.getUsername())
-                                        .then(Mono.defer(() -> {
-                                            TokenResDTO tokenResDTO = new TokenResDTO();
-                                            tokenResDTO.setAccessToken(accessToken);
-                                            tokenResDTO.setRefreshToken(refreshToken);
-
-
-                                            // 设置过期时间（秒）
-                                            tokenResDTO.setExpiresIn(jwtProperties.getAccessTokenExpiration() / 1000);
-                                            log.info("用户 {} 登录成功，生成 Token", dto.getUsername());
-                                            return Mono.just(tokenResDTO);
-                                        }));
-                            });
+                                        // 存储 RefreshToken
+                                        return redisService.storeRefreshToken(refreshToken, user.getUsername())
+                                                .then(Mono.defer(() -> {
+                                                    TokenResDTO tokenResDTO = new TokenResDTO();
+                                                    tokenResDTO.setAccessToken(accessToken);
+                                                    tokenResDTO.setRefreshToken(refreshToken);
+                                                    tokenResDTO.setExpiresIn(jwtProperties.getAccessTokenExpiration() / 1000);
+                                                    log.info("用户 {} 登录成功，生成 Token 并更新 lastLoginTime", dto.getUsername());
+                                                    return Mono.just(tokenResDTO);
+                                                }));
+                                    })
+                    );
                 })
                 .switchIfEmpty(Mono.error(new RuntimeException("用户不存在")));
     }

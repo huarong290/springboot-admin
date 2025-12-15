@@ -276,4 +276,13 @@ public class SysUserRepositoryCustom {
                 .one(); // 返回单个结果
     }
 
+
+    public Mono<Long> updateLastLoginTime(Long userId, LocalDateTime lastLoginTime) {
+        return client.sql("UPDATE sys_user SET last_login_time = :lastLoginTime WHERE id = :userId")
+                .bind("lastLoginTime", lastLoginTime)
+                .bind("userId", userId)
+                .fetch()
+                .rowsUpdated();
+
+    }
 }
