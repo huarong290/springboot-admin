@@ -149,7 +149,7 @@ public class SysUserServiceImpl implements ISysUserService {
      */
     @Override
     public Mono<Long> deleteUser(Long id) {
-        return userRepositoryCustom.deleteUserById(id);
+        return userRepositoryCustom.deleteUserById(id,false);
     }
 
     /**
