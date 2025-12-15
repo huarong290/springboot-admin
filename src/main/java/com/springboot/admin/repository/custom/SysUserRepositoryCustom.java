@@ -6,8 +6,9 @@ import com.springboot.admin.model.entity.sys.SysRole;
 import com.springboot.admin.model.entity.sys.SysUser;
 import com.springboot.admin.model.vo.PageResult;
 import com.springboot.admin.model.vo.user.SysUserVO;
-import com.springboot.admin.utils.R2dbcPageHelperUtil;
+import com.springboot.admin.utils.R2dbcHelperUtil;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
@@ -15,7 +16,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.Locale;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -72,7 +73,7 @@ public class SysUserRepositoryCustom {
             params.put("deptId", query.getDeptId());
         }
 
-        return R2dbcPageHelperUtil.queryPage(
+        return R2dbcHelperUtil.queryPage(
                 client,
                 baseSql.toString(),
                 params,
@@ -152,82 +153,131 @@ public class SysUserRepositoryCustom {
                 .all();
     }
 
+
     /**
      * 新增用户，返回生成的主键 ID
      */
     public Mono<Long> insertUser(SysUser user) {
-        String sql = """
-        INSERT INTO sys_user (username, password, email, phone, dept_id, org_id, nickname, status, avatar, create_time, update_time)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-        """;
+        Map<String, Object> fieldMap = new LinkedHashMap<>();
 
-        return client.sql(sql)
-                .bind(0, user.getUsername())
-                .bind(1, user.getPassword())
-                .bind(2, user.getEmail())
-                .bind(3, user.getPhone())
-                .bind(4, user.getDeptId())
-                .bind(5, user.getOrgId())
-                .bind(6, user.getNickname())
-                .bind(7, user.getStatus())
-                .bind(8, user.getAvatar())
-                .filter(statement -> statement.returnGeneratedValues("id"))
-                .fetch()
-                .first()
-                .map(row -> (Long) row.get("id"));
+        if (StringUtils.isNotBlank(user.getUsername())){
+            fieldMap.put("username", user.getUsername());
+        }
+        if(StringUtils.isNotBlank(user.getPassword())){
+            fieldMap.put("password", user.getPassword());
+        }
+        if(StringUtils.isNotBlank(user.getEmail())){
+            fieldMap.put("email", user.getEmail());
+        }
+        if(StringUtils.isNotBlank(user.getPhone())){
+            fieldMap.put("phone", user.getPhone());
+        }
+        if (user.getDeptId() != null) {
+            fieldMap.put("dept_id", user.getDeptId());
+        }
+        if (user.getOrgId() != null) {
+            fieldMap.put("org_id", user.getOrgId());
+        }
+        if (StringUtils.isNotBlank(user.getNickname())){
+            fieldMap.put("nickname", user.getNickname());
+        }
+        if (user.getStatus() != null){
+            fieldMap.put("status", user.getStatus());
+        }
+        if (user.getLastLoginTime() != null){
+            fieldMap.put("last_login_time", user.getLastLoginTime());
+        }
+        if (user.getAvatar() != null){
+            fieldMap.put("avatar", user.getAvatar());
+        }
+        // 固定插入时间
+        fieldMap.put("create_time", LocalDateTime.now());
+        fieldMap.put("update_time", LocalDateTime.now());
+
+        return R2dbcHelperUtil.insertAndReturnId(client, "sys_user", fieldMap);
     }
 
     /**
      * 更新用户，返回更新成功的记录数
      */
     public Mono<Long> updateUser(SysUserDTO dto, String encodedPassword) {
-        String sql = """
-        UPDATE sys_user
-        SET username = ?,
-            password = ?,
-            email = ?,
-            phone = ?,
-            dept_id = ?,
-            org_id = ?,
-            nickname = ?,
-            enabled = ?,
-            avatar = ?,
-            update_time = NOW()
-        WHERE id = ?
-        """;
+        Map<String, Object> fieldMap = new LinkedHashMap<>();
 
-        return client.sql(sql)
-                .bind(0, dto.getUsername())
-                .bind(1, encodedPassword)
-                .bind(2, dto.getEmail())
-                .bind(3, dto.getPhone())
-                .bind(4, dto.getDeptId())
-                .bind(5, dto.getOrgId())
-                .bind(6, dto.getNickname())
-                .bind(7, dto.getStatus())
-                .bind(8, dto.getAvatar())
-                .bind(9, dto.getId())
-                .fetch()
-                .rowsUpdated()
-                // 返回更新的记录数（通常为 1）
-                .map(Long::valueOf);
+        if (StringUtils.isNotBlank(dto.getUsername())){
+            fieldMap.put("username", dto.getUsername());
+        }
+        if(StringUtils.isNotBlank(dto.getPassword())){
+            fieldMap.put("password", dto.getPassword());
+        }
+        if(StringUtils.isNotBlank(dto.getEmail())){
+            fieldMap.put("email", dto.getEmail());
+        }
+        if(StringUtils.isNotBlank(dto.getPhone())){
+            fieldMap.put("phone", dto.getPhone());
+        }
+        if (dto.getDeptId() != null) {
+            fieldMap.put("dept_id", dto.getDeptId());
+        }
+        if (dto.getOrgId() != null) {
+            fieldMap.put("org_id", dto.getOrgId());
+        }
+        if (StringUtils.isNotBlank(dto.getNickname())){
+            fieldMap.put("nickname", dto.getNickname());
+        }
+        if (dto.getStatus() != null){
+            fieldMap.put("status", dto.getStatus());
+        }
+        if (dto.getAvatar() != null){
+            fieldMap.put("avatar", dto.getAvatar());
+        }
+        // 更新时间
+        fieldMap.put("update_time", LocalDateTime.now());
+
+        return R2dbcHelperUtil.update(client, "sys_user", fieldMap, "id", dto.getId())
+                .map(Long::valueOf); // rowsUpdated 返回 Mono<Integer>，这里转成 Long
     }
+
+
 
 
     /**
      * 删除单个用户
      *
-     * @param id 用户ID
-     * @return Mono<Integer> 返回受影响的行数
+     * 用途：
+     * - 后台管理：逻辑删除（推荐，保留数据用于审计）
+     * - 特殊场景：物理删除（彻底清除数据，例如测试数据清理）
+     *
+     * @param id 权限ID
+     * @param logicalDelete 是否逻辑删除
+     *                      true  = 逻辑删除（delete_flag = 1）
+     *                      false = 物理删除（DELETE）
+     * @return Mono<Long> 响应式单对象，返回删除成功的记录数（通常为 1）
      */
-    public Mono<Long> deleteUserById(Long id) {
-        String sql = "DELETE FROM sys_user WHERE id = ?";
-        return client.sql(sql)
-                .bind(0, id)
-                .fetch()
-                .rowsUpdated();
-    }
+    public Mono<Long> deleteUserById(Long id, boolean logicalDelete) {
+        if (logicalDelete) {
+            // 逻辑删除：更新 delete_flag = 1
+            String sql = "UPDATE sys_user SET " +
+                    "delete_flag = 1, " +
+                    "update_by = 'system', " +
+                    "update_time = CURRENT_TIMESTAMP " +
+                    "WHERE id = ? AND delete_flag = 0";
 
+            return client.sql(sql)
+                    .bind(0, id)
+                    .fetch()
+                    .rowsUpdated()
+                    .map(Long::valueOf);
+        } else {
+            // 物理删除：直接 DELETE
+            String sql = "DELETE FROM sys_user WHERE id = ?";
+
+            return client.sql(sql)
+                    .bind(0, id)
+                    .fetch()
+                    .rowsUpdated()
+                    .map(Long::valueOf);
+        }
+    }
     /**
      * 批量删除用户
      *

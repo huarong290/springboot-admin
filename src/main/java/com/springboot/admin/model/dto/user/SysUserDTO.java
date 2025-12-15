@@ -41,6 +41,6 @@ public class SysUserDTO {
      * 用户头像 URL
      * 对应 sys_user.avatar
      */
-    @Schema(description = "是否启用")
+    @Schema(description = "用户头像URL")
     private String avatar;
 }
