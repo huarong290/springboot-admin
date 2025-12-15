@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
+
 /**
  * 用户表 Service 实现类
  *
@@ -170,6 +172,20 @@ public class SysUserServiceImpl implements ISysUserService {
     @Override
     public Flux<SysUserVO> listUsersByDeptId(Long deptId) {
         return userRepositoryCustom.findUsersByDeptId(deptId).map(userConvert::toVO);
+    }
+
+    @Override
+    public Mono<Long> updateLastLoginTime(Long userId, LocalDateTime lastLoginTime) {
+        log.info("updateLastLoginTime, userId = {}, lastLoginTime = {}", userId, lastLoginTime);
+        // 调用自定义仓库方法更新 last_login_time 字段
+        return userRepositoryCustom.updateLastLoginTime(userId, lastLoginTime)
+                .doOnNext(rows -> {
+                    if (rows > 0) {
+                        log.info("用户 {} 登录时间已更新为 {}", userId, lastLoginTime);
+                    } else {
+                        log.warn("更新用户 {} 登录时间失败，未找到记录", userId);
+                    }
+                });
     }
 
     //    /**

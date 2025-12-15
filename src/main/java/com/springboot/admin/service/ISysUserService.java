@@ -7,6 +7,8 @@ import com.springboot.admin.model.vo.user.SysUserVO;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
+
 /**
  * 用户表 Service 接口
  * <p>
@@ -91,5 +93,14 @@ public interface ISysUserService {
      */
 
     Flux<SysUserVO> listUsersByDeptId(Long deptId);
+    /**
+     * 更新用户的最近登录时间
+     *
+     * @param userId 用户ID
+     * @param lastLoginTime 最近登录时间
+     * @return Mono<Long> 响应式单对象，返回更新后的记录数
+     */
+    Mono<Long> updateLastLoginTime(Long userId, LocalDateTime lastLoginTime);
+
 }
 
