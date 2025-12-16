@@ -1,5 +1,6 @@
 package com.springboot.admin.controller;
 
+import com.springboot.admin.annotation.Logable;
 import com.springboot.admin.common.ApiResult;
 import com.springboot.admin.common.ApiResultCode;
 import com.springboot.admin.model.dto.user.SysUserDTO;
@@ -38,10 +39,48 @@ public class SysUserController {
      */
     @GetMapping("/pageUserList")
     @Operation(summary = "分页查询用户列表")
+    @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<PageResult<SysUserVO>>> pageUserList(SysUserQueryDTO query) {
         return userService.pageUserList(query).map(ApiResult::successResult);
 
     }
+    /**
+     * 新增用户
+     *
+     * @param sysUserDTO 用户传输对象
+     * @return 返回新增用户对象ID
+     */
+    @PostMapping("/addUser")
+    @Operation(summary = "新增用户")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<Long>> addUser(@RequestBody SysUserDTO sysUserDTO) {
+        return userService.addUser(sysUserDTO).map(ApiResult::successResult);
+    }
+    /**
+     * 编辑用户
+     *
+     * @param sysUserDTO 用户传输对象
+     * @return 返回编辑用户影响条数
+     */
+    @PutMapping("/updateUser")
+    @Operation(summary = "更新用户信息")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<Long>> updateUser(@RequestBody SysUserDTO sysUserDTO) {
+        return userService.updateUser(sysUserDTO).map(ApiResult::successResult);
+    }
+    /**
+     * 删除用户
+     *
+     * @param id 用户主键ID
+     * @return 返回删除用户影响条数
+     */
+    @DeleteMapping("/deleteUser/{id}")
+    @Operation(summary = "删除用户")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<Long>> deleteUser(@PathVariable Long id) {
+        return userService.deleteUser(id).map(rows -> ApiResult.successResult("删除成功", rows));
+    }
+
     /**
      * 根据用户ID查询用户信息
      *
@@ -68,40 +107,6 @@ public class SysUserController {
         return userService.getUserByUsername(username)
                 .map(ApiResult::successResult)
                 .switchIfEmpty(Mono.just(ApiResult.failResult(ApiResultCode.NOT_FOUND, "用户不存在")));
-    }
-    @PostMapping("/addUser")
-    @Operation(summary = "新增用户")
-    public Mono<ApiResult<Long>> addUser(@RequestBody SysUserDTO sysUserDTO) {
-        return userService.addUser(sysUserDTO)
-                // 假设 service 返回的是新用户的 ID
-                .map(ApiResult::successResult)
-                .onErrorResume(e -> {
-                    log.error("新增用户失败: {}", e.getMessage(), e);
-                    return Mono.just(ApiResult.failResult(ApiResultCode.FAILED, "新增用户失败"));
-                });
-    }
-
-
-    @PutMapping("/updateUser")
-    @Operation(summary = "更新用户信息")
-    public Mono<ApiResult<Long>> updateUser(@RequestBody SysUserDTO sysUserDTO) {
-        return userService.updateUser(sysUserDTO)
-                // 假设 service 返回的是更新成功的记录数 (int)
-                .map(ApiResult::successResult)
-                .onErrorResume(e -> {
-                    log.error("更新用户失败: {}", e.getMessage(), e);
-                    return Mono.just(ApiResult.failResult(ApiResultCode.FAILED, "更新用户失败"));
-                });
-    }
-    @DeleteMapping("/deleteUser/{id}")
-    @Operation(summary = "删除用户")
-    public Mono<ApiResult<Long>> deleteUser(@PathVariable Long id) {
-        return userService.deleteUser(id)
-                .map(rows -> ApiResult.successResult("删除成功", rows))
-                .onErrorResume(e -> {
-                    log.error("删除用户失败: {}", e.getMessage(), e);
-                    return Mono.just(ApiResult.failResult(ApiResultCode.FAILED, "删除用户失败"));
-                });
     }
 
     @DeleteMapping("/deleteUsers")
