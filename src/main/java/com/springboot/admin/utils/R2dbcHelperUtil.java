@@ -166,7 +166,7 @@ public class R2dbcHelperUtil {
         int offset = (page - 1) * size;
 
         // 数据查询 SQL
-        String dataSql = "SELECT u.* " + baseSql + " LIMIT :size OFFSET :offset";
+        String dataSql = "SELECT t.* " + baseSql + " LIMIT :size OFFSET :offset";
 
         DatabaseClient.GenericExecuteSpec dataSpec = client.sql(dataSql)
                 .bind("size", size)

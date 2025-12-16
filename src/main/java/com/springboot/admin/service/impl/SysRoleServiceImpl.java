@@ -3,7 +3,9 @@ package com.springboot.admin.service.impl;
 import com.alibaba.fastjson2.JSONObject;
 import com.springboot.admin.convert.SysRoleConvert;
 import com.springboot.admin.model.dto.role.SysRoleDTO;
+import com.springboot.admin.model.dto.role.SysRoleQueryDTO;
 import com.springboot.admin.model.entity.sys.SysRole;
+import com.springboot.admin.model.vo.PageResult;
 import com.springboot.admin.model.vo.role.SysRoleVO;
 import com.springboot.admin.repository.custom.SysRoleRepositoryCustom;
 import com.springboot.admin.repository.single.SysRoleRepository;
@@ -36,6 +38,13 @@ public class SysRoleServiceImpl implements ISysRoleService {
         this.roleRepositoryCustom = roleRepositoryCustom;
         this.sysRoleConvert = sysRoleConvert;
     }
+
+
+    @Override
+    public Mono<PageResult<SysRoleVO>> pageRoleList(SysRoleQueryDTO query) {
+        return roleRepositoryCustom.pageRoleList(query);
+    }
+
     /** ---------------- 单表操作 ---------------- */
 
     @Override
@@ -51,17 +60,19 @@ public class SysRoleServiceImpl implements ISysRoleService {
     @Override
     public Mono<Long> addRole(SysRoleDTO roleDTO) {
         SysRole sysRole =sysRoleConvert.toEntity(roleDTO);
-        return roleRepository.save(sysRole).map(SysRole::getId);
+        // 调用自定义仓库方法，返回主键 ID
+        return roleRepositoryCustom.insertRole(sysRole);
     }
 
     @Override
     public Mono<Long> updateRole(SysRoleDTO roleDTO) {
-        SysRole sysRole =sysRoleConvert.toEntity(roleDTO);
-        return roleRepositoryCustom.updateRole(sysRole);
+        // 调用自定义仓库方法，返回更新的记录数
+        return roleRepositoryCustom.updateRole(roleDTO);
     }
 
     @Override
     public Mono<Long> deleteRole(Long id) {
+        // 调用自定义仓库方法，返回删除的记录数
         return roleRepositoryCustom.deleteRoleById(id,false);
     }
 

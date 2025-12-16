@@ -1,12 +1,22 @@
 package com.springboot.admin.repository.custom;
 
 
+import com.springboot.admin.model.dto.role.SysRoleDTO;
+import com.springboot.admin.model.dto.role.SysRoleQueryDTO;
 import com.springboot.admin.model.entity.sys.SysRole;
+import com.springboot.admin.model.vo.PageResult;
+import com.springboot.admin.model.vo.role.SysRoleVO;
+import com.springboot.admin.utils.R2dbcHelperUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -23,6 +33,134 @@ public class SysRoleRepositoryCustom {
 
     public SysRoleRepositoryCustom(DatabaseClient client) {
         this.client = client;
+    }
+
+
+
+    /**
+     * 分页查询角色列表
+     *
+     * @param query 角色查询参数（包含分页和条件）
+     * @return Mono<PageResult<SysRoleVO>> 分页结果
+     */
+    public Mono<PageResult<SysRoleVO>> pageRoleList(SysRoleQueryDTO query) {
+        StringBuilder baseSql = new StringBuilder("FROM sys_role t WHERE t.delete_flag = 0 ");
+
+        Map<String, Object> params = new HashMap<>();
+        if (query.getRoleName() != null && !query.getRoleName().isBlank()) {
+            baseSql.append("AND t.role_name LIKE :roleName ");
+            params.put("roleName", "%" + query.getRoleName() + "%");
+        }
+        if (query.getRoleCode() != null && !query.getRoleCode().isBlank()) {
+            baseSql.append("AND t.role_code LIKE :roleCode ");
+            params.put("roleCode", "%" + query.getRoleCode() + "%");
+        }
+        if (query.getRoleStatus() != null) {
+            baseSql.append("AND t.role_status = :status ");
+            params.put("status", query.getRoleStatus());
+        }
+        if (query.getCreateTimeStart() != null && !query.getCreateTimeStart().isBlank()) {
+            baseSql.append("AND t.create_time >= :createTimeStart ");
+            params.put("createTimeStart", query.getCreateTimeStart());
+        }
+        if (query.getCreateTimeEnd() != null && !query.getCreateTimeEnd().isBlank()) {
+            baseSql.append("AND t.create_time <= :createTimeEnd ");
+            params.put("createTimeEnd", query.getCreateTimeEnd());
+        }
+
+        return R2dbcHelperUtil.queryPage(
+                client,
+                baseSql.toString(),
+                params,
+                query.getPage(),
+                query.getSize(),
+                (row, meta) -> {
+                    SysRoleVO role = new SysRoleVO();
+                    role.setId(row.get("id", Long.class));
+                    role.setRoleName(row.get("role_name", String.class));
+                    role.setRoleCode(row.get("role_code", String.class));
+                    role.setRoleDescription(row.get("role_description", String.class));
+                    role.setRoleStatus(row.get("role_status", Integer.class));
+                    role.setCreateTime(
+                            Optional.ofNullable(row.get("create_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
+                    role.setUpdateTime(
+                            Optional.ofNullable(row.get("update_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
+                    return role;
+                }
+        );
+    }
+    /**
+     * 新增角色，返回生成的主键 ID
+     */
+    public Mono<Long> insertRole(SysRole sysRole) {
+        Map<String, Object> fieldMap = new LinkedHashMap<>();
+        // 基本字段
+        if (StringUtils.isNotBlank(sysRole.getRoleName())){
+            fieldMap.put("role_name", sysRole.getRoleName());
+        }
+        if (StringUtils.isNotBlank(sysRole.getRoleCode())){
+            fieldMap.put("role_code", sysRole.getRoleCode());
+        }
+        if (StringUtils.isNotBlank(sysRole.getRoleDescription())){
+            fieldMap.put("role_description", sysRole.getRoleDescription());
+        }
+        if (sysRole.getRoleStatus() != null) {
+            fieldMap.put("role_status", sysRole.getRoleStatus());
+        }
+        // 固定插入时间
+        fieldMap.put("create_time", LocalDateTime.now());
+        fieldMap.put("update_time", LocalDateTime.now());
+
+        return R2dbcHelperUtil.insertAndReturnId(client, "sys_role", fieldMap);
+    }
+    /**
+     * 更新角色信息
+     *
+     * @param sysRole 角色实体（包含要更新的字段和主键 ID）
+     * @return Mono<Integer> 受影响的行数
+     */
+    /**
+     * 更新角色信息
+     *
+     * 用途：
+     * - 后台管理：修改角色名称、编码、描述、启用状态等
+     *
+     * SQL逻辑：
+     *  - 使用 UPDATE 语句更新 sys_role 表
+     *  - 过滤条件：id = ? 且 delete_flag = 0
+     *
+     * @param dto 角色实体对象（包含需要更新的字段）
+     * @return Mono<Long> 响应式单对象，返回更新成功的记录数
+     */
+    public Mono<Long> updateRole(SysRoleDTO dto) {
+        Map<String, Object> fieldMap = new LinkedHashMap<>();
+
+        // 基本字段（只更新非空）
+        if (StringUtils.isNotBlank(dto.getRoleName())) {
+            fieldMap.put("role_name", dto.getRoleName());
+        }
+        if (StringUtils.isNotBlank(dto.getRoleCode())) {
+            fieldMap.put("role_code", dto.getRoleCode());
+        }
+        if (StringUtils.isNotBlank(dto.getRoleDescription())) {
+            fieldMap.put("role_description", dto.getRoleDescription());
+        }
+        if (dto.getRoleStatus() != null) {
+            fieldMap.put("role_status", dto.getRoleStatus());
+        }
+
+        // 更新时间固定刷新
+        fieldMap.put("update_time", LocalDateTime.now());
+
+        // 调用工具方法更新（根据主键 ID）
+        return R2dbcHelperUtil.update(client, "sys_role", fieldMap, "id", dto.getId())
+                .map(Long::valueOf);
     }
 
     /**
@@ -131,41 +269,8 @@ public class SysRoleRepositoryCustom {
                     return role;
                 }).all();
     }
-    /**
-     * 更新角色信息
-     *
-     * 用途：
-     * - 后台管理：修改角色名称、编码、描述、启用状态等
-     *
-     * SQL逻辑：
-     *  - 使用 UPDATE 语句更新 sys_role 表
-     *  - 过滤条件：id = ? 且 delete_flag = 0
-     *
-     * @param sysRole 角色实体对象（包含需要更新的字段）
-     * @return Mono<Long> 响应式单对象，返回更新成功的记录数
-     */
-    public Mono<Long> updateRole(SysRole sysRole) {
-        String sql = "UPDATE sys_role SET " +
-                "role_name = ?, " +
-                "role_code = ?, " +
-                "role_description = ?, " +
-                "update_by = ?, " +
-                "update_time = CURRENT_TIMESTAMP " +
-                "WHERE id = ? AND delete_flag = 0";
 
-        return client.sql(sql)
-                // 按顺序绑定参数
-                .bind(0, sysRole.getRoleName())
-                .bind(1, sysRole.getRoleCode())
-                .bind(2, sysRole.getRoleDescription())
-                .bind(3, sysRole.getUpdateBy() != null ? sysRole.getUpdateBy() : "system")
-                .bind(4, sysRole.getId())
-                // 执行更新
-                .fetch()
-                .rowsUpdated()
-                // 返回更新的记录数（通常为 1）
-                .map(Long::valueOf);
-    }
+
     /**
      * 物理删除角色（彻底删除）
      *
