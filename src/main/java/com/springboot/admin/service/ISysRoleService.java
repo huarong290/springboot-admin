@@ -1,6 +1,8 @@
 package com.springboot.admin.service;
 
 import com.springboot.admin.model.dto.role.SysRoleDTO;
+import com.springboot.admin.model.dto.role.SysRoleQueryDTO;
+import com.springboot.admin.model.vo.PageResult;
 import com.springboot.admin.model.vo.role.SysRoleVO;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -14,6 +16,13 @@ import java.util.List;
  * 使用 SysRoleDTO 作为入参，SysRoleVO 作为出参。
  */
 public interface ISysRoleService {
+    /**
+     * 根据角色编码查询角色信息
+     *
+     * @param query 角色查询DTO
+     * @return Mono<SysRoleVO> 响应式单对象
+     */
+    Mono<PageResult<SysRoleVO>> pageRoleList(SysRoleQueryDTO query);
 
     /**
      * 根据角色ID查询角色信息
@@ -110,4 +119,6 @@ public interface ISysRoleService {
      * @return Flux<SysRoleVO> 响应式流，返回该菜单拥有的角色集合
      */
     Flux<SysRoleVO> listRolesByMenuId(Long menuId);
+
+
 }

@@ -53,23 +53,23 @@ public class SysUserRepositoryCustom {
      * @return Mono<PageResult<SysUser>> 分页结果
      */
     public Mono<PageResult<SysUserVO>> pageUserList(SysUserQueryDTO query) {
-        StringBuilder baseSql = new StringBuilder("FROM sys_user u WHERE u.delete_flag = 0 ");
+        StringBuilder baseSql = new StringBuilder("FROM sys_user t WHERE t.delete_flag = 0 ");
 
         Map<String, Object> params = new HashMap<>();
         if (query.getUsername() != null && !query.getUsername().isBlank()) {
-            baseSql.append("AND u.username LIKE :username ");
+            baseSql.append("AND t.username LIKE :username ");
             params.put("username", "%" + query.getUsername() + "%");
         }
         if (query.getEmail() != null && !query.getEmail().isBlank()) {
-            baseSql.append("AND u.email LIKE :email ");
+            baseSql.append("AND t.email LIKE :email ");
             params.put("email", "%" + query.getEmail() + "%");
         }
         if (query.getPhone() != null && !query.getPhone().isBlank()) {
-            baseSql.append("AND u.phone LIKE :phone ");
+            baseSql.append("AND t.phone LIKE :phone ");
             params.put("phone", "%" + query.getPhone() + "%");
         }
         if (query.getDeptId() != null) {
-            baseSql.append("AND u.dept_id = :deptId ");
+            baseSql.append("AND t.dept_id = :deptId ");
             params.put("deptId", query.getDeptId());
         }
 

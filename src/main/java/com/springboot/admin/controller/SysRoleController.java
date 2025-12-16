@@ -3,13 +3,14 @@ package com.springboot.admin.controller;
 import com.springboot.admin.annotation.Logable;
 import com.springboot.admin.common.ApiResult;
 import com.springboot.admin.model.dto.role.SysRoleDTO;
+import com.springboot.admin.model.dto.role.SysRoleQueryDTO;
+import com.springboot.admin.model.vo.PageResult;
 import com.springboot.admin.model.vo.role.SysRoleVO;
 import com.springboot.admin.service.ISysRoleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -27,6 +28,50 @@ import java.util.List;
 public class SysRoleController {
     @Autowired
     private  ISysRoleService roleService;
+
+    /**
+     * 分页查询角色列表
+     *
+     * @param query 用户查询参数（继承 PageQuery，包含分页和条件）
+     * @return 返回分页结果：用户列表 + 总数 + 页码信息
+     */
+    @GetMapping("/pageRoleList")
+    @Operation(summary = "分页查询角色列表")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<PageResult<SysRoleVO>>> pageRoleList(SysRoleQueryDTO query) {
+        return roleService.pageRoleList(query).map(ApiResult::successResult);
+    }
+    /**
+     * 新增角色
+     */
+    @PostMapping("/addRole")
+    @Operation(summary = "新增角色")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<Long>> addRole(@RequestBody SysRoleDTO roleDTO) {
+        return roleService.addRole(roleDTO)
+                .map(ApiResult::successResult);
+    }
+    /**
+     * 更新角色信息
+     */
+    @PutMapping("/updateRole")
+    @Operation(summary = "更新角色信息")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<Long>> updateRole(@RequestBody SysRoleDTO roleDTO) {
+        return roleService.updateRole(roleDTO)
+                .map(ApiResult::successResult);
+    }
+
+    /**
+     * 删除角色
+     */
+    @DeleteMapping("deleteRole/{id}")
+    @Operation(summary = "删除角色")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<Long>> deleteRole(@PathVariable Long id) {
+        return roleService.deleteRole(id)
+                .map(ApiResult::successResult);
+    }
 
     /**
      * 根据角色ID查询角色信息
@@ -50,38 +95,8 @@ public class SysRoleController {
                 .map(ApiResult::successResult);
     }
 
-    /**
-     * 新增角色
-     */
-    @PostMapping("/addRole")
-    @Operation(summary = "新增角色")
-    @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<Long>> addRole(@RequestBody SysRoleDTO roleDTO) {
-        return roleService.addRole(roleDTO)
-                .map(ApiResult::successResult);
-    }
 
-    /**
-     * 更新角色信息
-     */
-    @PutMapping("/updateRole")
-    @Operation(summary = "更新角色信息")
-    @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<Long>> updateRole(@RequestBody SysRoleDTO roleDTO) {
-        return roleService.updateRole(roleDTO)
-                .map(ApiResult::successResult);
-    }
 
-    /**
-     * 删除角色
-     */
-    @DeleteMapping("deleteRole/{id}")
-    @Operation(summary = "删除角色")
-    @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<Long>> deleteRole(@PathVariable Long id) {
-        return roleService.deleteRole(id)
-                .map(ApiResult::successResult);
-    }
 
     /**
      * 批量删除角色（逻辑删除）
