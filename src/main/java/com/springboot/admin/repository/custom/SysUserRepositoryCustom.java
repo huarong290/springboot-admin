@@ -157,38 +157,38 @@ public class SysUserRepositoryCustom {
     /**
      * 新增用户，返回生成的主键 ID
      */
-    public Mono<Long> insertUser(SysUser user) {
+    public Mono<Long> insertUser(SysUserDTO sysUserDTO) {
         Map<String, Object> fieldMap = new LinkedHashMap<>();
 
-        if (StringUtils.isNotBlank(user.getUsername())){
-            fieldMap.put("username", user.getUsername());
+        if (StringUtils.isNotBlank(sysUserDTO.getUsername())){
+            fieldMap.put("username", sysUserDTO.getUsername());
         }
-        if(StringUtils.isNotBlank(user.getPassword())){
-            fieldMap.put("password", user.getPassword());
+        if(StringUtils.isNotBlank(sysUserDTO.getPassword())){
+            fieldMap.put("password", sysUserDTO.getPassword());
         }
-        if(StringUtils.isNotBlank(user.getEmail())){
-            fieldMap.put("email", user.getEmail());
+        if(StringUtils.isNotBlank(sysUserDTO.getEmail())){
+            fieldMap.put("email", sysUserDTO.getEmail());
         }
-        if(StringUtils.isNotBlank(user.getPhone())){
-            fieldMap.put("phone", user.getPhone());
+        if(StringUtils.isNotBlank(sysUserDTO.getPhone())){
+            fieldMap.put("phone", sysUserDTO.getPhone());
         }
-        if (user.getDeptId() != null) {
-            fieldMap.put("dept_id", user.getDeptId());
+        if (sysUserDTO.getDeptId() != null) {
+            fieldMap.put("dept_id", sysUserDTO.getDeptId());
         }
-        if (user.getOrgId() != null) {
-            fieldMap.put("org_id", user.getOrgId());
+        if (sysUserDTO.getOrgId() != null) {
+            fieldMap.put("org_id", sysUserDTO.getOrgId());
         }
-        if (StringUtils.isNotBlank(user.getNickname())){
-            fieldMap.put("nickname", user.getNickname());
+        if (StringUtils.isNotBlank(sysUserDTO.getNickname())){
+            fieldMap.put("nickname", sysUserDTO.getNickname());
         }
-        if (user.getStatus() != null){
-            fieldMap.put("status", user.getStatus());
+        if (sysUserDTO.getStatus() != null){
+            fieldMap.put("status", sysUserDTO.getStatus());
         }
-        if (user.getLastLoginTime() != null){
-            fieldMap.put("last_login_time", user.getLastLoginTime());
+        if (sysUserDTO.getLastLoginTime() != null){
+            fieldMap.put("last_login_time", sysUserDTO.getLastLoginTime());
         }
-        if (user.getAvatar() != null){
-            fieldMap.put("avatar", user.getAvatar());
+        if (sysUserDTO.getAvatar() != null){
+            fieldMap.put("avatar", sysUserDTO.getAvatar());
         }
         // 固定插入时间
         fieldMap.put("create_time", LocalDateTime.now());
@@ -229,6 +229,9 @@ public class SysUserRepositoryCustom {
         }
         if (dto.getAvatar() != null){
             fieldMap.put("avatar", dto.getAvatar());
+        }
+        if (StringUtils.isNotBlank(encodedPassword)){
+            fieldMap.put("password", encodedPassword);
         }
         // 更新时间
         fieldMap.put("update_time", LocalDateTime.now());

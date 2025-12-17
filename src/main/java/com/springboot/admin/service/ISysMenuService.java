@@ -44,7 +44,7 @@ public interface ISysMenuService {
      * @param menuDTO 菜单对象
      * @return Mono<SysMenuVO> 响应式单对象，返回更新后的实体
      */
-    Mono<SysMenuVO> updateMenu(SysMenuDTO menuDTO);
+    Mono<Long> updateMenu(SysMenuDTO menuDTO);
 
     /**
      * 删除菜单

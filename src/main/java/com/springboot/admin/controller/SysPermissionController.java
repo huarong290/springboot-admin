@@ -3,7 +3,8 @@ package com.springboot.admin.controller;
 import com.springboot.admin.annotation.Logable;
 import com.springboot.admin.common.ApiResult;
 import com.springboot.admin.model.dto.permission.SysPermissionDTO;
-import com.springboot.admin.model.entity.sys.SysPermission;
+import com.springboot.admin.model.dto.permission.SysPermissionQueryDTO;
+import com.springboot.admin.model.vo.PageResult;
 import com.springboot.admin.model.vo.permission.SysPermissionVO;
 import com.springboot.admin.service.ISysPermissionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,12 +31,23 @@ public class SysPermissionController {
     @Autowired
     private ISysPermissionService sysPermissionService;
 
-    @GetMapping("/getPermissionById/{id}")
-    @Operation(summary = "根据权限点ID查询权限信息")
+
+    /**
+     * 分页查询权限列表接口
+     *
+     * 用途：
+     * - 后台管理：分页展示权限信息
+     * - 支持条件查询：权限编码、权限名称、权限类型、状态、创建时间区间
+     *
+     * @param query 权限查询参数（继承 PageQuery，包含分页和条件）
+     * @return 返回分页结果：权限列表 + 总数 + 页码信息
+     */
+    @GetMapping("/pagePermissionList")
+    @Operation(summary = "分页查询权限列表")
     @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<SysPermissionVO>> getPermissionById(@PathVariable Long id) {
-        return sysPermissionService.getPermissionById(id)
-                .map(ApiResult::successResult);
+    public Mono<ApiResult<PageResult<SysPermissionVO>>> pagePermissionList(SysPermissionQueryDTO query) {
+        // 调用 service 层方法，返回分页结果，并包装成统一的 ApiResult
+        return sysPermissionService.pagePermissionList(query).map(ApiResult::successResult);
     }
 
     @PostMapping("/addPermission")
@@ -59,6 +71,14 @@ public class SysPermissionController {
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<Long>> deletePermission(@PathVariable Long id) {
         return sysPermissionService.deletePermission(id)
+                .map(ApiResult::successResult);
+    }
+
+    @GetMapping("/getPermissionById/{id}")
+    @Operation(summary = "根据权限点ID查询权限信息")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<SysPermissionVO>> getPermissionById(@PathVariable Long id) {
+        return sysPermissionService.getPermissionById(id)
                 .map(ApiResult::successResult);
     }
 

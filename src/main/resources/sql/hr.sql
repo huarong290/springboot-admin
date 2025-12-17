@@ -117,7 +117,7 @@ CREATE TABLE `sys_permission` (
   `permission_code` varchar(100) NOT NULL COMMENT '权限编码',
   `permission_name` varchar(100) NOT NULL COMMENT '权限名称',
   `permission_type` tinyint NOT NULL DEFAULT '1' COMMENT '权限类型：1=接口权限，2=数据权限',
-  `permission_status` tinyint(5) NOT NULL DEFAULT '1' COMMENT '是否启用',
+  `permission_status` tinyint(5) NOT NULL DEFAULT '1' COMMENT '是否启用:1-启用 0-禁用',
   `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
   `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

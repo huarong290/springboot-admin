@@ -19,5 +19,4 @@ public interface SysPermissionRepository extends ReactiveCrudRepository<SysPermi
      * @return Mono<Boolean> 响应式单对象，返回True或False
      */
     Mono<Boolean> existsByPermissionCode(String permissionCode);
-
 }

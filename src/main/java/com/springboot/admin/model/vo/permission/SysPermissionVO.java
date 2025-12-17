@@ -1,6 +1,9 @@
 package com.springboot.admin.model.vo.permission;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 
 /**
  * 权限点 VO
@@ -37,4 +40,16 @@ public class SysPermissionVO {
      * 1 = 启用，0 = 禁用
      */
     private Integer permissionStatus;
+
+    /**
+     * 创建时间
+     */
+    @Schema(description = "创建时间")
+    private LocalDateTime createTime;
+
+    /**
+     * 更新时间
+     */
+    @Schema(description = "更新时间")
+    private LocalDateTime updateTime;
 }

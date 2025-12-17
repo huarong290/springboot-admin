@@ -6,7 +6,6 @@ import com.springboot.admin.convert.SysRoleConvert;
 import com.springboot.admin.exception.BusinessException;
 import com.springboot.admin.model.dto.role.SysRoleDTO;
 import com.springboot.admin.model.dto.role.SysRoleQueryDTO;
-import com.springboot.admin.model.entity.sys.SysRole;
 import com.springboot.admin.model.vo.PageResult;
 import com.springboot.admin.model.vo.role.SysRoleVO;
 import com.springboot.admin.repository.custom.SysRoleRepositoryCustom;
@@ -61,19 +60,18 @@ public class SysRoleServiceImpl implements ISysRoleService {
 
     @Override
     public Mono<Long> addRole(SysRoleDTO roleDTO) {
-        SysRole sysRole = sysRoleConvert.toEntity(roleDTO);
 
         // 先检查 roleCode 是否已存在
-        return roleRepository.findByRoleCode(sysRole.getRoleCode())
+        return roleRepository.findByRoleCode(roleDTO.getRoleCode())
                 .hasElement()
                 .flatMap(exists -> {
                     if (exists) {
                         return Mono.error(new BusinessException(
                                 ApiResultCode.CONFLICT.getCode(),
-                                "角色编码已存在：" + sysRole.getRoleCode()
+                                "角色编码已存在：" + roleDTO.getRoleCode()
                         ));
                     }
-                    return roleRepositoryCustom.insertRole(sysRole);
+                    return roleRepositoryCustom.insertRole(roleDTO);
                 });
     }
 

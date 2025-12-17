@@ -3,7 +3,6 @@ package com.springboot.admin.service.impl;
 import com.alibaba.fastjson2.JSON;
 import com.springboot.admin.convert.SysMenuConvert;
 import com.springboot.admin.model.dto.menu.SysMenuDTO;
-import com.springboot.admin.model.entity.sys.SysMenu;
 import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
 import com.springboot.admin.model.vo.menu.SysMenuVO;
 import com.springboot.admin.repository.custom.SysMenuRepositoryCustom;
@@ -86,9 +85,9 @@ public class SysMenuServiceImpl implements ISysMenuService {
      */
     @Override
     public Mono<Long> addMenu(SysMenuDTO menuDTO) {
-        SysMenu entity = sysMenuConvert.toEntity(menuDTO);
-        return sysMenuRepository.save(entity)
-                .map(SysMenu::getId);
+
+        return sysMenuRepositoryCustom.insertMenu(menuDTO);
+
     }
 
     /**
@@ -101,10 +100,9 @@ public class SysMenuServiceImpl implements ISysMenuService {
      * @return Mono<SysMenuVO> 响应式单对象，返回更新后的实体
      */
     @Override
-    public Mono<SysMenuVO> updateMenu(SysMenuDTO menuDTO) {
-        SysMenu entity = sysMenuConvert.toEntity(menuDTO);
-        return sysMenuRepository.save(entity)
-                .map(sysMenuConvert::toVO);
+    public Mono<Long> updateMenu(SysMenuDTO menuDTO) {
+
+        return sysMenuRepositoryCustom.updateMenu(menuDTO);
     }
 
     /**
@@ -118,7 +116,7 @@ public class SysMenuServiceImpl implements ISysMenuService {
      */
     @Override
     public Mono<Long> deleteMenu(Long id) {
-        return sysMenuRepositoryCustom.deleteMenuById(id);
+        return sysMenuRepositoryCustom.deleteMenuById(id,false);
     }
 
     /**

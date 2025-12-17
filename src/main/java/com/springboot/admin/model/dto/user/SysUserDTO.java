@@ -2,6 +2,9 @@ package com.springboot.admin.model.dto.user;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import org.springframework.data.relational.core.mapping.Column;
+
+import java.time.LocalDateTime;
 
 /**
  * 用户传输对象 DTO
@@ -43,4 +46,10 @@ public class SysUserDTO {
      */
     @Schema(description = "用户头像URL")
     private String avatar;
+
+    /**
+     * 上次登录时间
+     */
+    @Column("last_login_time")
+    private LocalDateTime lastLoginTime;
 }

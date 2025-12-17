@@ -7,10 +7,10 @@ import reactor.core.publisher.Flux;
 
 /**
  * 自定义组织仓库类
- *
+ * <p>
  * 封装组织相关的多表关联查询逻辑：
- *   - 组织 → 部门
- *
+ * - 组织 → 部门
+ * <p>
  * 单表操作由 SysOrgRepository (ReactiveCrudRepository) 负责，
  * 多表操作集中在此类中，保持分层清晰。
  */

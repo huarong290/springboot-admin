@@ -8,10 +8,10 @@ import reactor.core.publisher.Flux;
 
 /**
  * 自定义部门仓库类
- *
+ * <p>
  * 封装部门相关的多表关联查询逻辑：
- *   - 部门 → 用户
- *
+ * - 部门 → 用户
+ * <p>
  * 单表操作由 SysDeptRepository (ReactiveCrudRepository) 负责，
  * 多表操作集中在此类中，保持分层清晰。
  */
@@ -23,6 +23,7 @@ public class SysDeptRepositoryCustom {
     public SysDeptRepositoryCustom(DatabaseClient client) {
         this.client = client;
     }
+
     /**
      * 根据组织ID查询部门列表
      *

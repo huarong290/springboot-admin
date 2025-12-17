@@ -1,11 +1,17 @@
 package com.springboot.admin.repository.custom;
 
+import com.springboot.admin.model.dto.menu.SysMenuDTO;
 import com.springboot.admin.model.entity.sys.SysMenu;
+import com.springboot.admin.utils.R2dbcHelperUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
@@ -16,6 +22,176 @@ public class SysMenuRepositoryCustom {
     public SysMenuRepositoryCustom(DatabaseClient client) {
         this.client = client;
     }
+
+    /**
+     * 新增菜单，返回生成的主键 ID
+     */
+    public Mono<Long> insertMenu(SysMenuDTO sysMenuDTO) {
+        // 使用 LinkedHashMap 保持字段插入顺序
+        Map<String, Object> fieldMap = new LinkedHashMap<>();
+
+        // 菜单名称（必填）
+        if (StringUtils.isNotBlank(sysMenuDTO.getMenuName())) {
+            fieldMap.put("menu_name", sysMenuDTO.getMenuName());
+        }
+
+        // 父菜单 ID（顶级菜单为 0）
+        if (sysMenuDTO.getMenuParentId() != null) {
+            fieldMap.put("menu_parent_id", sysMenuDTO.getMenuParentId());
+        }
+
+        // 路由路径
+        if (StringUtils.isNotBlank(sysMenuDTO.getMenuPath())) {
+            fieldMap.put("menu_path", sysMenuDTO.getMenuPath());
+        }
+
+        // 前端组件路径
+        if (StringUtils.isNotBlank(sysMenuDTO.getMenuComponent())) {
+            fieldMap.put("menu_component", sysMenuDTO.getMenuComponent());
+        }
+
+        // 菜单图标
+        if (StringUtils.isNotBlank(sysMenuDTO.getMenuIcon())) {
+            fieldMap.put("menu_icon", sysMenuDTO.getMenuIcon());
+        }
+
+        // 菜单类型（0=目录，1=菜单，2=按钮）
+        if (sysMenuDTO.getMenuType() != null) {
+            fieldMap.put("menu_type", sysMenuDTO.getMenuType());
+        }
+
+        // 权限标识
+        if (StringUtils.isNotBlank(sysMenuDTO.getMenuPermission())) {
+            fieldMap.put("menu_permission", sysMenuDTO.getMenuPermission());
+        }
+
+        // 排序值
+        if (sysMenuDTO.getMenuSort() != null) {
+            fieldMap.put("menu_sort", sysMenuDTO.getMenuSort());
+        }
+
+        // 是否显示（1=显示，0=隐藏）
+        if (sysMenuDTO.getMenuVisible() != null) {
+            fieldMap.put("menu_visible", sysMenuDTO.getMenuVisible());
+        }
+
+        // 是否启用（1=启用，0=禁用）
+        if (sysMenuDTO.getMenuStatus() != null) {
+            fieldMap.put("menu_status", sysMenuDTO.getMenuStatus());
+        }
+
+        // 固定插入时间
+        fieldMap.put("create_time", LocalDateTime.now());
+        fieldMap.put("update_time", LocalDateTime.now());
+
+        // 调用工具方法执行插入，并返回生成的主键 ID
+        return R2dbcHelperUtil.insertAndReturnId(client, "sys_menu", fieldMap);
+    }
+
+    /**
+     * 更新菜单，根据主键 ID 更新非空字段
+     */
+    public Mono<Long> updateMenu(SysMenuDTO sysMenuDTO) {
+        // 使用 LinkedHashMap 保持字段顺序
+        Map<String, Object> fieldMap = new LinkedHashMap<>();
+
+        // 菜单名称
+        if (StringUtils.isNotBlank(sysMenuDTO.getMenuName())) {
+            fieldMap.put("menu_name", sysMenuDTO.getMenuName());
+        }
+
+        // 父菜单 ID
+        if (sysMenuDTO.getMenuParentId() != null) {
+            fieldMap.put("menu_parent_id", sysMenuDTO.getMenuParentId());
+        }
+
+        // 路由路径
+        if (StringUtils.isNotBlank(sysMenuDTO.getMenuPath())) {
+            fieldMap.put("menu_path", sysMenuDTO.getMenuPath());
+        }
+
+        // 前端组件路径
+        if (StringUtils.isNotBlank(sysMenuDTO.getMenuComponent())) {
+            fieldMap.put("menu_component", sysMenuDTO.getMenuComponent());
+        }
+
+        // 菜单图标
+        if (StringUtils.isNotBlank(sysMenuDTO.getMenuIcon())) {
+            fieldMap.put("menu_icon", sysMenuDTO.getMenuIcon());
+        }
+
+        // 菜单类型
+        if (sysMenuDTO.getMenuType() != null) {
+            fieldMap.put("menu_type", sysMenuDTO.getMenuType());
+        }
+
+        // 权限标识
+        if (StringUtils.isNotBlank(sysMenuDTO.getMenuPermission())) {
+            fieldMap.put("menu_permission", sysMenuDTO.getMenuPermission());
+        }
+
+        // 排序值
+        if (sysMenuDTO.getMenuSort() != null) {
+            fieldMap.put("menu_sort", sysMenuDTO.getMenuSort());
+        }
+
+        // 是否显示
+        if (sysMenuDTO.getMenuVisible() != null) {
+            fieldMap.put("menu_visible", sysMenuDTO.getMenuVisible());
+        }
+
+        // 是否启用
+        if (sysMenuDTO.getMenuStatus() != null) {
+            fieldMap.put("menu_status", sysMenuDTO.getMenuStatus());
+        }
+
+        // 更新时间固定更新
+        fieldMap.put("update_time", LocalDateTime.now());
+
+        // 执行更新操作，返回影响的行数
+        return R2dbcHelperUtil.update(client, "sys_menu", fieldMap, "id", sysMenuDTO.getId())
+                .map(Long::valueOf); // rowsUpdated 返回 Mono<Integer>，这里转成 Long
+    }
+
+    /**
+     * 删除单个菜单
+     * <p>
+     * 用途：
+     * - 后台管理：逻辑删除（推荐，保留数据用于审计）
+     * - 特殊场景：物理删除（彻底清除数据，例如测试数据清理）
+     *
+     * @param id            菜单ID
+     * @param logicalDelete 是否逻辑删除
+     *                      true  = 逻辑删除（delete_flag = 1）
+     *                      false = 物理删除（DELETE）
+     * @return Mono<Long> 响应式单对象，返回删除成功的记录数（通常为 1）
+     */
+    public Mono<Long> deleteMenuById(Long id, boolean logicalDelete) {
+        if (logicalDelete) {
+            // 逻辑删除：更新 delete_flag = 1
+            String sql = "UPDATE sys_menu SET " +
+                    "delete_flag = 1, " +
+                    "update_by = 'system', " +
+                    "update_time = CURRENT_TIMESTAMP " +
+                    "WHERE id = ? AND delete_flag = 0";
+
+            return client.sql(sql)
+                    .bind(0, id)
+                    .fetch()
+                    .rowsUpdated()
+                    .map(Long::valueOf);
+        } else {
+            // 物理删除：直接 DELETE
+            String sql = "DELETE FROM sys_menu WHERE id = ?";
+
+            return client.sql(sql)
+                    .bind(0, id)
+                    .fetch()
+                    .rowsUpdated()
+                    .map(Long::valueOf);
+        }
+    }
+
     /**
      * 根据用户ID查询菜单列表
      *
@@ -61,6 +237,7 @@ public class SysMenuRepositoryCustom {
                 })
                 .all();
     }
+
     /**
      * 根据角色ID查询菜单列表
      *
@@ -103,21 +280,6 @@ public class SysMenuRepositoryCustom {
                     return menu;
                 })
                 .all();
-    }
-
-
-    /**
-     * 删除单个菜单
-     *
-     * @param id 菜单ID
-     * @return Mono<Integer> 返回受影响的行数
-     */
-    public Mono<Long> deleteMenuById(Long id) {
-        String sql = "DELETE FROM sys_menu WHERE id = ?";
-        return client.sql(sql)
-                .bind(0, id)
-                .fetch()
-                .rowsUpdated();
     }
 
 }
