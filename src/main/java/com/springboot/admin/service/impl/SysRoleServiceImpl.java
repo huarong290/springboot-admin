@@ -1,7 +1,9 @@
 package com.springboot.admin.service.impl;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.springboot.admin.common.ApiResultCode;
 import com.springboot.admin.convert.SysRoleConvert;
+import com.springboot.admin.exception.BusinessException;
 import com.springboot.admin.model.dto.role.SysRoleDTO;
 import com.springboot.admin.model.dto.role.SysRoleQueryDTO;
 import com.springboot.admin.model.entity.sys.SysRole;
@@ -59,10 +61,22 @@ public class SysRoleServiceImpl implements ISysRoleService {
 
     @Override
     public Mono<Long> addRole(SysRoleDTO roleDTO) {
-        SysRole sysRole =sysRoleConvert.toEntity(roleDTO);
-        // 调用自定义仓库方法，返回主键 ID
-        return roleRepositoryCustom.insertRole(sysRole);
+        SysRole sysRole = sysRoleConvert.toEntity(roleDTO);
+
+        // 先检查 roleCode 是否已存在
+        return roleRepository.findByRoleCode(sysRole.getRoleCode())
+                .hasElement()
+                .flatMap(exists -> {
+                    if (exists) {
+                        return Mono.error(new BusinessException(
+                                ApiResultCode.CONFLICT.getCode(),
+                                "角色编码已存在：" + sysRole.getRoleCode()
+                        ));
+                    }
+                    return roleRepositoryCustom.insertRole(sysRole);
+                });
     }
+
 
     @Override
     public Mono<Long> updateRole(SysRoleDTO roleDTO) {

@@ -1,7 +1,9 @@
 package com.springboot.admin.service.impl;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.springboot.admin.common.ApiResultCode;
 import com.springboot.admin.convert.SysUserConvert;
+import com.springboot.admin.exception.BusinessException;
 import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.dto.user.SysUserQueryDTO;
 import com.springboot.admin.model.entity.sys.SysUser;
@@ -88,8 +90,15 @@ public class SysUserServiceImpl implements ISysUserService {
         SysUser user = userConvert.toEntity(dto);
         // 特殊处理密码
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
-        // 调用自定义仓库方法，返回主键 ID
-        return userRepositoryCustom.insertUser(user);
+
+        // 先检查用户名是否已存在
+        return userRepository.findByUsername(user.getUsername())
+                .flatMap(existing -> Mono.error(new BusinessException(
+                        ApiResultCode.CONFLICT.getCode(),
+                        "用户名已存在：" + user.getUsername()
+                )))
+                // 如果不存在，执行插入 调用自定义仓库方法，返回主键 ID
+                .then(userRepositoryCustom.insertUser(user));
     }
     /**
      * 更新用户
