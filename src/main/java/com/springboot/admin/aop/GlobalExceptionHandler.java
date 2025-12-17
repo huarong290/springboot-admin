@@ -5,6 +5,8 @@ import com.springboot.admin.common.ApiResultCode;
 import com.springboot.admin.exception.BaseException;
 import com.springboot.admin.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -66,6 +68,26 @@ public class GlobalExceptionHandler {
         return Mono.just(ApiResult.failResult(ApiResultCode.INTERNAL_SERVER_ERROR.getCode(),
                 "系统内部错误：反射访问受限，请检查 JVM 启动参数 --add-opens 配置"));
     }
+    /**
+     * 处理唯一约束冲突异常
+     */
+    @ExceptionHandler(DuplicateKeyException.class)
+    public Mono<ApiResult<Void>> handleDuplicateKeyException(DuplicateKeyException e) {
+        log.warn("数据库唯一约束冲突: {}", e.getMessage());
+        return Mono.just(ApiResult.failResult(ApiResultCode.CONFLICT.getCode(),
+                "数据重复，违反唯一约束，请检查输入"));
+    }
+
+    /**
+     * 处理通用数据库访问异常
+     */
+    @ExceptionHandler(DataAccessException.class)
+    public Mono<ApiResult<Void>> handleDataAccessException(DataAccessException e) {
+        log.error("数据库访问异常: {}", e.getMessage(), e);
+        return Mono.just(ApiResult.failResult(ApiResultCode.INTERNAL_SERVER_ERROR.getCode(),
+                "数据库访问错误，请联系管理员"));
+    }
+
     /**
      * 处理其他未捕获异常
      */
