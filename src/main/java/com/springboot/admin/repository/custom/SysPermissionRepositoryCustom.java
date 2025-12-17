@@ -1,10 +1,22 @@
 package com.springboot.admin.repository.custom;
 
+import com.springboot.admin.model.dto.permission.SysPermissionDTO;
+import com.springboot.admin.model.dto.permission.SysPermissionQueryDTO;
 import com.springboot.admin.model.entity.sys.SysPermission;
+import com.springboot.admin.model.vo.PageResult;
+import com.springboot.admin.model.vo.permission.SysPermissionVO;
+import com.springboot.admin.utils.R2dbcHelperUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
 
 
 /**
@@ -21,8 +33,89 @@ public class SysPermissionRepositoryCustom {
     public SysPermissionRepositoryCustom(DatabaseClient client) {
         this.client = client;
     }
+    /**
+     * 分页查询权限列表
+     *
+     * @param query 权限查询参数（包含分页和条件）
+     * @return Mono<PageResult<SysPermissionVO>> 分页结果
+     */
+    public Mono<PageResult<SysPermissionVO>> pagePermissionList(SysPermissionQueryDTO query) {
+        // 基础 SQL，过滤掉逻辑删除的数据
+        StringBuilder baseSql = new StringBuilder("FROM sys_permission t WHERE t.delete_flag = 0 ");
 
-    /** 根据用户ID查询权限列表 */
+        // 参数 Map，用于绑定查询条件
+        Map<String, Object> params = new HashMap<>();
+
+        // 按权限编码模糊查询
+        if (StringUtils.isNotBlank(query.getPermissionCode())) {
+            baseSql.append("AND t.permission_code LIKE :permissionCode ");
+            params.put("permissionCode", "%" + query.getPermissionCode() + "%");
+        }
+
+        // 按权限名称模糊查询
+        if (StringUtils.isNotBlank(query.getPermissionName())) {
+            baseSql.append("AND t.permission_name LIKE :permissionName ");
+            params.put("permissionName", "%" + query.getPermissionName() + "%");
+        }
+
+        // 按权限类型精确查询
+        if (query.getPermissionType() != null) {
+            baseSql.append("AND t.permission_type = :permissionType ");
+            params.put("permissionType", query.getPermissionType());
+        }
+
+        // 按权限状态精确查询
+        if (query.getPermissionStatus() != null) {
+            baseSql.append("AND t.permission_status = :permissionStatus ");
+            params.put("permissionStatus", query.getPermissionStatus());
+        }
+
+        // 按创建时间起始范围查询
+        if (StringUtils.isNotBlank(query.getCreateTimeStart()) ) {
+            baseSql.append("AND t.create_time >= :createTimeStart ");
+            params.put("createTimeStart", query.getCreateTimeStart());
+        }
+
+        // 按创建时间结束范围查询
+        if (StringUtils.isNotBlank(query.getCreateTimeEnd()) ) {
+            baseSql.append("AND t.create_time <= :createTimeEnd ");
+            params.put("createTimeEnd", query.getCreateTimeEnd());
+        }
+
+        // 调用工具类执行分页查询
+        return R2dbcHelperUtil.queryPage(
+                client,
+                baseSql.toString(),
+                params,
+                query.getPage(),
+                query.getSize(),
+                (row, meta) -> {
+                    SysPermissionVO permission = new SysPermissionVO();
+                    permission.setId(row.get("id", Long.class));
+                    permission.setPermissionCode(row.get("permission_code", String.class));
+                    permission.setPermissionName(row.get("permission_name", String.class));
+                    permission.setPermissionType(row.get("permission_type", Integer.class));
+                    permission.setPermissionStatus(row.get("permission_status", Integer.class));
+                    permission.setCreateTime(
+                            Optional.ofNullable(row.get("create_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
+                    permission.setUpdateTime(
+                            Optional.ofNullable(row.get("update_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
+                    return permission;
+                }
+        );
+    }
+
+
+
+    /**
+     * 根据用户ID查询权限列表
+     */
     public Flux<SysPermission> listPermissionsByUserId(Long userId) {
         String sql = "SELECT p.* FROM sys_permission p " +
                 "INNER JOIN sys_role_permission rp ON p.id = rp.permission_id " +
@@ -75,59 +168,77 @@ public class SysPermissionRepositoryCustom {
                 })
                 .all();
     }
+
     /**
      * 新增权限，返回生成的主键 ID
      */
-    public Mono<Long> insertPermission(SysPermission sysPermission) {
-        String sql = "INSERT INTO sys_permission " +
-                "(permission_code, permission_name, permission_type,permission_status, create_by, update_by) " +
-                "VALUES (?, ?, ?, ?, ?, ?)";
+    /**
+     * 新增权限，返回生成的主键 ID
+     */
+    public Mono<Long> insertPermission(SysPermissionDTO sysPermissionDTO) {
+        Map<String, Object> fieldMap = new LinkedHashMap<>();
 
-        return client.sql(sql)
-                .bind(0, sysPermission.getPermissionCode())
-                .bind(1, sysPermission.getPermissionName())
-                .bind(2, sysPermission.getPermissionType())
-                .bind(3, sysPermission.getPermissionStatus())
-                .bind(4, sysPermission.getCreateBy())
-                .bind(5, sysPermission.getUpdateBy())
-                .filter(statement -> statement.returnGeneratedValues("id"))
-                .fetch()
-                .first()
-                .map(row -> (Long) row.get("id"));
+        if (StringUtils.isNotBlank(sysPermissionDTO.getPermissionCode())) {
+            fieldMap.put("permission_code", sysPermissionDTO.getPermissionCode());
+        }
+        if (StringUtils.isNotBlank(sysPermissionDTO.getPermissionName())) {
+            fieldMap.put("permission_name", sysPermissionDTO.getPermissionName());
+        }
+        if (sysPermissionDTO.getPermissionType() != null) {
+            fieldMap.put("permission_type", sysPermissionDTO.getPermissionType());
+        }
+        if (sysPermissionDTO.getPermissionStatus() != null) {
+            fieldMap.put("permission_status", sysPermissionDTO.getPermissionStatus());
+        }
+
+        // 固定插入时间和创建者
+        fieldMap.put("create_by", "system");
+        fieldMap.put("create_time", LocalDateTime.now());
+        fieldMap.put("update_by", "system");
+        fieldMap.put("update_time", LocalDateTime.now());
+
+        return R2dbcHelperUtil.insertAndReturnId(client, "sys_permission", fieldMap);
     }
+
 
     /**
      * 更新权限信息，返回受影响的行数
      */
-    public Mono<Long> updatePermission(SysPermission sysPermission) {
-        String sql = "UPDATE sys_permission SET " +
-                "permission_code = ?, " +
-                "permission_name = ?, " +
-                "permission_type = ?, " +
-                "permission_status = ?, " +
-                "update_by = ?, " +
-                "update_time = NOW() " +
-                "WHERE id = ?";
-        return client.sql(sql)
-                .bind(0, sysPermission.getPermissionCode())
-                .bind(1, sysPermission.getPermissionName())
-                .bind(2, sysPermission.getPermissionType())
-                .bind(3, sysPermission.getPermissionStatus())
-                .bind(4, sysPermission.getUpdateBy())
-                .bind(5, sysPermission.getId())
-                .fetch()
-                .rowsUpdated()
-                .map(Long::valueOf); // 转换为 Mono<Long>
+    /**
+     * 更新权限，根据主键 ID 更新非空字段
+     */
+    public Mono<Long> updatePermission(SysPermissionDTO sysPermissionDTO) {
+        Map<String, Object> fieldMap = new LinkedHashMap<>();
+
+        if (StringUtils.isNotBlank(sysPermissionDTO.getPermissionCode())) {
+            fieldMap.put("permission_code", sysPermissionDTO.getPermissionCode());
+        }
+        if (StringUtils.isNotBlank(sysPermissionDTO.getPermissionName())) {
+            fieldMap.put("permission_name", sysPermissionDTO.getPermissionName());
+        }
+        if (sysPermissionDTO.getPermissionType() != null) {
+            fieldMap.put("permission_type", sysPermissionDTO.getPermissionType());
+        }
+        if (sysPermissionDTO.getPermissionStatus() != null) {
+            fieldMap.put("permission_status", sysPermissionDTO.getPermissionStatus());
+        }
+
+        // 更新时间固定更新
+        fieldMap.put("update_by", "system");
+        fieldMap.put("update_time", LocalDateTime.now());
+
+        return R2dbcHelperUtil.update(client, "sys_permission", fieldMap, "id", sysPermissionDTO.getId());
     }
+
 
     /**
      * 删除权限
-     *
+     * <p>
      * 用途：
      * - 后台管理：逻辑删除（推荐，保留数据用于审计）
      * - 特殊场景：物理删除（彻底清除数据，例如测试数据清理）
      *
-     * @param id 权限ID
+     * @param id            权限ID
      * @param logicalDelete 是否逻辑删除
      *                      true  = 逻辑删除（delete_flag = 1）
      *                      false = 物理删除（DELETE）
@@ -158,5 +269,6 @@ public class SysPermissionRepositoryCustom {
                     .map(Long::valueOf);
         }
     }
+
 
 }

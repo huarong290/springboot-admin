@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono;
 
 /**
  * 自定义角色菜单关联 Repository
- *
+ * <p>
  * 提供复杂查询逻辑，例如根据角色ID查询菜单关联关系。
  * 使用 R2DBC DatabaseClient 执行 SQL，返回响应式 Flux。
  */
@@ -44,12 +44,12 @@ public class SysRoleMenuRepositoryCustom {
 
     /**
      * 删除角色菜单关联
-     *
+     * <p>
      * 用途：
      * - 后台管理：逻辑删除（推荐，保留数据用于审计）
      * - 特殊场景：物理删除（彻底清除数据，例如测试数据清理）
      *
-     * @param id 角色菜单关联ID
+     * @param id            角色菜单关联ID
      * @param logicalDelete 是否逻辑删除
      *                      true  = 逻辑删除（delete_flag = 1）
      *                      false = 物理删除（DELETE）

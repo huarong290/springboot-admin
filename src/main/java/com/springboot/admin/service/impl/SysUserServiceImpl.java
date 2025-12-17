@@ -6,13 +6,13 @@ import com.springboot.admin.convert.SysUserConvert;
 import com.springboot.admin.exception.BusinessException;
 import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.dto.user.SysUserQueryDTO;
-import com.springboot.admin.model.entity.sys.SysUser;
 import com.springboot.admin.model.vo.PageResult;
 import com.springboot.admin.model.vo.user.SysUserVO;
 import com.springboot.admin.repository.custom.SysUserRepositoryCustom;
 import com.springboot.admin.repository.single.SysUserRepository;
 import com.springboot.admin.service.ISysUserService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -86,19 +86,18 @@ public class SysUserServiceImpl implements ISysUserService {
      */
     @Override
     public Mono<Long> addUser(SysUserDTO dto) {
-        // DTO 转换成实体
-        SysUser user = userConvert.toEntity(dto);
+
         // 特殊处理密码
-        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        dto.setPassword(passwordEncoder.encode(dto.getPassword()));
 
         // 先检查用户名是否已存在
-        return userRepository.findByUsername(user.getUsername())
+        return userRepository.findByUsername(dto.getUsername())
                 .flatMap(existing -> Mono.error(new BusinessException(
                         ApiResultCode.CONFLICT.getCode(),
-                        "用户名已存在：" + user.getUsername()
+                        "用户名已存在：" + dto.getUsername()
                 )))
                 // 如果不存在，执行插入 调用自定义仓库方法，返回主键 ID
-                .then(userRepositoryCustom.insertUser(user));
+                .then(userRepositoryCustom.insertUser(dto));
     }
     /**
      * 更新用户
@@ -111,7 +110,7 @@ public class SysUserServiceImpl implements ISysUserService {
     public Mono<Long> updateUser(SysUserDTO sysUserDTO) {
         // 判断密码是否为空并加密
         String encodedPassword = null;
-        if (sysUserDTO.getPassword() != null && !sysUserDTO.getPassword().isBlank()) {
+        if (sysUserDTO.getPassword() != null && StringUtils.isNotBlank(sysUserDTO.getPassword())) {
             encodedPassword = passwordEncoder.encode(sysUserDTO.getPassword());
         }
         // 调用自定义仓库方法，返回更新条数

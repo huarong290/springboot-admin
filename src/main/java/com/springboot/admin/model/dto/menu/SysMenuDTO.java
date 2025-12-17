@@ -88,6 +88,6 @@ public class SysMenuDTO {
      * 1 = 启用，0 = 禁用
      */
     @Schema(description = "是否启用:1-启用 0-禁用")
-    private Integer menuEnabled;
+    private Integer menuStatus;
 }
 

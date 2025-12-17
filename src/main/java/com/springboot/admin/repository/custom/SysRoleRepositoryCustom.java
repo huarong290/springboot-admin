@@ -34,9 +34,6 @@ public class SysRoleRepositoryCustom {
     public SysRoleRepositoryCustom(DatabaseClient client) {
         this.client = client;
     }
-
-
-
     /**
      * 分页查询角色列表
      *
@@ -98,20 +95,20 @@ public class SysRoleRepositoryCustom {
     /**
      * 新增角色，返回生成的主键 ID
      */
-    public Mono<Long> insertRole(SysRole sysRole) {
+    public Mono<Long> insertRole(SysRoleDTO roleDTO) {
         Map<String, Object> fieldMap = new LinkedHashMap<>();
         // 基本字段
-        if (StringUtils.isNotBlank(sysRole.getRoleName())){
-            fieldMap.put("role_name", sysRole.getRoleName());
+        if (StringUtils.isNotBlank(roleDTO.getRoleName())){
+            fieldMap.put("role_name", roleDTO.getRoleName());
         }
-        if (StringUtils.isNotBlank(sysRole.getRoleCode())){
-            fieldMap.put("role_code", sysRole.getRoleCode());
+        if (StringUtils.isNotBlank(roleDTO.getRoleCode())){
+            fieldMap.put("role_code", roleDTO.getRoleCode());
         }
-        if (StringUtils.isNotBlank(sysRole.getRoleDescription())){
-            fieldMap.put("role_description", sysRole.getRoleDescription());
+        if (StringUtils.isNotBlank(roleDTO.getRoleDescription())){
+            fieldMap.put("role_description", roleDTO.getRoleDescription());
         }
-        if (sysRole.getRoleStatus() != null) {
-            fieldMap.put("role_status", sysRole.getRoleStatus());
+        if (roleDTO.getRoleStatus() != null) {
+            fieldMap.put("role_status", roleDTO.getRoleStatus());
         }
         // 固定插入时间
         fieldMap.put("create_time", LocalDateTime.now());

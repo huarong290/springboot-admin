@@ -27,6 +27,33 @@ public class SysMenuController {
     private ISysMenuService iSysMenuService;
 
     /**
+     * 新增菜单
+     */
+    @PostMapping("/addMenu")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<Long>> addMenu(@RequestBody SysMenuDTO menuDTO) {
+        return iSysMenuService.addMenu(menuDTO)
+                .map(ApiResult::successResult);
+    }
+    /**
+     * 更新菜单信息
+     */
+    @PutMapping("/updateMenu")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<Long>> updateMenu(@RequestBody SysMenuDTO menuDTO) {
+        return iSysMenuService.updateMenu(menuDTO)
+                .map(ApiResult::successResult);
+    }
+    /**
+     * 删除菜单
+     */
+    @DeleteMapping("/deleteMenu/{id}")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<Long>> deleteMenu(@PathVariable Long id) {
+        return iSysMenuService.deleteMenu(id)
+                .map(ApiResult::successResult);
+    }
+    /**
      * 根据菜单ID查询菜单信息
      */
     @GetMapping("/getMenuById/{id}")
@@ -47,35 +74,11 @@ public class SysMenuController {
                 .map(ApiResult::successResult);
     }
 
-    /**
-     * 新增菜单
-     */
-    @PostMapping("/addMenu")
-    @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<Long>> addMenu(@RequestBody SysMenuDTO menuDTO) {
-        return iSysMenuService.addMenu(menuDTO)
-                .map(ApiResult::successResult);
-    }
 
-    /**
-     * 更新菜单信息
-     */
-    @PutMapping("/updateMenu")
-    @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<SysMenuVO>> updateMenu(@RequestBody SysMenuDTO menuDTO) {
-        return iSysMenuService.updateMenu(menuDTO)
-                .map(ApiResult::successResult);
-    }
 
-    /**
-     * 删除菜单
-     */
-    @DeleteMapping("/deleteMenu/{id}")
-    @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<Long>> deleteMenu(@PathVariable Long id) {
-        return iSysMenuService.deleteMenu(id)
-                .map(ApiResult::successResult);
-    }
+
+
+
 
     /**
      * 查询所有菜单（平铺列表）
