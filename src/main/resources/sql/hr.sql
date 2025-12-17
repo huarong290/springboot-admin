@@ -239,3 +239,281 @@ VALUES
 (1, 1, 1), (2, 1, 2), (3, 1, 3), (4, 1, 4), -- 超级管理员 → 全部权限
 (5, 2, 1), -- 普通用户 → 新增用户
 (6, 3, 4); -- 财务专员 → 分配角色
+
+
+
+DROP TABLE IF EXISTS `hr_employee`;
+CREATE TABLE `hr_employee`  (
+                                `id` bigint NOT NULL AUTO_INCREMENT COMMENT '员工ID',
+                                `employee_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '员工编号（唯一，可修改）',
+                                `name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '姓名',
+                                `company_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '所属公司',
+                                `department` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '部门',
+                                `employment_status` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '在职状态',
+                                `is_transferred` tinyint(1) NULL DEFAULT 0 COMMENT '是否转岗',
+                                `accommodation_status` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '住宿情况',
+                                `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+                                `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+                                PRIMARY KEY (`id`) USING BTREE,
+                                UNIQUE INDEX `uk_employee_code`(`employee_code` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '员工基本信息表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of hr_employee
+-- ----------------------------
+INSERT INTO `hr_employee` VALUES (1, 'GL00055', 'alice', '平台财务中心', '产品开发01组', '在职', 0, '外宿', 0, 'admin', '2025-10-08 09:52:33', 'admin', '2025-11-09 13:05:19');
+
+-- ----------------------------
+-- Table structure for hr_exchange_rate_log
+-- ----------------------------
+DROP TABLE IF EXISTS `hr_exchange_rate_log`;
+CREATE TABLE `hr_exchange_rate_log`  (
+                                         `id` bigint NOT NULL AUTO_INCREMENT,
+                                         `base_currency` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '本币',
+                                         `target_currency` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '目标币',
+                                         `exchange_rate` decimal(18, 8) NOT NULL DEFAULT 1.00000000 COMMENT '汇率值',
+                                         `effective_date` date NULL DEFAULT NULL COMMENT '生效日期',
+                                         `source` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '汇率来源（如央行、CoinMarketCap等）',
+                                         `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+                                         `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                         `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                         `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                         `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+                                         PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '汇率记录表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of hr_exchange_rate_log
+-- ----------------------------
+INSERT INTO `hr_exchange_rate_log` VALUES (1, 'USDT', '比索', 55.50000000, '2025-05-01', 'YH', 0, 'admin', '2025-10-09 01:15:39', 'admin', '2025-10-26 11:38:05');
+INSERT INTO `hr_exchange_rate_log` VALUES (2, 'USDT', '泰铢', 32.40000000, '2025-05-01', 'YH', 0, 'admin', '2025-10-09 01:20:10', 'admin', '2025-10-26 11:38:26');
+INSERT INTO `hr_exchange_rate_log` VALUES (3, 'USDT', '比索', 56.00000000, '2025-06-01', 'YH', 0, 'admin', '2025-10-26 11:37:56', 'admin', '2025-10-26 11:38:35');
+INSERT INTO `hr_exchange_rate_log` VALUES (4, 'USDT', '泰铢', 32.10000000, '2025-06-01', 'YH', 0, 'admin', '2025-10-26 11:39:21', 'admin', '2025-10-26 11:39:21');
+
+-- ----------------------------
+-- Table structure for hr_salary_deduction
+-- ----------------------------
+DROP TABLE IF EXISTS `hr_salary_deduction`;
+CREATE TABLE `hr_salary_deduction`  (
+                                        `id` bigint NOT NULL AUTO_INCREMENT COMMENT '扣款ID',
+                                        `period_id` bigint NOT NULL COMMENT '薪资周期ID',
+                                        `absenteeism_deduction` decimal(10, 2) NULL DEFAULT NULL COMMENT '旷工扣款',
+                                        `late_deduction` decimal(10, 2) NULL DEFAULT NULL COMMENT '迟到扣款',
+                                        `utility_deduction` decimal(10, 2) NULL DEFAULT NULL COMMENT '水电网扣款',
+                                        `housing_deduction` decimal(10, 2) NULL DEFAULT NULL COMMENT '外宿房补/宿舍超标扣款',
+                                        `fine` decimal(10, 2) NULL DEFAULT NULL COMMENT '各类罚款(负数)',
+                                        `passport_deduction` decimal(10, 2) NULL DEFAULT NULL COMMENT '护照费用代扣(负数)',
+                                        `annual_leave_downgrade` decimal(10, 2) NULL DEFAULT NULL COMMENT '年假降级',
+                                        `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+                                        `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                        `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                        `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                        `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+                                        PRIMARY KEY (`id`) USING BTREE,
+                                        INDEX `period_id`(`period_id` ASC) USING BTREE,
+                                        CONSTRAINT `hr_salary_deduction_ibfk_1` FOREIGN KEY (`period_id`) REFERENCES `hr_salary_period` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '员工扣款项表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of hr_salary_deduction
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for hr_salary_deposit
+-- ----------------------------
+DROP TABLE IF EXISTS `hr_salary_deposit`;
+CREATE TABLE `hr_salary_deposit`  (
+                                      `id` bigint NOT NULL AUTO_INCREMENT COMMENT '押金ID',
+                                      `period_id` bigint NOT NULL COMMENT '薪资周期ID',
+                                      `deposit_current` decimal(10, 2) NULL DEFAULT NULL COMMENT '本月押金',
+                                      `deposit_total_deducted` decimal(10, 2) NULL DEFAULT NULL COMMENT '截止本月已扣押金',
+                                      `deposit_current_returned` decimal(10, 2) NULL DEFAULT NULL COMMENT '本月返还',
+                                      `deposit_total_returned` decimal(10, 2) NULL DEFAULT NULL COMMENT '截止本月返还',
+                                      `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+                                      `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                      `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                      `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                      `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+                                      PRIMARY KEY (`id`) USING BTREE,
+                                      INDEX `period_id`(`period_id` ASC) USING BTREE,
+                                      CONSTRAINT `hr_salary_deposit_ibfk_1` FOREIGN KEY (`period_id`) REFERENCES `hr_salary_period` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '押金记录表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of hr_salary_deposit
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for hr_salary_income
+-- ----------------------------
+DROP TABLE IF EXISTS `hr_salary_income`;
+CREATE TABLE `hr_salary_income`  (
+                                     `id` bigint NOT NULL AUTO_INCREMENT COMMENT '收入ID',
+                                     `period_id` bigint NOT NULL COMMENT '薪资周期ID',
+                                     `base_salary` decimal(10, 2) NULL DEFAULT NULL COMMENT '本月底薪标准',
+                                     `day_shift_pay` decimal(10, 2) NULL DEFAULT NULL COMMENT '日加白工资',
+                                     `overtime_pay` decimal(10, 2) NULL DEFAULT NULL COMMENT '时加班工资',
+                                     `kpi_bonus` decimal(10, 2) NULL DEFAULT NULL COMMENT 'KPI绩效',
+                                     `performance_commission` decimal(10, 2) NULL DEFAULT NULL COMMENT '业绩提成',
+                                     `agent_commission` decimal(10, 2) NULL DEFAULT NULL COMMENT '代理提成',
+                                     `twelve_hour_subsidy` decimal(10, 2) NULL DEFAULT NULL COMMENT '12小时补贴',
+                                     `housing_adjustment` decimal(10, 2) NOT NULL DEFAULT 0.00 COMMENT '外宿房补/宿舍超标扣款',
+                                     `transport_subsidy` decimal(10, 2) NULL DEFAULT NULL COMMENT '车补',
+                                     `full_attendance_bonus` decimal(10, 2) NULL DEFAULT NULL COMMENT '全勤奖',
+                                     `holiday_bonus` decimal(10, 2) NULL DEFAULT NULL COMMENT '节日福利',
+                                     `remote_subsidy` decimal(10, 2) NULL DEFAULT NULL COMMENT '远程补贴',
+                                     `referral_bonus` decimal(10, 2) NULL DEFAULT NULL COMMENT '内推奖金',
+                                     `travel_meal_subsidy` decimal(10, 2) NULL DEFAULT NULL COMMENT '出差餐补/住宿费',
+                                     `card_reward` decimal(10, 2) NULL DEFAULT NULL COMMENT '员工卡/注册/安全卡奖励',
+                                     `onboarding_reimbursement` decimal(10, 2) NULL DEFAULT NULL COMMENT '新人入职/回国费用报销',
+                                     `resignation_settlement` decimal(10, 2) NULL DEFAULT NULL COMMENT '离职费用结算',
+                                     `last_month_adjustment` decimal(10, 2) NULL DEFAULT NULL COMMENT '上月补发/续扣',
+                                     `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+                                     `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                     `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+                                     `employee_id` bigint NOT NULL COMMENT '员工ID',
+                                     `dragon_boat_festival_gift` decimal(10, 2) NULL DEFAULT NULL COMMENT '端午节礼金',
+                                     `dragon_boat_festival_double_pay` decimal(10, 2) NULL DEFAULT NULL COMMENT '端午节两倍薪资',
+                                     `mid_autumn_festival_gift` decimal(10, 2) NULL DEFAULT NULL COMMENT '中秋节礼金',
+                                     `mid_autumn_festival_double_pay` decimal(10, 2) NULL DEFAULT NULL COMMENT '中秋节两倍薪资',
+                                     `annual_leave_bonus` decimal(10, 2) NULL DEFAULT 0.00 COMMENT '年假奖金',
+                                     PRIMARY KEY (`id`) USING BTREE,
+                                     INDEX `period_id`(`period_id` ASC) USING BTREE,
+                                     INDEX `employee_id`(`employee_id` ASC) USING BTREE,
+                                     CONSTRAINT `hr_salary_income_ibfk_1` FOREIGN KEY (`period_id`) REFERENCES `hr_salary_period` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+                                     CONSTRAINT `hr_salary_income_ibfk_2` FOREIGN KEY (`employee_id`) REFERENCES `hr_employee` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '员工收入项表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of hr_salary_income
+-- ----------------------------
+INSERT INTO `hr_salary_income` VALUES (1, 2, 5840.00, 0.00, 0.00, 1168.00, 0.00, 0.00, 0.00, 300.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 'admin', '2025-10-10 23:58:24', 'admin', '2025-10-26 11:26:01', 1, 0.00, 0.00, 0.00, 0.00, 0.00);
+INSERT INTO `hr_salary_income` VALUES (2, 1, 5840.00, 0.00, 0.00, 2920.00, 0.00, 0.00, 0.00, 300.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 'admin', '2025-10-26 11:21:51', 'admin', '2025-10-26 11:26:42', 1, 180.00, 376.77, 0.00, 0.00, 0.00);
+INSERT INTO `hr_salary_income` VALUES (3, 3, 5840.00, 0.00, 0.00, 1168.00, 0.00, 0.00, 0.00, 300.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 'admin', '2025-10-26 11:30:43', 'admin', '2025-10-26 11:30:43', 1, 0.00, 0.00, 0.00, 0.00, 0.00);
+INSERT INTO `hr_salary_income` VALUES (4, 4, 5840.00, 0.00, 0.00, 2920.00, 0.00, 0.00, 0.00, 300.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 'admin', '2025-10-26 14:09:29', 'admin', '2025-10-26 14:09:53', 1, 0.00, 0.00, 0.00, 0.00, 0.00);
+INSERT INTO `hr_salary_income` VALUES (5, 5, 5840.00, 0.00, 0.00, 1168.00, 0.00, 0.00, 0.00, 300.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 859.05, 0, 'admin', '2025-10-26 14:19:37', 'admin', '2025-10-26 15:10:05', 1, 0.00, 0.00, 0.00, 0.00, 0.00);
+INSERT INTO `hr_salary_income` VALUES (6, 6, 7008.00, 0.00, 0.00, 1401.60, 0.00, 0.00, 0.00, 300.00, 0.00, 70.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 'admin', '2025-10-26 15:14:28', 'admin', '2025-11-07 22:41:31', 1, 0.00, 0.00, 0.00, 0.00, 0.00);
+INSERT INTO `hr_salary_income` VALUES (7, 7, 7008.00, 0.00, 0.00, 3504.00, 0.00, 0.00, 0.00, 300.00, 0.00, 70.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 'admin', '2025-11-07 22:40:54', 'admin', '2025-11-07 22:40:54', 1, 0.00, 452.13, 180.00, 0.00, 0.00);
+
+-- ----------------------------
+-- Table structure for hr_salary_period
+-- ----------------------------
+DROP TABLE IF EXISTS `hr_salary_period`;
+CREATE TABLE `hr_salary_period`  (
+                                     `id` bigint NOT NULL AUTO_INCREMENT COMMENT '周期ID',
+                                     `employee_id` bigint NOT NULL COMMENT '员工ID',
+                                     `work_month` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '在岗月份',
+                                     `settlement_month` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '结算月份（格式：YYYYMM）',
+                                     `start_date` date NULL DEFAULT NULL COMMENT '开始日期',
+                                     `end_date` date NULL DEFAULT NULL COMMENT '结束日期',
+                                     `month_days` int NULL DEFAULT NULL COMMENT '月天数',
+                                     `attendance_days` int NULL DEFAULT NULL COMMENT '出勤天数',
+                                     `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+                                     `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                     `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+                                     PRIMARY KEY (`id`) USING BTREE,
+                                     INDEX `employee_id`(`employee_id` ASC) USING BTREE,
+                                     CONSTRAINT `hr_salary_period_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `hr_employee` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '薪资周期信息表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of hr_salary_period
+-- ----------------------------
+INSERT INTO `hr_salary_period` VALUES (1, 1, '13', '2025-05', '2025-05-01', '2025-05-31', 31, 31, 0, 'admin', '2025-10-09 23:00:33', 'admin', '2025-10-09 23:00:33');
+INSERT INTO `hr_salary_period` VALUES (2, 1, '12', '2025-04', '2025-04-01', '2025-04-30', 30, 30, 0, 'admin', '2025-10-09 23:08:47', 'admin', '2025-10-09 23:08:47');
+INSERT INTO `hr_salary_period` VALUES (3, 1, '14', '2025-06', '2025-06-01', '2025-06-30', 30, 30, 0, 'admin', '2025-10-09 23:24:23', 'admin', '2025-10-09 23:24:23');
+INSERT INTO `hr_salary_period` VALUES (4, 1, '15', '2025-07', '2025-07-01', '2025-07-31', 31, 31, 0, 'admin', '2025-10-26 14:04:10', 'admin', '2025-10-26 14:04:10');
+INSERT INTO `hr_salary_period` VALUES (5, 1, '16', '2025-08', '2025-08-01', '2025-08-31', 31, 31, 0, 'admin', '2025-10-26 14:15:28', 'admin', '2025-10-26 14:15:28');
+INSERT INTO `hr_salary_period` VALUES (6, 1, '17', '2025-09', '2025-09-01', '2025-09-30', 30, 30, 0, 'admin', '2025-10-26 15:12:52', 'admin', '2025-10-26 15:12:52');
+INSERT INTO `hr_salary_period` VALUES (7, 1, '18', '2025-10', '2025-10-01', '2025-10-31', 31, 31, 0, 'admin', '2025-11-07 22:37:37', 'admin', '2025-11-07 22:37:37');
+
+-- ----------------------------
+-- Table structure for hr_salary_summary
+-- ----------------------------
+DROP TABLE IF EXISTS `hr_salary_summary`;
+CREATE TABLE `hr_salary_summary`  (
+                                      `id` bigint NOT NULL AUTO_INCREMENT COMMENT '汇总ID',
+                                      `period_id` bigint NOT NULL COMMENT '薪资周期ID',
+                                      `currency` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT 'CNY' COMMENT '结算币种',
+                                      `exchange_rate` decimal(10, 4) NULL DEFAULT 1.0000 COMMENT '汇率（本币兑目标币）',
+                                      `salary_subtotal` decimal(10, 2) NULL DEFAULT NULL COMMENT '应发小计（本币）',
+                                      `salary_total` decimal(10, 2) NULL DEFAULT NULL COMMENT '结算薪资（本币）',
+                                      `salary_converted` decimal(10, 2) NULL DEFAULT NULL COMMENT '结算薪资（目标币）',
+                                      `salary_rmb` decimal(10, 2) NULL DEFAULT NULL COMMENT '人民币金额（如需展示）',
+                                      `salary_usdt` decimal(10, 2) NULL DEFAULT NULL COMMENT 'USDT金额（如需展示）',
+                                      `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '备注',
+                                      `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+                                      `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                      `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                      `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                      `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+                                      PRIMARY KEY (`id`) USING BTREE,
+                                      INDEX `period_id`(`period_id` ASC) USING BTREE,
+                                      CONSTRAINT `hr_salary_summary_ibfk_1` FOREIGN KEY (`period_id`) REFERENCES `hr_salary_period` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '薪资汇总与结算表（含币种与汇率）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of hr_salary_summary
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for sys_dict_item
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_dict_item`;
+CREATE TABLE `sys_dict_item`  (
+                                  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                                  `dict_type_code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '所属字典类型code',
+                                  `dict_item_label` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '字典项标签（如 男、女）',
+                                  `dict_item_value` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '字典项值（如 1、0）',
+                                  `sort` int NOT NULL DEFAULT 0 COMMENT '排序值，越小越靠前',
+                                  `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否启用，0表示启用',
+                                  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '备注说明',
+                                  `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+                                  `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                  `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+                                  PRIMARY KEY (`id`) USING BTREE,
+                                  UNIQUE INDEX `uk_dict_type_value`(`dict_type_code` ASC, `dict_item_value` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统字典项表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_dict_item
+-- ----------------------------
+INSERT INTO `sys_dict_item` VALUES (1, 'gender', '男', '1', 1, 0, '', 0, 'admin', '2025-08-16 20:25:34', 'admin', '2025-09-30 10:49:19');
+INSERT INTO `sys_dict_item` VALUES (2, 'gender', '女', '0', 3, 0, '', 0, 'admin', '2025-08-16 20:25:34', 'admin', '2025-09-30 10:49:36');
+INSERT INTO `sys_dict_item` VALUES (3, 'status', '启用', '1', 1, 1, '', 0, 'admin', '2025-08-16 20:25:49', 'admin', '2025-08-16 20:25:49');
+INSERT INTO `sys_dict_item` VALUES (4, 'status', '禁用', '0', 2, 1, '', 0, 'admin', '2025-08-16 20:25:49', 'admin', '2025-08-16 20:25:49');
+
+-- ----------------------------
+-- Table structure for sys_dict_type
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_dict_type`;
+CREATE TABLE `sys_dict_type`  (
+                                  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                                  `dict_type_code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '字典类型编码（如 gender、status）',
+                                  `dict_type_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '字典类型名称（如 性别、状态）',
+                                  `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否启用,0 表示启用',
+                                  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '备注说明',
+                                  `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+                                  `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                  `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+                                  PRIMARY KEY (`id`) USING BTREE,
+                                  UNIQUE INDEX `uk_dict_code`(`dict_type_code` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统字典类型表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_dict_type
+-- ----------------------------
+INSERT INTO `sys_dict_type` VALUES (1, 'gender', '性别', 0, '性别字典', 0, 'admin', '2025-08-16 20:25:16', 'admin', '2025-09-30 10:50:31');
+INSERT INTO `sys_dict_type` VALUES (2, 'status', '状态', 0, '通用状态字典', 0, 'admin', '2025-08-16 20:25:16', 'admin', '2025-08-16 20:25:16');
+INSERT INTO `sys_dict_type` VALUES (3, 'channel', '渠道1', 0, '渠道字典1', 0, 'admin', '2025-09-19 09:50:56', 'admin', '2025-09-19 10:11:59');
