@@ -1,9 +1,13 @@
 package com.springboot.admin.service.impl;
 
-import com.springboot.admin.model.entity.sys.SysOrg;
+import com.springboot.admin.model.dto.org.SysOrgDTO;
+import com.springboot.admin.model.dto.org.SysOrgQueryDTO;
 import com.springboot.admin.model.entity.sys.SysDept;
-import com.springboot.admin.repository.single.SysOrgRepository;
+import com.springboot.admin.model.entity.sys.SysOrg;
+import com.springboot.admin.model.vo.PageResult;
+import com.springboot.admin.model.vo.org.SysOrgVO;
 import com.springboot.admin.repository.custom.SysOrgRepositoryCustom;
+import com.springboot.admin.repository.single.SysOrgRepository;
 import com.springboot.admin.service.ISysOrgService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,6 +40,11 @@ public class SysOrgServiceImpl implements ISysOrgService {
 
     /** ---------------- 单表操作 ---------------- */
 
+    @Override
+    public Mono<PageResult<SysOrgVO>> pageOrgList(SysOrgQueryDTO query) {
+        return orgRepositoryCustom.pageOrgList(query);
+    }
+
     /**
      * 根据ID获取组织
      *
@@ -50,34 +59,34 @@ public class SysOrgServiceImpl implements ISysOrgService {
     /**
      * 新增组织
      *
-     * @param org 组织对象
-     * @return 保存后的组织对象 (Mono<SysOrg>)
+     * @param sysOrgDTO 组织对象
+     * @return 保存后的组织对象 (Mono<Long>)
      */
     @Override
-    public Mono<SysOrg> addOrg(SysOrg org) {
-        return orgRepository.save(org);
+    public Mono<Long> addOrg(SysOrgDTO sysOrgDTO) {
+        return orgRepositoryCustom.insertOrg(sysOrgDTO);
     }
 
     /**
      * 更新组织
      *
-     * @param org 组织对象
-     * @return 更新后的组织对象 (Mono<SysOrg>)
+     * @param sysOrgDTO 组织对象
+     * @return 更新后的组织对象 (Mono<Long>)
      */
     @Override
-    public Mono<SysOrg> updateOrg(SysOrg org) {
-        return orgRepository.save(org);
+    public Mono<Long> updateOrg(SysOrgDTO sysOrgDTO) {
+        return orgRepositoryCustom.updateOrg(sysOrgDTO);
     }
 
     /**
      * 删除组织
      *
      * @param id 组织ID
-     * @return Mono<Void>
+     * @return Mono<Long>
      */
     @Override
-    public Mono<Void> deleteOrg(Long id) {
-        return orgRepository.deleteById(id);
+    public Mono<Long> deleteOrg(Long id) {
+        return orgRepositoryCustom.deleteOrgById(id,false);
     }
 
     /**

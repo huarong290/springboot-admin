@@ -1,9 +1,12 @@
 package com.springboot.admin.service.impl;
 
+import com.springboot.admin.model.dto.dept.SysDeptDTO;
+import com.springboot.admin.model.dto.dept.SysDeptQueryDTO;
 import com.springboot.admin.model.entity.sys.SysDept;
-import com.springboot.admin.model.entity.sys.SysUser;
-import com.springboot.admin.repository.single.SysDeptRepository;
+import com.springboot.admin.model.vo.PageResult;
+import com.springboot.admin.model.vo.dept.SysDeptVO;
 import com.springboot.admin.repository.custom.SysDeptRepositoryCustom;
+import com.springboot.admin.repository.single.SysDeptRepository;
 import com.springboot.admin.service.ISysDeptService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,7 +38,10 @@ public class SysDeptServiceImpl implements ISysDeptService {
     }
 
     /** ---------------- 单表操作 ---------------- */
-
+    @Override
+    public Mono<PageResult<SysDeptVO>> pageDeptList(SysDeptQueryDTO query) {
+        return deptRepositoryCustom.pageDeptList(query);
+    }
     /**
      * 根据ID获取部门
      *
@@ -50,26 +56,25 @@ public class SysDeptServiceImpl implements ISysDeptService {
     /**
      * 新增部门
      *
-     * @param dept 部门对象
+     * @param sysDeptDTO 部门对象
      * @return 保存后的部门对象 (Mono<SysDept>)
      */
     @Override
-    public Mono<SysDept> addDept(SysDept dept) {
-        return deptRepository.save(dept);
+    public Mono<Long> addDept(SysDeptDTO sysDeptDTO) {
+        return deptRepositoryCustom.insertDept(sysDeptDTO);
     }
 
     /**
      * 更新部门
      *
-     * @param dept 部门对象
+     * @param sysDeptDTO 部门对象
      * @return 更新后的部门对象 (Mono<SysDept>)
      */
     @Override
-    public Mono<SysDept> updateDept(SysDept dept) {
+    public Mono<Long> updateDept(SysDeptDTO sysDeptDTO) {
 
-        return deptRepository.save(dept);
+        return deptRepositoryCustom.updateDept(sysDeptDTO);
     }
-
     /**
      * 删除部门
      *
@@ -77,9 +82,9 @@ public class SysDeptServiceImpl implements ISysDeptService {
      * @return Mono<Void>
      */
     @Override
-    public Mono<Void> deleteDept(Long id) {
+    public Mono<Long> deleteDept(Long id) {
 
-        return deptRepository.deleteById(id);
+        return deptRepositoryCustom.deleteDeptById(id,false);
     }
 
     /**
