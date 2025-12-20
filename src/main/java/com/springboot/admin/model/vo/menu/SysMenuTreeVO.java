@@ -57,6 +57,12 @@ public class SysMenuTreeVO {
      */
     @Schema(description = "菜单类型:0-目录 1-菜单 2-按钮")
     private Integer menuType;
+    /**
+     * 菜单图标
+     * 示例："user"
+     */
+    @Schema(description = "菜单图标")
+    private String menuIcon;
 
     /**
      * 权限标识
