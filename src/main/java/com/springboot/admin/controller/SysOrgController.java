@@ -5,6 +5,7 @@ import com.springboot.admin.common.ApiResult;
 import com.springboot.admin.model.dto.org.SysOrgDTO;
 import com.springboot.admin.model.dto.org.SysOrgQueryDTO;
 import com.springboot.admin.model.vo.PageResult;
+import com.springboot.admin.model.vo.org.SysOrgTreeVO;
 import com.springboot.admin.model.vo.org.SysOrgVO;
 import com.springboot.admin.service.ISysOrgService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 /**
  * 组织管理 Controller
@@ -65,6 +68,16 @@ public class SysOrgController {
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<Long>> deleteOrg(@PathVariable Long id) {
         return orgService.deleteOrg(id).map(rows -> ApiResult.successResult("删除成功", rows));
+    }
+
+    /**
+     * 查询组织树结构
+     */
+    @GetMapping("/tree")
+    @Operation(summary = "查询组织树结构")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<List<SysOrgTreeVO>>> getOrgTree() {
+        return orgService.getOrgTree().map(ApiResult::successResult);
     }
 }
 

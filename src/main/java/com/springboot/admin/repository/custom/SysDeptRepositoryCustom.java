@@ -4,6 +4,7 @@ import com.springboot.admin.model.dto.dept.SysDeptDTO;
 import com.springboot.admin.model.dto.dept.SysDeptQueryDTO;
 import com.springboot.admin.model.entity.sys.SysDept;
 import com.springboot.admin.model.vo.PageResult;
+import com.springboot.admin.model.vo.dept.SysDeptTreeVO;
 import com.springboot.admin.model.vo.dept.SysDeptVO;
 import com.springboot.admin.utils.R2dbcHelperUtil;
 import org.apache.commons.lang3.StringUtils;
@@ -13,10 +14,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * 自定义部门仓库类
@@ -55,9 +53,9 @@ public class SysDeptRepositoryCustom {
             baseSql.append("AND t.dept_code LIKE :deptCode ");
             params.put("deptCode", "%" + query.getDeptCode() + "%");
         }
-        if (query.getStatus() != null) {
-            baseSql.append("AND t.status = :status ");
-            params.put("status", query.getStatus());
+        if (query.getDeptStatus() != null) {
+            baseSql.append("AND t.dept_status = :deptStatus ");
+            params.put("dept_status", query.getDeptStatus());
         }
 
         return R2dbcHelperUtil.queryPage(
@@ -72,11 +70,11 @@ public class SysDeptRepositoryCustom {
                     dept.setDeptName(row.get("dept_name", String.class));
                     dept.setDeptCode(row.get("dept_code", String.class));
                     dept.setParentId(row.get("parent_id", Long.class));
-                    dept.setOrderNum(row.get("order_num", Integer.class));
+                    dept.setDeptSort(row.get("dept_sort", Integer.class));
                     dept.setLeader(row.get("leader", String.class));
                     dept.setPhone(row.get("phone", String.class));
                     dept.setEmail(row.get("email", String.class));
-                    dept.setStatus(row.get("status", Integer.class));
+                    dept.setDeptStatus(row.get("dept_status", Integer.class));
                     dept.setCreateTime(
                             Optional.ofNullable(row.get("create_time", java.time.ZonedDateTime.class))
                                     .map(java.time.ZonedDateTime::toLocalDateTime)
@@ -106,8 +104,8 @@ public class SysDeptRepositoryCustom {
         if (dto.getParentId() != null) {
             fieldMap.put("parent_id", dto.getParentId());
         }
-        if (dto.getOrderNum() != null) {
-            fieldMap.put("order_num", dto.getOrderNum());
+        if (dto.getDeptSort() != null) {
+            fieldMap.put("dept_sort", dto.getDeptSort());
         }
         if (StringUtils.isNotBlank(dto.getLeader())) {
             fieldMap.put("leader", dto.getLeader());
@@ -118,8 +116,8 @@ public class SysDeptRepositoryCustom {
         if (StringUtils.isNotBlank(dto.getEmail())) {
             fieldMap.put("email", dto.getEmail());
         }
-        if (dto.getStatus() != null) {
-            fieldMap.put("status", dto.getStatus());
+        if (dto.getDeptStatus() != null) {
+            fieldMap.put("dept_status", dto.getDeptStatus());
         }
         fieldMap.put("create_time", LocalDateTime.now());
         fieldMap.put("update_time", LocalDateTime.now());
@@ -142,8 +140,8 @@ public class SysDeptRepositoryCustom {
         if (dto.getParentId() != null) {
             fieldMap.put("parent_id", dto.getParentId());
         }
-        if (dto.getOrderNum() != null) {
-            fieldMap.put("order_num", dto.getOrderNum());
+        if (dto.getDeptSort() != null) {
+            fieldMap.put("dept_sort", dto.getDeptSort());
         }
         if (StringUtils.isNotBlank(dto.getLeader())) {
             fieldMap.put("leader", dto.getLeader());
@@ -154,11 +152,10 @@ public class SysDeptRepositoryCustom {
         if (StringUtils.isNotBlank(dto.getEmail())) {
             fieldMap.put("email", dto.getEmail());
         }
-        if (dto.getStatus() != null) {
-            fieldMap.put("status", dto.getStatus());
+        if (dto.getDeptStatus() != null) {
+            fieldMap.put("dept_status", dto.getDeptStatus());
         }
         fieldMap.put("update_time", LocalDateTime.now());
-
         return R2dbcHelperUtil.update(client, "sys_dept", fieldMap, "id", dto.getId())
                 .map(Long::valueOf);
     }
@@ -194,6 +191,35 @@ public class SysDeptRepositoryCustom {
                     return dept;
                 })
                 .all();
+    }
+
+
+    public Mono<List<SysDeptTreeVO>> findAllDeptTreeVO() {
+        String sql = "SELECT id, dept_code , dept_name,  dept_status,  " +
+                "parent_id,  create_time , update_time  " +
+                "FROM sys_dept WHERE delete_flag = 0";
+        return client.sql(sql)
+                .map(row -> {
+                    SysDeptTreeVO vo = new SysDeptTreeVO();
+                    vo.setId(row.get("id", Long.class));
+                    vo.setDeptCode(row.get("dept_code", String.class));
+                    vo.setDeptName(row.get("dept_name", String.class));
+                    vo.setDeptStatus(row.get("dept_status", Integer.class));
+                    vo.setParentId(row.get("parent_id", Long.class));
+                    vo.setCreateTime(
+                            Optional.ofNullable(row.get("create_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
+                    vo.setUpdateTime(
+                            Optional.ofNullable(row.get("update_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
+                    return vo;
+                })
+                .all()
+                .collectList();
     }
 
 

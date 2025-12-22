@@ -52,32 +52,14 @@ public class SysOrgVO {
      * 排序号
      */
     @Schema(description = "排序号")
-    private Integer orderNum;
-
-    /**
-     * 组织负责人
-     */
-    @Schema(description = "组织负责人")
-    private String leader;
-
-    /**
-     * 联系电话
-     */
-    @Schema(description = "联系电话")
-    private String phone;
-
-    /**
-     * 邮箱
-     */
-    @Schema(description = "邮箱")
-    private String email;
+    private Integer orgSort;
 
     /**
      * 状态
      * 1 = 正常，0 = 停用
      */
     @Schema(description = "状态:1-正常 0-停用")
-    private Integer status;
+    private Integer orgStatus;
 
     /**
      * 创建时间

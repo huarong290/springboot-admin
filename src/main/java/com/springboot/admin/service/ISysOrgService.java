@@ -5,9 +5,12 @@ import com.springboot.admin.model.dto.org.SysOrgQueryDTO;
 import com.springboot.admin.model.entity.sys.SysDept;
 import com.springboot.admin.model.entity.sys.SysOrg;
 import com.springboot.admin.model.vo.PageResult;
+import com.springboot.admin.model.vo.org.SysOrgTreeVO;
 import com.springboot.admin.model.vo.org.SysOrgVO;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 /**
  * 组织表 Service 接口
@@ -45,6 +48,13 @@ public interface ISysOrgService {
      * @return Mono<Long> 响应式空对象，表示删除完成
      */
     Mono<Long> deleteOrg(Long id);
+
+    /**
+     * 查询组织树结构
+     *
+     * @return 组织树形结构
+     */
+    Mono<List<SysOrgTreeVO>> getOrgTree();
     /**
      * 根据组织ID查询组织信息
      *

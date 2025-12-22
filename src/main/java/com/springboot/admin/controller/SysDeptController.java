@@ -5,6 +5,7 @@ import com.springboot.admin.common.ApiResult;
 import com.springboot.admin.model.dto.dept.SysDeptDTO;
 import com.springboot.admin.model.dto.dept.SysDeptQueryDTO;
 import com.springboot.admin.model.vo.PageResult;
+import com.springboot.admin.model.vo.dept.SysDeptTreeVO;
 import com.springboot.admin.model.vo.dept.SysDeptVO;
 import com.springboot.admin.service.ISysDeptService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 /**
  * 部门管理 Controller
@@ -66,5 +69,13 @@ public class SysDeptController {
     public Mono<ApiResult<Long>> deleteDept(@PathVariable Long id) {
         return deptService.deleteDept(id).map(rows -> ApiResult.successResult("删除成功", rows));
     }
+
+    @GetMapping("/tree")
+    @Operation(summary = "查询部门树结构")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<List<SysDeptTreeVO>>> getDeptTree() {
+        return deptService.getDeptTree().map(ApiResult::successResult);
+    }
+
 }
 

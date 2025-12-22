@@ -40,7 +40,7 @@ public class SysDeptDTO {
      * 排序号
      */
     @Schema(description = "排序号")
-    private Integer orderNum;
+    private Integer deptSort;
 
     /**
      * 部门负责人
@@ -65,5 +65,5 @@ public class SysDeptDTO {
      * 1 = 正常，0 = 停用
      */
     @Schema(description = "状态:1-正常 0-停用")
-    private Integer status;
+    private Integer deptStatus;
 }
