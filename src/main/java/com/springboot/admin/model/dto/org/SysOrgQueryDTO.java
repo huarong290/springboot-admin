@@ -29,6 +29,6 @@ public class SysOrgQueryDTO extends PageQueryDTO {
      * 1 = 正常，0 = 停用
      */
     @Schema(description = "状态:1-正常 0-停用")
-    private Integer status;
+    private Integer orgStatus;
 }
 

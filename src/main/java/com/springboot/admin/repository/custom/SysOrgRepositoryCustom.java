@@ -4,6 +4,7 @@ import com.springboot.admin.model.dto.org.SysOrgDTO;
 import com.springboot.admin.model.dto.org.SysOrgQueryDTO;
 import com.springboot.admin.model.entity.sys.SysDept;
 import com.springboot.admin.model.vo.PageResult;
+import com.springboot.admin.model.vo.org.SysOrgTreeVO;
 import com.springboot.admin.model.vo.org.SysOrgVO;
 import com.springboot.admin.utils.R2dbcHelperUtil;
 import org.apache.commons.lang3.StringUtils;
@@ -13,10 +14,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * 自定义组织仓库类
@@ -53,9 +51,9 @@ public class SysOrgRepositoryCustom {
             baseSql.append("AND t.org_code LIKE :orgCode ");
             params.put("orgCode", "%" + query.getOrgCode() + "%");
         }
-        if (query.getStatus() != null) {
-            baseSql.append("AND t.status = :status ");
-            params.put("status", query.getStatus());
+        if (query.getOrgStatus() != null) {
+            baseSql.append("AND t.org_status = :orgStatus ");
+            params.put("org_status", query.getOrgStatus());
         }
 
         return R2dbcHelperUtil.queryPage(
@@ -70,11 +68,8 @@ public class SysOrgRepositoryCustom {
                     org.setOrgName(row.get("org_name", String.class));
                     org.setOrgCode(row.get("org_code", String.class));
                     org.setParentId(row.get("parent_id", Long.class));
-                    org.setOrderNum(row.get("order_num", Integer.class));
-                    org.setLeader(row.get("leader", String.class));
-                    org.setPhone(row.get("phone", String.class));
-                    org.setEmail(row.get("email", String.class));
-                    org.setStatus(row.get("status", Integer.class));
+                    org.setOrgSort(row.get("org_sort", Integer.class));
+                    org.setOrgStatus(row.get("org_status", Integer.class));
                     org.setCreateTime(
                             Optional.ofNullable(row.get("create_time", java.time.ZonedDateTime.class))
                                     .map(java.time.ZonedDateTime::toLocalDateTime)
@@ -104,20 +99,11 @@ public class SysOrgRepositoryCustom {
         if (dto.getParentId() != null) {
             fieldMap.put("parent_id", dto.getParentId());
         }
-        if (dto.getOrderNum() != null) {
-            fieldMap.put("order_num", dto.getOrderNum());
+        if (dto.getOrgSort() != null) {
+            fieldMap.put("org_sort", dto.getOrgSort());
         }
-        if (StringUtils.isNotBlank(dto.getLeader())) {
-            fieldMap.put("leader", dto.getLeader());
-        }
-        if (StringUtils.isNotBlank(dto.getPhone())) {
-            fieldMap.put("phone", dto.getPhone());
-        }
-        if (StringUtils.isNotBlank(dto.getEmail())) {
-            fieldMap.put("email", dto.getEmail());
-        }
-        if (dto.getStatus() != null) {
-            fieldMap.put("status", dto.getStatus());
+        if (dto.getOrgStatus() != null) {
+            fieldMap.put("org_status", dto.getOrgStatus());
         }
         fieldMap.put("create_time", LocalDateTime.now());
         fieldMap.put("update_time", LocalDateTime.now());
@@ -140,20 +126,12 @@ public class SysOrgRepositoryCustom {
         if (dto.getParentId() != null) {
             fieldMap.put("parent_id", dto.getParentId());
         }
-        if (dto.getOrderNum() != null) {
-            fieldMap.put("order_num", dto.getOrderNum());
+        if (dto.getOrgSort() != null) {
+            fieldMap.put("org_sort", dto.getOrgSort());
         }
-        if (StringUtils.isNotBlank(dto.getLeader())) {
-            fieldMap.put("leader", dto.getLeader());
-        }
-        if (StringUtils.isNotBlank(dto.getPhone())) {
-            fieldMap.put("phone", dto.getPhone());
-        }
-        if (StringUtils.isNotBlank(dto.getEmail())) {
-            fieldMap.put("email", dto.getEmail());
-        }
-        if (dto.getStatus() != null) {
-            fieldMap.put("status", dto.getStatus());
+
+        if (dto.getOrgStatus() != null) {
+            fieldMap.put("org_status", dto.getOrgStatus());
         }
         fieldMap.put("update_time", LocalDateTime.now());
 
@@ -196,4 +174,25 @@ public class SysOrgRepositoryCustom {
                 })
                 .all();
     }
+
+    public Mono<List<SysOrgTreeVO>> findAllOrgTreeVO() {
+        String sql = "SELECT id, org_code , org_name , org_status , " +
+                "parent_id , create_time , update_time  " +
+                "FROM sys_org WHERE delete_flag = 0";
+        return client.sql(sql)
+                .map(row -> {
+                    SysOrgTreeVO vo = new SysOrgTreeVO();
+                    vo.setId(row.get("id", Long.class));
+                    vo.setOrgCode(row.get("org_code", String.class));
+                    vo.setOrgName(row.get("org_name", String.class));
+                    vo.setOrgStatus(row.get("org_status", Integer.class));
+                    vo.setParentId(row.get("parent_id", Long.class));
+                    vo.setCreateTime(row.get("create_time", LocalDateTime.class));
+                    vo.setUpdateTime(row.get("update_time", LocalDateTime.class));
+                    return vo;
+                })
+                .all()
+                .collectList();
+    }
+
 }

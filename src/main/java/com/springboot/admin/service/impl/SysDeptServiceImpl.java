@@ -4,6 +4,7 @@ import com.springboot.admin.model.dto.dept.SysDeptDTO;
 import com.springboot.admin.model.dto.dept.SysDeptQueryDTO;
 import com.springboot.admin.model.entity.sys.SysDept;
 import com.springboot.admin.model.vo.PageResult;
+import com.springboot.admin.model.vo.dept.SysDeptTreeVO;
 import com.springboot.admin.model.vo.dept.SysDeptVO;
 import com.springboot.admin.repository.custom.SysDeptRepositoryCustom;
 import com.springboot.admin.repository.single.SysDeptRepository;
@@ -12,6 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * 部门表 Service 实现类
@@ -86,7 +91,11 @@ public class SysDeptServiceImpl implements ISysDeptService {
 
         return deptRepositoryCustom.deleteDeptById(id,false);
     }
-
+    @Override
+    public Mono<List<SysDeptTreeVO>> getDeptTree() {
+        return deptRepositoryCustom.findAllDeptTreeVO()
+                .map(list -> buildTree(list, 0L)); // 顶级 parentId = 0
+    }
     /**
      * 查询所有部门
      *
@@ -123,5 +132,20 @@ public class SysDeptServiceImpl implements ISysDeptService {
     public Flux<SysDept> findDeptListByOrgId(Long orgId) {
 
         return deptRepositoryCustom.findDeptListByOrgId(orgId);
+    }
+
+
+    /**
+     * 构建树形结构
+     */
+    private List<SysDeptTreeVO> buildTree(List<SysDeptTreeVO> list, Long parentId) {
+        List<SysDeptTreeVO> children = new ArrayList<>();
+        for (SysDeptTreeVO dept : list) {
+            if (Objects.equals(dept.getParentId(), parentId)) {
+                dept.setChildren(buildTree(list, dept.getId()));
+                children.add(dept);
+            }
+        }
+        return children;
     }
 }

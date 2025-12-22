@@ -5,6 +5,7 @@ import com.springboot.admin.model.dto.org.SysOrgQueryDTO;
 import com.springboot.admin.model.entity.sys.SysDept;
 import com.springboot.admin.model.entity.sys.SysOrg;
 import com.springboot.admin.model.vo.PageResult;
+import com.springboot.admin.model.vo.org.SysOrgTreeVO;
 import com.springboot.admin.model.vo.org.SysOrgVO;
 import com.springboot.admin.repository.custom.SysOrgRepositoryCustom;
 import com.springboot.admin.repository.single.SysOrgRepository;
@@ -13,6 +14,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * 组织表 Service 实现类
@@ -88,7 +93,11 @@ public class SysOrgServiceImpl implements ISysOrgService {
     public Mono<Long> deleteOrg(Long id) {
         return orgRepositoryCustom.deleteOrgById(id,false);
     }
-
+    @Override
+    public Mono<List<SysOrgTreeVO>> getOrgTree() {
+        return orgRepositoryCustom.findAllOrgTreeVO()
+                .map(list -> buildTree(list, 0L)); // 顶级 parentId = 0
+    }
     /**
      * 查询所有组织
      *
@@ -121,5 +130,18 @@ public class SysOrgServiceImpl implements ISysOrgService {
     @Override
     public Flux<SysDept> listDeptsByOrgId(Long orgId) {
         return orgRepositoryCustom.findDeptsByOrgId(orgId);
+    }
+
+
+
+    private List<SysOrgTreeVO> buildTree(List<SysOrgTreeVO> list, Long parentId) {
+        List<SysOrgTreeVO> children = new ArrayList<>();
+        for (SysOrgTreeVO org : list) {
+            if (Objects.equals(org.getParentId(), parentId)) {
+                org.setChildren(buildTree(list, org.getId()));
+                children.add(org);
+            }
+        }
+        return children;
     }
 }

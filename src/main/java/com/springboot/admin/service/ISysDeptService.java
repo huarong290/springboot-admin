@@ -4,9 +4,12 @@ import com.springboot.admin.model.dto.dept.SysDeptDTO;
 import com.springboot.admin.model.dto.dept.SysDeptQueryDTO;
 import com.springboot.admin.model.entity.sys.SysDept;
 import com.springboot.admin.model.vo.PageResult;
+import com.springboot.admin.model.vo.dept.SysDeptTreeVO;
 import com.springboot.admin.model.vo.dept.SysDeptVO;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 /**
  * 部门表 Service 接口
@@ -45,6 +48,14 @@ public interface ISysDeptService {
      * @return Mono<Void> 响应式空对象，表示删除完成
      */
     Mono<Long> deleteDept(Long id);
+
+
+    /**
+     * 查询部门树结构
+     *
+     * @return 部门树形结构
+     */
+    Mono<List<SysDeptTreeVO>> getDeptTree();
     /**
      * 根据部门ID查询部门信息
      *
