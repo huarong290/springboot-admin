@@ -227,12 +227,42 @@ VALUES
 (3, 1, '角色管理', '/system/role', 'RolePage', 'team', 1, 'sys:role:list', 2, 1),
 (4, 1, '菜单管理', '/system/menu', 'MenuPage', 'menu', 1, 'sys:menu:list', 3, 1);
 
-INSERT INTO `sys_permission` (`id`, `permission_code`, `permission_name`, `permission_type`)
-VALUES
-(1, 'sys:user:add', '新增用户', 1),
-(2, 'sys:user:edit', '编辑用户', 1),
-(3, 'sys:user:delete', '删除用户', 1),
-(4, 'sys:role:assign', '分配角色', 1);
+-- 用户管理权限 (id 1-3)
+INSERT INTO sys_permission (id, permission_code, permission_name, permission_type, permission_status, delete_flag, create_by, create_time, update_by, update_time) VALUES
+    (1, 'sys:user:add','新增用户',1,1,0,'system',NOW(),'system',NOW()),
+    (2, 'sys:user:edit','编辑用户',1,1,0,'system',NOW(),'system',NOW()),
+    (3, 'sys:user:delete','删除用户',1,1,0,'system',NOW(),'system',NOW());
+
+-- 角色管理权限 (id 4-7)
+INSERT INTO sys_permission (id, permission_code, permission_name, permission_type, permission_status, delete_flag, create_by, create_time, update_by, update_time) VALUES
+    (4, 'sys:role:assign','分配角色',1,1,0,'system',NOW(),'system',NOW()),
+    (5, 'sys:role:add','新增角色',1,1,0,'system',NOW(),'system',NOW()),
+    (6, 'sys:role:edit','编辑角色',1,1,0,'system',NOW(),'system',NOW()),
+    (7, 'sys:role:delete','删除角色',1,1,0,'system',NOW(),'system',NOW());
+
+-- 菜单管理权限 (id 8-10)
+INSERT INTO sys_permission (id, permission_code, permission_name, permission_type, permission_status, delete_flag, create_by, create_time, update_by, update_time) VALUES
+    (8, 'sys:menu:add','新增菜单',1,1,0,'system',NOW(),'system',NOW()),
+    (9, 'sys:menu:edit','编辑菜单',1,1,0,'system',NOW(),'system',NOW()),
+    (10, 'sys:menu:delete','删除菜单',1,1,0,'system',NOW(),'system',NOW());
+
+-- 权限管理权限 (id 11-13)
+INSERT INTO sys_permission (id, permission_code, permission_name, permission_type, permission_status, delete_flag, create_by, create_time, update_by, update_time) VALUES
+    (11, 'sys:perm:add','新增权限',1,1,0,'system',NOW(),'system',NOW()),
+    (12, 'sys:perm:edit','编辑权限',1,1,0,'system',NOW(),'system',NOW()),
+    (13, 'sys:perm:delete','删除权限',1,1,0,'system',NOW(),'system',NOW());
+
+-- 部门管理权限 (id 14-16)
+INSERT INTO sys_permission (id, permission_code, permission_name, permission_type, permission_status, delete_flag, create_by, create_time, update_by, update_time) VALUES
+    (14, 'sys:dept:add','新增部门',1,1,0,'system',NOW(),'system',NOW()),
+    (15, 'sys:dept:edit','编辑部门',1,1,0,'system',NOW(),'system',NOW()),
+    (16, 'sys:dept:delete','删除部门',1,1,0,'system',NOW(),'system',NOW());
+
+-- 组织管理权限 (id 17-19)
+INSERT INTO sys_permission (id, permission_code, permission_name, permission_type, permission_status, delete_flag, create_by, create_time, update_by, update_time) VALUES
+    (17, 'sys:org:add','新增组织',1,1,0,'system',NOW(),'system',NOW()),
+    (18, 'sys:org:edit','编辑组织',1,1,0,'system',NOW(),'system',NOW()),
+    (19, 'sys:org:delete','删除组织',1,1,0,'system',NOW(),'system',NOW());
 
 INSERT INTO `sys_user_role` (`id`, `user_id`, `role_id`)
 VALUES
@@ -246,25 +276,67 @@ VALUES
 (1, 1, 1), (2, 1, 2), (3, 1, 3), (4, 1, 4), -- 超级管理员 → 全部菜单
 (5, 2, 2), -- 普通用户 → 用户管理
 (6, 3, 3); -- 财务专员 → 角色管理
-INSERT INTO `sys_role_permission` (`id`, `role_id`, `permission_id`)
-VALUES
-(1, 1, 1), (2, 1, 2), (3, 1, 3), (4, 1, 4), -- 超级管理员 → 全部权限
-(5, 2, 1), -- 普通用户 → 新增用户
-(6, 3, 4); -- 财务专员 → 分配角色
+-- 超级管理员 (role_id=1) 绑定所有权限 (id=1~19)
+INSERT INTO sys_role_permission (id, role_id, permission_id, delete_flag, create_by, create_time, update_by, update_time) VALUES
+    (1, 1, 1, 0, 'system', NOW(), 'system', NOW()),
+    (2, 1, 2, 0, 'system', NOW(), 'system', NOW()),
+    (3, 1, 3, 0, 'system', NOW(), 'system', NOW()),
+    (4, 1, 4, 0, 'system', NOW(), 'system', NOW()),
+    (5, 1, 5, 0, 'system', NOW(), 'system', NOW()),
+    (6, 1, 6, 0, 'system', NOW(), 'system', NOW()),
+    (7, 1, 7, 0, 'system', NOW(), 'system', NOW()),
+    (8, 1, 8, 0, 'system', NOW(), 'system', NOW()),
+    (9, 1, 9, 0, 'system', NOW(), 'system', NOW()),
+    (10, 1, 10, 0, 'system', NOW(), 'system', NOW()),
+    (11, 1, 11, 0, 'system', NOW(), 'system', NOW()),
+    (12, 1, 12, 0, 'system', NOW(), 'system', NOW()),
+    (13, 1, 13, 0, 'system', NOW(), 'system', NOW()),
+    (14, 1, 14, 0, 'system', NOW(), 'system', NOW()),
+    (15, 1, 15, 0, 'system', NOW(), 'system', NOW()),
+    (16, 1, 16, 0, 'system', NOW(), 'system', NOW()),
+    (17, 1, 17, 0, 'system', NOW(), 'system', NOW()),
+    (18, 1, 18, 0, 'system', NOW(), 'system', NOW()),
+    (19, 1, 19, 0, 'system', NOW(), 'system', NOW());
 
--- 用户管理菜单 (id=2) 对应权限
-INSERT INTO sys_menu_permission (menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time)
-VALUES
-    (2, 1, 0, 'system', NOW(), 'system', NOW()), -- sys:user:add
-    (2, 2, 0, 'system', NOW(), 'system', NOW()), -- sys:user:edit
-    (2, 3, 0, 'system', NOW(), 'system', NOW()); -- sys:user:delete
 
--- 角色管理菜单 (id=3) 对应权限
-INSERT INTO sys_menu_permission (menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time)
-VALUES
-    (3, 4, 0, 'system', NOW(), 'system', NOW()); -- sys:role:assign
+-- 用户管理 (menu_id=2)
+INSERT INTO sys_menu_permission (id, menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time) VALUES
+    (1, 2, 1, 0, 'system', NOW(), 'system', NOW()),
+    (2, 2, 2, 0, 'system', NOW(), 'system', NOW()),
+    (3, 2, 3, 0, 'system', NOW(), 'system', NOW());
 
--- 菜单管理菜单 (id=4) 暂时没有额外权限点，可以不插入或后续扩展
+-- 角色管理 (menu_id=3)
+INSERT INTO sys_menu_permission (id, menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time) VALUES
+    (4, 3, 4, 0, 'system', NOW(), 'system', NOW()),
+    (5, 3, 5, 0, 'system', NOW(), 'system', NOW()),
+    (6, 3, 6, 0, 'system', NOW(), 'system', NOW()),
+    (7, 3, 7, 0, 'system', NOW(), 'system', NOW());
+
+-- 菜单管理 (menu_id=4)
+INSERT INTO sys_menu_permission (id, menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time) VALUES
+    (8, 4, 8, 0, 'system', NOW(), 'system', NOW()),
+    (9, 4, 9, 0, 'system', NOW(), 'system', NOW()),
+    (10, 4, 10, 0, 'system', NOW(), 'system', NOW());
+
+-- 权限管理 (menu_id=5)
+INSERT INTO sys_menu_permission (id, menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time) VALUES
+    (11, 5, 11, 0, 'system', NOW(), 'system', NOW()),
+    (12, 5, 12, 0, 'system', NOW(), 'system', NOW()),
+    (13, 5, 13, 0, 'system', NOW(), 'system', NOW());
+
+-- 部门管理 (menu_id=6)
+INSERT INTO sys_menu_permission (id, menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time) VALUES
+    (14, 6, 14, 0, 'system', NOW(), 'system', NOW()),
+    (15, 6, 15, 0, 'system', NOW(), 'system', NOW()),
+    (16, 6, 16, 0, 'system', NOW(), 'system', NOW());
+
+-- 组织管理 (menu_id=7)
+INSERT INTO sys_menu_permission (id, menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time) VALUES
+    (17, 7, 17, 0, 'system', NOW(), 'system', NOW()),
+    (18, 7, 18, 0, 'system', NOW(), 'system', NOW()),
+    (19, 7, 19, 0, 'system', NOW(), 'system', NOW());
+
+
 
 DROP TABLE IF EXISTS `hr_employee`;
 CREATE TABLE `hr_employee`  (

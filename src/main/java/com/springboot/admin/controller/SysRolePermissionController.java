@@ -2,6 +2,7 @@ package com.springboot.admin.controller;
 
 import com.springboot.admin.annotation.Logable;
 import com.springboot.admin.common.ApiResult;
+import com.springboot.admin.model.dto.BindResultDTO;
 import com.springboot.admin.model.entity.sys.SysRolePermission;
 import com.springboot.admin.service.ISysRolePermissionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,7 +15,7 @@ import java.util.List;
 
 /**
  * 角色权限点关联 Controller
- *
+ * <p>
  * 提供角色与权限点关联的 REST API：
  * - 查询角色绑定的权限点
  * - 新增角色权限点绑定
@@ -27,6 +28,20 @@ public class SysRolePermissionController {
 
     @Autowired
     private ISysRolePermissionService rolePermissionService;
+
+
+    @PostMapping("/bindRolePermissions/{roleId}")
+    @Operation(summary = "增量绑定角色权限点")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<BindResultDTO>> bindRolePermissions(@PathVariable Long roleId,
+                                                              @RequestBody List<Long> permissionIds) {
+        return rolePermissionService.bindRolePermissions(roleId, permissionIds)
+                .map(result -> ApiResult.successResult(
+                        "增量更新成功，新增 " + result.getAddedCount() + " 条，删除 " + result.getRemovedCount() + " 条",
+                        result
+                ));
+    }
+
 
     @GetMapping("/getPermissionsByRoleId/{roleId}")
     @Operation(summary = "根据角色ID查询权限点关联关系")

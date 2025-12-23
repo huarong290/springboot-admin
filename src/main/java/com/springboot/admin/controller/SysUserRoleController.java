@@ -2,9 +2,8 @@ package com.springboot.admin.controller;
 
 import com.springboot.admin.annotation.Logable;
 import com.springboot.admin.common.ApiResult;
+import com.springboot.admin.model.dto.BindResultDTO;
 import com.springboot.admin.model.dto.userrole.SysUserRoleDTO;
-import com.springboot.admin.model.entity.sys.SysUserRole;
-import com.springboot.admin.model.vo.rolemenu.SysRoleMenuVO;
 import com.springboot.admin.model.vo.userrole.SysUserRoleVO;
 import com.springboot.admin.service.ISysUserRoleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,7 +16,7 @@ import java.util.List;
 
 /**
  * 用户角色关联 Controller
- *
+ * <p>
  * 提供用户与角色关联的 REST API：
  * - 查询用户绑定的角色
  * - 新增用户角色绑定
@@ -30,6 +29,13 @@ public class SysUserRoleController {
 
     @Autowired
     private ISysUserRoleService userRoleService;
+
+    @PostMapping("/bindUserRoles/{userId}")
+    @Operation(summary = "增量绑定用户角色")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<BindResultDTO>> bindUserRoles(@PathVariable Long userId, @RequestBody List<Long> roleIds) {
+        return userRoleService.bindUserRoles(userId, roleIds).map(result -> ApiResult.successResult("用户角色绑定成功，新增 " + result.getAddedCount() + " 条，删除 " + result.getRemovedCount() + " 条", result));
+    }
 
     @GetMapping("/getRolesByUserId/{userId}")
     @Operation(summary = "根据用户ID查询角色关联关系")

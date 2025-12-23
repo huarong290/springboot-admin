@@ -1,5 +1,6 @@
 package com.springboot.admin.service.impl;
 
+import com.springboot.admin.model.dto.BindResultDTO;
 import com.springboot.admin.model.entity.sys.SysRolePermission;
 import com.springboot.admin.repository.custom.SysRolePermissionRepositoryCustom;
 import com.springboot.admin.repository.single.SysRolePermissionRepository;
@@ -8,6 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 角色权限点关联 Service 实现类
@@ -30,6 +34,31 @@ public class SysRolePermissionServiceImpl implements ISysRolePermissionService {
                                         SysRolePermissionRepositoryCustom sysRolePermissionRepositoryCustom) {
         this.sysRolePermissionRepository = sysRolePermissionRepository;
         this.sysRolePermissionRepositoryCustom = sysRolePermissionRepositoryCustom;
+    }
+
+    @Override
+    public Mono<BindResultDTO> bindRolePermissions(Long roleId, List<Long> permissionIds) {
+        return sysRolePermissionRepositoryCustom.findByRoleId(roleId)
+                .map(SysRolePermission::getPermissionId)
+                .collectList()
+                .flatMap(existing -> {
+                    // 需要新增的权限：前端传入但数据库没有
+                    List<Long> toAdd = permissionIds.stream()
+                            .filter(pid -> !existing.contains(pid))
+                            .collect(Collectors.toList());
+                    log.info("Role {} toAdd: {}", roleId, toAdd);
+                    // 需要删除的权限：数据库有但前端没传入
+                    List<Long> toRemove = existing.stream()
+                            .filter(pid -> !permissionIds.contains(pid))
+                            .collect(Collectors.toList());
+                    log.info("Role {} toRemove: {}", roleId, toRemove);
+                    // 执行删除和新增，并返回 BindResultDTO
+                    return sysRolePermissionRepositoryCustom.deleteByRoleIdAndPermissionIds(roleId, toRemove)
+                            .flatMap(removeCount ->
+                                    sysRolePermissionRepositoryCustom.insertRolePermissions(roleId, toAdd)
+                                            .map(addCount -> new BindResultDTO(addCount, removeCount))
+                            );
+                });
     }
 
     /**

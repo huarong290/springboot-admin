@@ -1,11 +1,12 @@
 package com.springboot.admin.service;
 
+import com.springboot.admin.model.dto.BindResultDTO;
 import com.springboot.admin.model.dto.userrole.SysUserRoleDTO;
-import com.springboot.admin.model.entity.sys.SysUserRole;
-import com.springboot.admin.model.vo.rolemenu.SysRoleMenuVO;
 import com.springboot.admin.model.vo.userrole.SysUserRoleVO;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 /**
  * 用户角色关联表 Service 接口
@@ -37,4 +38,6 @@ public interface ISysUserRoleService {
      * @return Mono<Void> 响应式空对象，表示删除完成
      */
     Mono<Long> deleteUserRole(Long id);
+
+    Mono<BindResultDTO> bindUserRoles(Long userId, List<Long> roleIds);
 }

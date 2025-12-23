@@ -7,6 +7,7 @@ import com.springboot.admin.model.dto.TokenResDTO;
 import com.springboot.admin.model.dto.UserLoginReqDTO;
 import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.dto.user.UserInfoDTO;
+import com.springboot.admin.model.vo.menu.MetaVO;
 import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
 import com.springboot.admin.model.vo.menu.SysMenuVO;
 import com.springboot.admin.model.vo.permission.SysPermissionVO;
@@ -250,19 +251,30 @@ public class AuthServiceServiceImpl implements IAuthService {
                 .filter(menu -> Objects.equals(menu.getMenuParentId(), parentId))
                 .sorted(Comparator.comparing(SysMenuVO::getMenuSort))
                 .map(menu -> {
-                    SysMenuTreeVO vo = new SysMenuTreeVO();
-                    vo.setId(menu.getId());
-                    vo.setMenuName(menu.getMenuName());
-                    vo.setMenuPath(menu.getMenuPath());
-                    vo.setMenuComponent(menu.getMenuComponent());
-                    vo.setMenuIcon(menu.getMenuIcon());
-                    vo.setMenuType(menu.getMenuType());
-                    vo.setMenuSort(menu.getMenuSort());
-                    vo.setMenuParentId(menu.getMenuParentId());
-                    vo.setMenuStatus(menu.getMenuStatus());
-                    vo.setCreateTime(menu.getCreateTime());
-                    vo.setChildren(buildMenuTree(menus, menu.getId())); // 递归构建子菜单
-                    return vo;
+                    SysMenuTreeVO treeVO = new SysMenuTreeVO();
+                    treeVO.setId(menu.getId());
+                    treeVO.setMenuName(menu.getMenuName());
+                    treeVO.setMenuPath(menu.getMenuPath());
+                    treeVO.setMenuComponent(menu.getMenuComponent());
+                    treeVO.setMenuParentId(menu.getMenuParentId());
+                    treeVO.setMenuType(menu.getMenuType());
+                    treeVO.setMenuIcon(menu.getMenuIcon().toLowerCase());
+                    treeVO.setMenuPermission(menu.getMenuPermission());
+                    treeVO.setMenuSort(menu.getMenuSort());
+                    treeVO.setMenuVisible(menu.getMenuVisible());
+                    treeVO.setMenuStatus(menu.getMenuStatus());
+                    treeVO.setCreateTime(menu.getCreateTime());
+                    treeVO.setUpdateTime(menu.getUpdateTime());
+
+                    // 构建 meta 信息
+                    MetaVO meta = new MetaVO();
+                    meta.setTitle(menu.getMenuName());
+                    meta.setIcon(menu.getMenuIcon().toLowerCase());
+                    meta.setKeepAlive(true);
+                    meta.setHidden(menu.getMenuVisible() != null && menu.getMenuVisible() == 0);
+                    treeVO.setMeta(meta);
+                    treeVO.setChildren(buildMenuTree(menus, menu.getId())); // 递归构建子菜单
+                    return treeVO;
                 })
                 .collect(Collectors.toList());
     }

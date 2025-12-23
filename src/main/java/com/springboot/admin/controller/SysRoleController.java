@@ -136,10 +136,10 @@ public class SysRoleController {
     /**
      * 根据用户ID查询角色列表
      */
-    @GetMapping("/listRolesByUserId/{userId}")
+    @GetMapping("/getRolesByUserId/{userId}")
     @Operation(summary = "根据用户ID查询角色列表")
     @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<List<SysRoleVO>>> listRolesByUserId(@PathVariable Long userId) {
+    public Mono<ApiResult<List<SysRoleVO>>> getRolesByUserId(@PathVariable Long userId) {
         return roleService.listRolesByUserId(userId).collectList().map(ApiResult::successResult);
     }
 
