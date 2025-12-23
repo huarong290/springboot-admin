@@ -8,6 +8,9 @@ import com.springboot.admin.model.dto.UserLoginReqDTO;
 import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.dto.user.UserInfoDTO;
 import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
+import com.springboot.admin.model.vo.menu.SysMenuVO;
+import com.springboot.admin.model.vo.permission.SysPermissionVO;
+import com.springboot.admin.model.vo.role.SysRoleVO;
 import com.springboot.admin.service.*;
 import com.springboot.admin.utils.JwtUtil;
 import jakarta.annotation.Resource;
@@ -18,7 +21,10 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -146,63 +152,61 @@ public class AuthServiceServiceImpl implements IAuthService {
      * 1. 解析 Token，获取用户名。
      * 2. 查询用户基本信息。
      * 3. 查询用户角色列表。
-     * 4. 查询用户权限列表。
+     * 4. 查询用户权限列表（调用 listPermissionsByUserId）。
      * 5. 查询用户菜单树。
      * 6. 聚合结果，组装成 UserInfoDTO。
-     *
-     * 日志：
-     * - 每一步都打印日志，方便排查问题。
-     * - 包括 Token 解析结果、用户信息、角色列表、权限列表、菜单树、最终组装结果。
      *
      * @param token 前端传入的 JWT Token
      * @return Mono<UserInfoDTO> 响应式单对象，包含用户信息、角色、权限、菜单树
      */
     @Override
     public Mono<UserInfoDTO> getUserInfoByToken(String token) {
-        // 1. 解析 token 获取 Claims
         return jwtUtil.parseToken(token)
                 .flatMap(claims -> {
                     String username = claims.getSubject();
                     log.info("[Step1] 成功解析 Token，username={}", username);
 
-                    // 2. 查询用户信息
+                    // Step2: 查询用户信息
                     return sysUserService.getUserByUsername(username)
                             .switchIfEmpty(Mono.error(new BusinessException("0100104", "用户不存在")))
                             .flatMap(user -> {
                                 log.info("[Step2] 查询到用户信息: {}", user);
 
-                                // 3. 查询角色 —— 使用 flatMap 避免 null
+                                // Step3: 查询角色列表
                                 Mono<List<String>> rolesMono = sysRoleService.listRolesByUserId(user.getId())
-                                        .flatMap(role -> {
-                                            if (role == null || role.getRoleCode() == null) {
-                                                return Mono.empty();
-                                            }
-                                            return Mono.just(role.getRoleCode());
-                                        })
+                                        .map(SysRoleVO::getRoleCode)
+                                        .filter(Objects::nonNull)
                                         .collectList()
                                         .doOnNext(roles -> log.info("[Step3] 角色列表: {}", roles));
 
-                                // 4. 查询权限 —— 使用 flatMap 避免 null
-                                Mono<List<String>> permissionsMono = sysPermissionService.listPermissionsByUserId(user.getId())
-                                        .flatMap(permission -> {
-                                            if (permission == null || permission.getPermissionCode() == null) {
-                                                return Mono.empty();
-                                            }
-                                            return Mono.just(permission.getPermissionCode());
-                                        })
+                                // Step4: 查询权限列表（基于权限表）
+                                Mono<List<String>> permissionsMono = sysPermissionService
+                                        .listPermissionsByUserId(user.getId())
+                                        .map(SysPermissionVO::getPermissionCode)
+                                        .filter(Objects::nonNull)
+                                        .distinct()
                                         .collectList()
                                         .doOnNext(perms -> log.info("[Step4] 权限列表: {}", perms));
 
-                                // 5. 查询菜单 —— 返回树形结构
-                                Mono<List<SysMenuTreeVO>> menusMono = sysMenuService.getMenuTreeByUserId(user.getId())
+                                // Step5: 查询菜单列表（递归 SQL 补齐父菜单）
+                                Mono<List<SysMenuTreeVO>> menusMono = sysMenuService
+                                        .getMenuListByUserId(user.getId())
                                         .collectList()
-                                        .defaultIfEmpty(List.of())
+                                        .map(menuList -> {
+                                            log.info("[Step5] 用户 {} 拥有 {} 个菜单，开始构建树形结构", user.getId(), menuList.size());
+                                            return buildMenuTree(menuList, 0L); // 从根节点开始
+                                        })
                                         .doOnNext(menus -> log.info("[Step5] 菜单树: {}", menus));
 
-                                // 6. 聚合结果
+                                // Step6: 聚合结果
                                 return Mono.zip(rolesMono, permissionsMono, menusMono)
                                         .map(tuple -> {
-                                            UserInfoDTO dto = buildUserInfoDTO(user, tuple.getT1(), tuple.getT2(), tuple.getT3());
+                                            UserInfoDTO dto = buildUserInfoDTO(
+                                                    user,
+                                                    tuple.getT1(), // 角色列表
+                                                    tuple.getT2(), // 权限列表
+                                                    tuple.getT3()  // 菜单树
+                                            );
                                             log.info("[Step6] 最终组装的 UserInfoDTO: {}", dto);
                                             return dto;
                                         });
@@ -214,15 +218,9 @@ public class AuthServiceServiceImpl implements IAuthService {
                 });
     }
 
+
     /**
      * 构建 UserInfoDTO
-     *
-     * 用途：
-     * - 将用户基本信息、角色列表、权限列表、菜单树组装成一个统一的 DTO。
-     * - 返回给前端，用于渲染用户信息和动态路由。
-     *
-     * 日志：
-     * - 在调用处打印最终组装结果。
      *
      * @param sysUserDTO 用户实体对象
      * @param roles 用户角色列表
@@ -230,7 +228,10 @@ public class AuthServiceServiceImpl implements IAuthService {
      * @param menus 用户菜单树
      * @return UserInfoDTO 用户信息 DTO
      */
-    private UserInfoDTO buildUserInfoDTO(SysUserDTO sysUserDTO, List<String> roles, List<String> permissions, List<SysMenuTreeVO> menus) {
+    private UserInfoDTO buildUserInfoDTO(SysUserDTO sysUserDTO,
+                                         List<String> roles,
+                                         List<String> permissions,
+                                         List<SysMenuTreeVO> menus) {
         UserInfoDTO dto = new UserInfoDTO();
         dto.setUserId(sysUserDTO.getId());
         dto.setUsername(sysUserDTO.getUsername());
@@ -243,6 +244,28 @@ public class AuthServiceServiceImpl implements IAuthService {
     }
 
 
+
+    public List<SysMenuTreeVO> buildMenuTree(List<SysMenuVO> menus, Long parentId) {
+        return menus.stream()
+                .filter(menu -> Objects.equals(menu.getMenuParentId(), parentId))
+                .sorted(Comparator.comparing(SysMenuVO::getMenuSort))
+                .map(menu -> {
+                    SysMenuTreeVO vo = new SysMenuTreeVO();
+                    vo.setId(menu.getId());
+                    vo.setMenuName(menu.getMenuName());
+                    vo.setMenuPath(menu.getMenuPath());
+                    vo.setMenuComponent(menu.getMenuComponent());
+                    vo.setMenuIcon(menu.getMenuIcon());
+                    vo.setMenuType(menu.getMenuType());
+                    vo.setMenuSort(menu.getMenuSort());
+                    vo.setMenuParentId(menu.getMenuParentId());
+                    vo.setMenuStatus(menu.getMenuStatus());
+                    vo.setCreateTime(menu.getCreateTime());
+                    vo.setChildren(buildMenuTree(menus, menu.getId())); // 递归构建子菜单
+                    return vo;
+                })
+                .collect(Collectors.toList());
+    }
 
 
 }

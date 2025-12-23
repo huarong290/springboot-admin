@@ -7,6 +7,8 @@ import com.springboot.admin.model.vo.permission.SysPermissionVO;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+
 /**
  * 权限点表 Service 接口
  * <p>
@@ -85,6 +87,14 @@ public interface ISysPermissionService {
      */
     Flux<SysPermissionVO> listPermissionsByRoleId(Long roleId);
 
+
+    /**
+     * 查询所有权限点
+     *
+     * @param roleIds 角色id列表
+     * @return Flux<SysPermission> 响应式流，返回多个权限点对象
+     */
+    Flux<SysPermissionVO> listPermissionsByRoleIds(List<Long> roleIds);
 
 }
 

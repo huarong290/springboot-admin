@@ -192,18 +192,40 @@ public class SysMenuRepositoryCustom {
         }
     }
 
+
     /**
-     * 根据用户ID查询菜单列表
+     * 根据用户ID查询菜单列表（基于权限表改造版）
+     *
+     * 用途：
+     * - 用户登录后，通过角色ID查询其权限，再通过菜单权限表映射到菜单。
+     * - 保证菜单和权限解耦，符合 RBAC + 菜单-权限映射的设计。
+     *
+     * 流程：
+     * 1. 用户 → 角色 (sys_user_role)
+     * 2. 角色 → 权限 (sys_role_permission + sys_permission)
+     * 3. 权限 → 菜单 (sys_menu_permission + sys_menu)
      *
      * @param userId 用户ID
-     * @return 用户所拥有的菜单集合 (Flux<SysMenu>)
+     * @return Flux<SysMenu> 用户所拥有的菜单集合
      */
     public Flux<SysMenu> getMenuListByUserId(Long userId) {
-        String sql = "SELECT m.* FROM sys_menu m " +
-                "INNER JOIN sys_role_menu rm ON m.id = rm.menu_id " +
-                "INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id " +
-                "WHERE ur.user_id = ? AND m.delete_flag = 0";
-
+        String sql = "WITH RECURSIVE menu_cte AS (" +
+                " SELECT DISTINCT m.* " +
+                " FROM sys_menu m " +
+                " INNER JOIN sys_menu_permission mp ON m.id = mp.menu_id " +
+                " INNER JOIN sys_permission p ON mp.permission_id = p.id " +
+                " INNER JOIN sys_role_permission rp ON p.id = rp.permission_id " +
+                " INNER JOIN sys_user_role ur ON rp.role_id = ur.role_id " +
+                " WHERE ur.user_id = ? " +
+                "   AND m.delete_flag = 0 " +
+                "   AND p.delete_flag = 0 " +
+                "   AND p.permission_status = 1 " +
+                " UNION " +
+                " SELECT parent.* " +
+                " FROM sys_menu parent " +
+                " INNER JOIN menu_cte child ON parent.id = child.menu_parent_id " +
+                " WHERE parent.delete_flag = 0 ) " +
+                " SELECT DISTINCT * FROM menu_cte ORDER BY menu_sort";
 
         return client.sql(sql)
                 .bind(0, userId)
@@ -216,7 +238,6 @@ public class SysMenuRepositoryCustom {
                     menu.setMenuComponent(row.get("menu_component", String.class));
                     menu.setMenuIcon(row.get("menu_icon", String.class));
                     menu.setMenuType(row.get("menu_type", Integer.class));
-                    menu.setMenuPermission(row.get("menu_permission", String.class));
                     menu.setMenuSort(row.get("menu_sort", Integer.class));
                     menu.setMenuVisible(row.get("menu_visible", Integer.class));
                     menu.setMenuStatus(row.get("menu_status", Integer.class));
@@ -237,6 +258,8 @@ public class SysMenuRepositoryCustom {
                 })
                 .all();
     }
+
+
 
     /**
      * 根据角色ID查询菜单列表

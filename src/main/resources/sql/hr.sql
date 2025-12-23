@@ -180,6 +180,18 @@ CREATE TABLE `sys_role_permission` (
   KEY `idx_permission_id` (`permission_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色与权限点关联表';
 
+CREATE TABLE `sys_menu_permission` (
+                                       `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                                       `menu_id` bigint NOT NULL COMMENT '菜单ID（对应 sys_menu 表的主键）',
+                                       `permission_id` bigint NOT NULL COMMENT '权限ID（对应 sys_permission 表的主键）',
+                                       `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除：0=未删除，1=已删除',
+                                       `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
+                                       `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                       `update_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '修改者',
+                                       `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+                                       PRIMARY KEY (`id`),
+                                       UNIQUE KEY `uk_menu_permission` (`menu_id`, `permission_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='菜单-权限关联表';
 
 
 
@@ -240,7 +252,19 @@ VALUES
 (5, 2, 1), -- 普通用户 → 新增用户
 (6, 3, 4); -- 财务专员 → 分配角色
 
+-- 用户管理菜单 (id=2) 对应权限
+INSERT INTO sys_menu_permission (menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time)
+VALUES
+    (2, 1, 0, 'system', NOW(), 'system', NOW()), -- sys:user:add
+    (2, 2, 0, 'system', NOW(), 'system', NOW()), -- sys:user:edit
+    (2, 3, 0, 'system', NOW(), 'system', NOW()); -- sys:user:delete
 
+-- 角色管理菜单 (id=3) 对应权限
+INSERT INTO sys_menu_permission (menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time)
+VALUES
+    (3, 4, 0, 'system', NOW(), 'system', NOW()); -- sys:role:assign
+
+-- 菜单管理菜单 (id=4) 暂时没有额外权限点，可以不插入或后续扩展
 
 DROP TABLE IF EXISTS `hr_employee`;
 CREATE TABLE `hr_employee`  (

@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+
 /**
  * 权限表 Service 实现类
  * <p>
@@ -111,5 +113,10 @@ public class SysPermissionServiceImpl implements ISysPermissionService {
         return sysPermissionRepositoryCustom.listPermissionsByRoleId(roleId).collectList().doOnNext(list -> log.info("查询到权限列表: {}", JSONObject.toJSONString(list)))
                 .flatMapMany(list -> Flux.fromIterable(list)
                         .map(sysPermissionConvert::toVO));
+    }
+
+    @Override
+    public Flux<SysPermissionVO> listPermissionsByRoleIds(List<Long> roleIds) {
+        return sysPermissionRepositoryCustom.listPermissionsByRoleIds(roleIds);
     }
 }

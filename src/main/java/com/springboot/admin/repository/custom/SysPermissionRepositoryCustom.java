@@ -13,10 +13,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 
 /**
@@ -270,5 +267,64 @@ public class SysPermissionRepositoryCustom {
         }
     }
 
+
+    /**
+     * 根据角色ID集合查询权限列表
+     *
+     * 用途：
+     * - 在用户登录后，通过角色ID集合查询该用户拥有的所有权限点。
+     * - 角色和权限是多对多关系，通过中间表 sys_role_permission 关联。
+     * - 返回权限 VO 列表，包含权限编码、名称、类型、状态等信息。
+     *
+     * 注意：
+     * - 过滤掉逻辑删除 (delete_flag=0) 的权限。
+     * - 过滤掉禁用状态 (permission_status=1) 的权限。
+     * - 去重：避免同一个权限被多个角色重复返回。
+     *
+     * @param roleIds 角色ID集合
+     * @return Flux<SysPermissionVO> 响应式流，返回权限列表
+     */
+    public Flux<SysPermissionVO> listPermissionsByRoleIds(List<Long> roleIds) {
+        // 如果角色ID集合为空，直接返回空结果
+        if (roleIds == null || roleIds.isEmpty()) {
+            return Flux.empty();
+        }
+
+        // 构造 SQL：通过角色权限表 (sys_role_permission) 关联权限表 (sys_permission)
+        String sql = "SELECT p.* FROM sys_permission p " +
+                "INNER JOIN sys_role_permission rp ON p.id = rp.permission_id " +
+                "WHERE rp.role_id IN (?) " +
+                "AND p.delete_flag = 0 " +
+                "AND p.permission_status = 1";
+
+        // 执行 SQL 查询
+        return client.sql(sql)
+                // 绑定参数 roleIds，用于 IN 查询
+                .bind(0, roleIds)
+                // 映射结果集到 SysPermissionVO
+                .map((row, meta) -> {
+                    SysPermissionVO vo = new SysPermissionVO();
+                    vo.setId(row.get("id", Long.class));
+                    vo.setPermissionCode(row.get("permission_code", String.class));
+                    vo.setPermissionName(row.get("permission_name", String.class));
+                    vo.setPermissionType(row.get("permission_type", Integer.class));
+                    vo.setPermissionStatus(row.get("permission_status", Integer.class));
+                    vo.setCreateTime(
+                            Optional.ofNullable(row.get("create_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
+                    vo.setUpdateTime(
+                            Optional.ofNullable(row.get("update_time", java.time.ZonedDateTime.class))
+                                    .map(java.time.ZonedDateTime::toLocalDateTime)
+                                    .orElse(null)
+                    );
+                    return vo;
+                })
+                // 返回所有结果
+                .all()
+                // 去重，避免重复权限
+                .distinct(SysPermissionVO::getPermissionCode);
+    }
 
 }
