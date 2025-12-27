@@ -167,48 +167,37 @@ public class AuthServiceServiceImpl implements IAuthService {
                     String username = claims.getSubject();
                     log.info("[Step1] 成功解析 Token，username={}", username);
 
-                    // Step2: 查询用户信息
                     return sysUserService.getUserByUsername(username)
                             .switchIfEmpty(Mono.error(new BusinessException("0100104", "用户不存在")))
                             .flatMap(user -> {
-                                log.info("[Step2] 查询到用户信息: {}", user);
+                                log.info("[Step2] 查询到用户信息: {}", user.getUsername());
 
-                                // Step3: 查询角色列表
-                                Mono<List<String>> rolesMono = sysRoleService.listRolesByUserId(user.getId())
-                                        .map(SysRoleVO::getRoleCode)
-                                        .filter(Objects::nonNull)
+                                Mono<List<SysRoleVO>> rolesMono = sysRoleService.listRolesByUserId(user.getId())
                                         .collectList()
                                         .doOnNext(roles -> log.info("[Step3] 角色列表: {}", roles));
 
-                                // Step4: 查询权限列表（基于权限表）
-                                Mono<List<String>> permissionsMono = sysPermissionService
+                                Mono<List<SysPermissionVO>> permissionsMono = sysPermissionService
                                         .listPermissionsByUserId(user.getId())
-                                        .map(SysPermissionVO::getPermissionCode)
-                                        .filter(Objects::nonNull)
                                         .distinct()
                                         .collectList()
-                                        .doOnNext(perms -> log.info("[Step4] 权限列表: {}", perms));
+                                        .doOnNext(perms -> log.info("[Step4] 权限数量: {}", perms.size()));
 
-                                // Step5: 查询菜单列表（递归 SQL 补齐父菜单）
                                 Mono<List<SysMenuTreeVO>> menusMono = sysMenuService
-                                        .getMenuListByUserId(user.getId())
+                                        .getMenuTreeByUserId(user.getId()) // 直接返回树形结构
                                         .collectList()
-                                        .map(menuList -> {
-                                            log.info("[Step5] 用户 {} 拥有 {} 个菜单，开始构建树形结构", user.getId(), menuList.size());
-                                            return buildMenuTree(menuList, 0L); // 从根节点开始
-                                        })
-                                        .doOnNext(menus -> log.info("[Step5] 菜单树: {}", menus));
+                                        .doOnNext(menus -> log.info("[Step5] 菜单数量: {}", menus.size()));
 
-                                // Step6: 聚合结果
                                 return Mono.zip(rolesMono, permissionsMono, menusMono)
                                         .map(tuple -> {
-                                            UserInfoDTO dto = buildUserInfoDTO(
-                                                    user,
-                                                    tuple.getT1(), // 角色列表
-                                                    tuple.getT2(), // 权限列表
-                                                    tuple.getT3()  // 菜单树
-                                            );
-                                            log.info("[Step6] 最终组装的 UserInfoDTO: {}", dto);
+                                            UserInfoDTO dto = new UserInfoDTO();
+                                            dto.setUserId(user.getId());
+                                            dto.setUsername(user.getUsername());
+                                            dto.setNickname(user.getNickname());
+                                            dto.setAvatar(user.getAvatar());
+                                            dto.setRoles(tuple.getT1());
+                                            dto.setPermissions(tuple.getT2());
+                                            dto.setMenus(tuple.getT3());
+                                            log.info("[Step6] UserInfoDTO 构建完成: {}", dto.getUsername());
                                             return dto;
                                         });
                             });
@@ -218,6 +207,7 @@ public class AuthServiceServiceImpl implements IAuthService {
                     return Mono.error(new BusinessException("0100105", "获取用户信息失败"));
                 });
     }
+
 
 
     /**
@@ -230,8 +220,8 @@ public class AuthServiceServiceImpl implements IAuthService {
      * @return UserInfoDTO 用户信息 DTO
      */
     private UserInfoDTO buildUserInfoDTO(SysUserDTO sysUserDTO,
-                                         List<String> roles,
-                                         List<String> permissions,
+                                         List<SysRoleVO> roles,
+                                         List<SysPermissionVO> permissions,
                                          List<SysMenuTreeVO> menus) {
         UserInfoDTO dto = new UserInfoDTO();
         dto.setUserId(sysUserDTO.getId());

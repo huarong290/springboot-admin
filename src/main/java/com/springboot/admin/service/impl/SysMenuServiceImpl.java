@@ -3,6 +3,7 @@ package com.springboot.admin.service.impl;
 import com.alibaba.fastjson2.JSON;
 import com.springboot.admin.convert.SysMenuConvert;
 import com.springboot.admin.model.dto.menu.SysMenuDTO;
+import com.springboot.admin.model.vo.menu.MetaVO;
 import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
 import com.springboot.admin.model.vo.menu.SysMenuVO;
 import com.springboot.admin.repository.custom.SysMenuRepositoryCustom;
@@ -13,8 +14,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 菜单表 Service 实现类
@@ -188,15 +189,48 @@ public class SysMenuServiceImpl implements ISysMenuService {
 
     @Override
     public Flux<SysMenuTreeVO> getMenuTreeByUserId(Long userId) {
-        // 先查询用户拥有的菜单（平铺列表）
-        // 再递归构建树形结构
         return getMenuListByUserId(userId)
                 .collectList()
                 .flatMapMany(list -> {
-                    log.info("[MenuQuery] 用户 {} 拥有 {} 个菜单，开始构建树形结构", userId, list.size());
-                    return Flux.fromIterable(buildMenuTree(list, 0L));
+                    log.info("[MenuQuery] 用户 {} 拥有 {} 个菜单", userId, list.size());
+                    Map<Long, List<SysMenuVO>> parentMap = list.stream()
+                            .collect(Collectors.groupingBy(menu ->
+                                    Optional.ofNullable(menu.getMenuParentId()).orElse(0L)));
+                    return Flux.fromIterable(buildChildren(parentMap, 0L));
                 });
     }
+
+    private List<SysMenuTreeVO> buildChildren(Map<Long, List<SysMenuVO>> parentMap, Long parentId) {
+        List<SysMenuVO> children = parentMap.getOrDefault(parentId, Collections.emptyList());
+
+        return children.stream()
+                .sorted(Comparator.comparing(SysMenuVO::getMenuSort))
+                .map(menu -> {
+                    SysMenuTreeVO vo = sysMenuConvert.toTreeVO(menu);
+
+                    // 图标判空处理
+                    String icon = Optional.ofNullable(menu.getMenuIcon()).orElse("").toLowerCase();
+                    vo.setMenuIcon(icon);
+
+                    // 构建 meta 信息
+                    MetaVO meta = new MetaVO();
+                    meta.setTitle(menu.getMenuName());
+                    meta.setIcon(icon);
+                    meta.setKeepAlive(true);
+                    meta.setHidden(menu.getMenuVisible() != null && menu.getMenuVisible() == 0);
+                    vo.setMeta(meta);
+
+                    // 递归构建子菜单
+                    vo.setChildren(buildChildren(parentMap, menu.getId()));
+
+                    log.debug("[TreeBuild] 构建完成: id={}, childrenCount={}", vo.getId(), vo.getChildren().size());
+                    return vo;
+                })
+                .collect(Collectors.toList());
+    }
+
+
+
 
     /** ---------------- 辅助方法 ---------------- */
 

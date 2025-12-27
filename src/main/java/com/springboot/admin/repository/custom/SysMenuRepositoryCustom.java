@@ -209,23 +209,7 @@ public class SysMenuRepositoryCustom {
      * @return Flux<SysMenu> 用户所拥有的菜单集合
      */
     public Flux<SysMenu> getMenuListByUserId(Long userId) {
-        String sql = "WITH RECURSIVE menu_cte AS (" +
-                " SELECT DISTINCT m.* " +
-                " FROM sys_menu m " +
-                " INNER JOIN sys_menu_permission mp ON m.id = mp.menu_id " +
-                " INNER JOIN sys_permission p ON mp.permission_id = p.id " +
-                " INNER JOIN sys_role_permission rp ON p.id = rp.permission_id " +
-                " INNER JOIN sys_user_role ur ON rp.role_id = ur.role_id " +
-                " WHERE ur.user_id = ? " +
-                "   AND m.delete_flag = 0 " +
-                "   AND p.delete_flag = 0 " +
-                "   AND p.permission_status = 1 " +
-                " UNION " +
-                " SELECT parent.* " +
-                " FROM sys_menu parent " +
-                " INNER JOIN menu_cte child ON parent.id = child.menu_parent_id " +
-                " WHERE parent.delete_flag = 0 ) " +
-                " SELECT DISTINCT * FROM menu_cte ORDER BY menu_sort";
+        String sql = "WITH RECURSIVE menu_cte AS ( SELECT DISTINCT m.* FROM sys_menu m INNER JOIN sys_menu_permission mp ON m.id = mp.menu_id INNER JOIN sys_permission p ON mp.permission_id = p.id INNER JOIN sys_role_permission rp ON p.id = rp.permission_id INNER JOIN sys_user_role ur ON rp.role_id = ur.role_id WHERE ur.user_id = ? AND m.delete_flag = 0 AND p.delete_flag = 0 AND p.permission_status = 1 AND rp.delete_flag = 0 UNION SELECT parent.* FROM sys_menu parent INNER JOIN menu_cte child ON parent.id = child.menu_parent_id WHERE parent.delete_flag = 0 ) SELECT DISTINCT * FROM menu_cte ORDER BY menu_sort";
 
         return client.sql(sql)
                 .bind(0, userId)

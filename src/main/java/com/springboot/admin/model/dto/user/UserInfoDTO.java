@@ -2,6 +2,8 @@ package com.springboot.admin.model.dto.user;
 
 
 import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
+import com.springboot.admin.model.vo.permission.SysPermissionVO;
+import com.springboot.admin.model.vo.role.SysRoleVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -40,18 +42,12 @@ public class UserInfoDTO {
     private String avatar;
 
     /**
-     * 用户角色列表
-     * 从 sys_role 表中查询，通常返回角色编码（role_code）
-     * 示例：["ADMIN", "USER"]
-     */
-    private List<String> roles= new ArrayList<>();
+     * 用户角色列表（完整对象，包含编码、名称、描述等）
+     * */
+    private List<SysRoleVO> roles = new ArrayList<>();
 
-    /**
-     * 用户权限列表
-     * 从 sys_permission 表中查询，通常返回权限编码（permission_code）
-     * 示例：["sys:user:add", "sys:user:edit"]
-     */
-    private List<String> permissions= new ArrayList<>();
+    /** 用户权限列表（完整对象，包含编码、名称、类型等） */
+    private List<SysPermissionVO> permissions = new ArrayList<>();
     /**
      * 用户菜单列表（树形结构）
      * 从 sys_menu 表中查询，返回树形结构

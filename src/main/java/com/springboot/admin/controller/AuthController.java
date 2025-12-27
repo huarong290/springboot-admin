@@ -23,6 +23,7 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -128,8 +129,8 @@ public class AuthController {
         dto.setUsername("testUser");
         dto.setNickname("测试用户");
         dto.setAvatar("https://example.com/avatar.png");
-        dto.setRoles(List.of("ADMIN"));
-        dto.setPermissions(List.of("sys:user:add"));
+        dto.setRoles(new ArrayList<>());
+        dto.setPermissions(new ArrayList<>());
         dto.setMenus(List.of(menu));
         return Mono.just(ApiResult.successResult(dto));
     }

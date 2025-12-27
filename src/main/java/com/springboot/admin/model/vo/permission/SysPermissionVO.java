@@ -42,6 +42,10 @@ public class SysPermissionVO {
     private Integer permissionStatus;
 
     /**
+     * 所属菜单ID
+     */
+    private Long menuId;
+    /**
      * 创建时间
      */
     @Schema(description = "创建时间")
