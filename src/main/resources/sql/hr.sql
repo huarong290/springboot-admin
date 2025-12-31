@@ -1,397 +1,56 @@
--- =========================
--- 组织表（集团/公司/事业部）
--- =========================
-CREATE TABLE `sys_org` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `parent_id` bigint NOT NULL DEFAULT '0' COMMENT '上级组织ID，顶级组织为0',
-  `org_name` varchar(100) NOT NULL COMMENT '组织名称',
-  `org_code` varchar(50) NOT NULL COMMENT '组织编码，唯一',
-  `org_type` varchar(50) DEFAULT NULL COMMENT '组织类型（集团/公司/事业部等）',
-  `org_sort` int NOT NULL DEFAULT '0' COMMENT '排序值',
-  `org_status` tinyint(5) NOT NULL DEFAULT '1' COMMENT '状态：1=启用，0=禁用',
-  `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
-  `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '修改者',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_org_code` (`org_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='组织表';
-
--- =========================
--- 部门表
--- =========================
-CREATE TABLE `sys_dept` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `parent_id` bigint NOT NULL DEFAULT '0' COMMENT '上级部门ID，顶级部门为0',
-  `org_id` bigint NOT NULL COMMENT '所属组织ID',
-  `dept_name` varchar(100) NOT NULL COMMENT '部门名称',
-  `dept_code` varchar(50) NOT NULL COMMENT '部门编码，唯一',
-  `dept_sort` int NOT NULL DEFAULT '0' COMMENT '排序值',
-  `leader` varchar(64) DEFAULT NULL COMMENT '部门负责人',
-  `phone` varchar(20) DEFAULT NULL COMMENT '联系电话',
-  `email` varchar(100) DEFAULT NULL COMMENT '部门邮箱',
-  `dept_status` tinyint(5) NOT NULL DEFAULT '1' COMMENT '状态：1=启用，0=禁用',
-  `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
-  `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '修改者',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_dept_code` (`dept_code`),
-  KEY `idx_org_id` (`org_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='部门表';
-
--- =========================
--- 用户表
--- =========================
-CREATE TABLE `sys_user` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `username` varchar(50) NOT NULL COMMENT '用户名，唯一',
-  `password` varchar(100) NOT NULL COMMENT '加密后的密码',
-  `nickname` varchar(50) DEFAULT '' COMMENT '用户昵称',
-  `email` varchar(100) DEFAULT '' COMMENT '邮箱地址',
-  `phone` varchar(20) DEFAULT '' COMMENT '手机号',
-  `avatar` varchar(255) DEFAULT '' COMMENT '用户头像URL',
-  `status` tinyint(5) NOT NULL DEFAULT '1' COMMENT '是否启用',
-  `dept_id` bigint DEFAULT NULL COMMENT '所属部门ID',
-  `org_id` bigint DEFAULT NULL COMMENT '所属组织ID',
-  `last_login_time` datetime DEFAULT NULL COMMENT '上次登录时间',
-  `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
-  `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '修改者',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_username` (`username`),
-  KEY `idx_dept_id` (`dept_id`),
-  KEY `idx_org_id` (`org_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统用户表';
-
--- =========================
--- 角色表
--- =========================
-CREATE TABLE `sys_role` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `role_name` varchar(50) NOT NULL COMMENT '角色名称',
-  `role_code` varchar(50) NOT NULL COMMENT '角色编码',
-  `role_description` varchar(255) DEFAULT '' COMMENT '角色描述',
-  `role_status` tinyint(5) NOT NULL DEFAULT '1' COMMENT '是否启用',
-  `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
-  `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '修改者',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_role_code` (`role_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统角色表';
-
--- =========================
--- 菜单表
--- =========================
-CREATE TABLE `sys_menu` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `menu_parent_id` bigint NOT NULL DEFAULT '0' COMMENT '父菜单ID',
-  `menu_name` varchar(50) NOT NULL COMMENT '菜单名称',
-  `menu_path` varchar(100) DEFAULT '' COMMENT '路由路径',
-  `menu_component` varchar(100) DEFAULT '' COMMENT '前端组件路径',
-  `menu_icon` varchar(50) DEFAULT '' COMMENT '菜单图标',
-  `menu_type` tinyint NOT NULL DEFAULT '1' COMMENT '菜单类型：0=目录，1=菜单，2=按钮',
-  `menu_permission` varchar(100) DEFAULT '' COMMENT '权限标识',
-  `menu_sort` int NOT NULL DEFAULT '0' COMMENT '排序值',
-  `menu_visible` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否显示',
-  `menu_status` tinyint(5) NOT NULL DEFAULT '1' COMMENT '是否启用',
-  `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
-  `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '修改者',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统菜单表';
-
--- =========================
--- 权限点表
--- =========================
-CREATE TABLE `sys_permission` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `permission_code` varchar(100) NOT NULL COMMENT '权限编码',
-  `permission_name` varchar(100) NOT NULL COMMENT '权限名称',
-  `permission_type` tinyint NOT NULL DEFAULT '1' COMMENT '权限类型：1=接口权限，2=数据权限',
-  `permission_status` tinyint(5) NOT NULL DEFAULT '1' COMMENT '是否启用:1-启用 0-禁用',
-  `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
-  `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '修改者',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_permission_code` (`permission_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统权限点表';
-
--- =========================
--- 用户角色关联表
--- =========================
-CREATE TABLE `sys_user_role` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `user_id` bigint NOT NULL COMMENT '用户ID',
-  `role_id` bigint NOT NULL COMMENT '角色ID',
-  `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
-  `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '修改者',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_user_role` (`user_id`,`role_id`),
-  KEY `idx_user_id` (`user_id`),
-  KEY `idx_role_id` (`role_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户与角色关联表';
-
--- =========================
--- 角色菜单关联表
--- =========================
-CREATE TABLE `sys_role_menu` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `role_id` bigint NOT NULL COMMENT '角色ID',
-  `menu_id` bigint NOT NULL COMMENT '菜单ID',
-  `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
-  `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '修改者',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_role_menu` (`role_id`,`menu_id`),
-  KEY `idx_role_id` (`role_id`),
-  KEY `idx_menu_id` (`menu_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色与菜单关联表';
--- =========================
--- 角色权限点关联表
--- =========================
-CREATE TABLE `sys_role_permission` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `role_id` bigint NOT NULL COMMENT '角色ID',
-  `permission_id` bigint NOT NULL COMMENT '权限点ID',
-  `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除',
-  `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '修改者',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_role_permission` (`role_id`,`permission_id`),
-  KEY `idx_role_id` (`role_id`),
-  KEY `idx_permission_id` (`permission_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色与权限点关联表';
-
-CREATE TABLE `sys_menu_permission` (
-                                       `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-                                       `menu_id` bigint NOT NULL COMMENT '菜单ID（对应 sys_menu 表的主键）',
-                                       `permission_id` bigint NOT NULL COMMENT '权限ID（对应 sys_permission 表的主键）',
-                                       `delete_flag` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除：0=未删除，1=已删除',
-                                       `create_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '创建者',
-                                       `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                       `update_by` varchar(64) NOT NULL DEFAULT 'system' COMMENT '修改者',
-                                       `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                                       PRIMARY KEY (`id`),
-                                       UNIQUE KEY `uk_menu_permission` (`menu_id`, `permission_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4  COMMENT='菜单-权限关联表';
-
-
-
-INSERT INTO `sys_org` (`id`, `parent_id`, `org_name`, `org_code`, `org_type`, `org_sort`, `status`)
-VALUES
-(1, 0, '集团总部', 'ORG001', '集团', 1, 1),
-(2, 1, '子公司A', 'ORG002', '子公司', 2, 1),
-(3, 1, '子公司B', 'ORG003', '子公司', 3, 1);
-
-INSERT INTO `sys_dept` (`id`, `parent_id`, `org_id`, `dept_name`, `dept_code`, `dept_sort`, `status`)
-VALUES
-(1, 0, 1, '研发部', 'DEPT001', 1, 1),
-(2, 0, 1, '财务部', 'DEPT002', 2, 1),
-(3, 0, 2, '市场部', 'DEPT003', 1, 1),
-(4, 0, 3, '销售部', 'DEPT004', 1, 1);
-
-INSERT INTO `sys_user` (`id`, `username`, `password`, `nickname`, `email`, `phone`, `avatar`, `enabled`, `dept_id`, `org_id`)
-VALUES
-(1, 'admin', '$2a$10$WWfiAZKieNynjwbyAxWSK.aAo0OfBpDYOLj03ksJV/C1hD4zwG03m', '系统管理员', 'admin@example.com', '13800000000', '', 1, 1, 1),
-(2, 'zhangsan', '$2a$10$WWfiAZKieNynjwbyAxWSK.aAo0OfBpDYOLj03ksJV/C1hD4zwG03m', '张三', 'zhangsan@example.com', '13800000001', '', 1, 2, 1),
-(3, 'lisi', '$2a$10$WWfiAZKieNynjwbyAxWSK.aAo0OfBpDYOLj03ksJV/C1hD4zwG03m', '李四', 'lisi@example.com', '13800000002', '', 1, 3, 2);
-
-INSERT INTO `sys_role` (`id`, `role_name`, `role_code`, `role_description`)
-VALUES
-(1, '超级管理员', 'ROLE_ADMIN', '拥有系统全部权限'),
-(2, '普通用户', 'ROLE_USER', '普通业务用户'),
-(3, '财务专员', 'ROLE_FINANCE', '财务相关权限');
-
-INSERT INTO `sys_menu` (`id`, `menu_parent_id`, `menu_name`, `menu_path`, `menu_component`, `menu_icon`, `menu_type`, `menu_permission`, `menu_sort`, `menu_visible`)
-VALUES
-(1, 0, '系统管理', '/system', 'Layout', 'setting', 0, '', 1, 1),
-(2, 1, '用户管理', '/system/user', 'UserPage', 'user', 1, 'sys:user:list', 1, 1),
-(3, 1, '角色管理', '/system/role', 'RolePage', 'team', 1, 'sys:role:list', 2, 1),
-(4, 1, '菜单管理', '/system/menu', 'MenuPage', 'menu', 1, 'sys:menu:list', 3, 1);
-
--- 用户管理权限 (id 1-3)
-INSERT INTO sys_permission (id, permission_code, permission_name, permission_type, permission_status, delete_flag, create_by, create_time, update_by, update_time) VALUES
-    (1, 'sys:user:add','新增用户',1,1,0,'system',NOW(),'system',NOW()),
-    (2, 'sys:user:edit','编辑用户',1,1,0,'system',NOW(),'system',NOW()),
-    (3, 'sys:user:delete','删除用户',1,1,0,'system',NOW(),'system',NOW());
-
--- 角色管理权限 (id 4-7)
-INSERT INTO sys_permission (id, permission_code, permission_name, permission_type, permission_status, delete_flag, create_by, create_time, update_by, update_time) VALUES
-    (4, 'sys:role:assign','分配角色',1,1,0,'system',NOW(),'system',NOW()),
-    (5, 'sys:role:add','新增角色',1,1,0,'system',NOW(),'system',NOW()),
-    (6, 'sys:role:edit','编辑角色',1,1,0,'system',NOW(),'system',NOW()),
-    (7, 'sys:role:delete','删除角色',1,1,0,'system',NOW(),'system',NOW());
-
--- 菜单管理权限 (id 8-10)
-INSERT INTO sys_permission (id, permission_code, permission_name, permission_type, permission_status, delete_flag, create_by, create_time, update_by, update_time) VALUES
-    (8, 'sys:menu:add','新增菜单',1,1,0,'system',NOW(),'system',NOW()),
-    (9, 'sys:menu:edit','编辑菜单',1,1,0,'system',NOW(),'system',NOW()),
-    (10, 'sys:menu:delete','删除菜单',1,1,0,'system',NOW(),'system',NOW());
-
--- 权限管理权限 (id 11-13)
-INSERT INTO sys_permission (id, permission_code, permission_name, permission_type, permission_status, delete_flag, create_by, create_time, update_by, update_time) VALUES
-    (11, 'sys:perm:add','新增权限',1,1,0,'system',NOW(),'system',NOW()),
-    (12, 'sys:perm:edit','编辑权限',1,1,0,'system',NOW(),'system',NOW()),
-    (13, 'sys:perm:delete','删除权限',1,1,0,'system',NOW(),'system',NOW());
-
--- 部门管理权限 (id 14-16)
-INSERT INTO sys_permission (id, permission_code, permission_name, permission_type, permission_status, delete_flag, create_by, create_time, update_by, update_time) VALUES
-    (14, 'sys:dept:add','新增部门',1,1,0,'system',NOW(),'system',NOW()),
-    (15, 'sys:dept:edit','编辑部门',1,1,0,'system',NOW(),'system',NOW()),
-    (16, 'sys:dept:delete','删除部门',1,1,0,'system',NOW(),'system',NOW());
-
--- 组织管理权限 (id 17-19)
-INSERT INTO sys_permission (id, permission_code, permission_name, permission_type, permission_status, delete_flag, create_by, create_time, update_by, update_time) VALUES
-    (17, 'sys:org:add','新增组织',1,1,0,'system',NOW(),'system',NOW()),
-    (18, 'sys:org:edit','编辑组织',1,1,0,'system',NOW(),'system',NOW()),
-    (19, 'sys:org:delete','删除组织',1,1,0,'system',NOW(),'system',NOW());
-
-INSERT INTO `sys_user_role` (`id`, `user_id`, `role_id`)
-VALUES
-(1, 1, 1), -- admin → 超级管理员
-(2, 2, 2), -- 张三 → 普通用户
-(3, 3, 3); -- 李四 → 财务专员
-
-
-INSERT INTO `sys_role_menu` (`id`, `role_id`, `menu_id`)
-VALUES
-(1, 1, 1), (2, 1, 2), (3, 1, 3), (4, 1, 4), -- 超级管理员 → 全部菜单
-(5, 2, 2), -- 普通用户 → 用户管理
-(6, 3, 3); -- 财务专员 → 角色管理
--- 超级管理员 (role_id=1) 绑定所有权限 (id=1~19)
-INSERT INTO sys_role_permission (id, role_id, permission_id, delete_flag, create_by, create_time, update_by, update_time) VALUES
-    (1, 1, 1, 0, 'system', NOW(), 'system', NOW()),
-    (2, 1, 2, 0, 'system', NOW(), 'system', NOW()),
-    (3, 1, 3, 0, 'system', NOW(), 'system', NOW()),
-    (4, 1, 4, 0, 'system', NOW(), 'system', NOW()),
-    (5, 1, 5, 0, 'system', NOW(), 'system', NOW()),
-    (6, 1, 6, 0, 'system', NOW(), 'system', NOW()),
-    (7, 1, 7, 0, 'system', NOW(), 'system', NOW()),
-    (8, 1, 8, 0, 'system', NOW(), 'system', NOW()),
-    (9, 1, 9, 0, 'system', NOW(), 'system', NOW()),
-    (10, 1, 10, 0, 'system', NOW(), 'system', NOW()),
-    (11, 1, 11, 0, 'system', NOW(), 'system', NOW()),
-    (12, 1, 12, 0, 'system', NOW(), 'system', NOW()),
-    (13, 1, 13, 0, 'system', NOW(), 'system', NOW()),
-    (14, 1, 14, 0, 'system', NOW(), 'system', NOW()),
-    (15, 1, 15, 0, 'system', NOW(), 'system', NOW()),
-    (16, 1, 16, 0, 'system', NOW(), 'system', NOW()),
-    (17, 1, 17, 0, 'system', NOW(), 'system', NOW()),
-    (18, 1, 18, 0, 'system', NOW(), 'system', NOW()),
-    (19, 1, 19, 0, 'system', NOW(), 'system', NOW());
-
-
--- 用户管理 (menu_id=2)
-INSERT INTO sys_menu_permission (id, menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time) VALUES
-    (1, 2, 1, 0, 'system', NOW(), 'system', NOW()),
-    (2, 2, 2, 0, 'system', NOW(), 'system', NOW()),
-    (3, 2, 3, 0, 'system', NOW(), 'system', NOW());
-
--- 角色管理 (menu_id=3)
-INSERT INTO sys_menu_permission (id, menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time) VALUES
-    (4, 3, 4, 0, 'system', NOW(), 'system', NOW()),
-    (5, 3, 5, 0, 'system', NOW(), 'system', NOW()),
-    (6, 3, 6, 0, 'system', NOW(), 'system', NOW()),
-    (7, 3, 7, 0, 'system', NOW(), 'system', NOW());
-
--- 菜单管理 (menu_id=4)
-INSERT INTO sys_menu_permission (id, menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time) VALUES
-    (8, 4, 8, 0, 'system', NOW(), 'system', NOW()),
-    (9, 4, 9, 0, 'system', NOW(), 'system', NOW()),
-    (10, 4, 10, 0, 'system', NOW(), 'system', NOW());
-
--- 权限管理 (menu_id=5)
-INSERT INTO sys_menu_permission (id, menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time) VALUES
-    (11, 5, 11, 0, 'system', NOW(), 'system', NOW()),
-    (12, 5, 12, 0, 'system', NOW(), 'system', NOW()),
-    (13, 5, 13, 0, 'system', NOW(), 'system', NOW());
-
--- 部门管理 (menu_id=6)
-INSERT INTO sys_menu_permission (id, menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time) VALUES
-    (14, 6, 14, 0, 'system', NOW(), 'system', NOW()),
-    (15, 6, 15, 0, 'system', NOW(), 'system', NOW()),
-    (16, 6, 16, 0, 'system', NOW(), 'system', NOW());
-
--- 组织管理 (menu_id=7)
-INSERT INTO sys_menu_permission (id, menu_id, permission_id, delete_flag, create_by, create_time, update_by, update_time) VALUES
-    (17, 7, 17, 0, 'system', NOW(), 'system', NOW()),
-    (18, 7, 18, 0, 'system', NOW(), 'system', NOW()),
-    (19, 7, 19, 0, 'system', NOW(), 'system', NOW());
-
-
-
 DROP TABLE IF EXISTS `hr_employee`;
 CREATE TABLE `hr_employee`  (
                                 `id` bigint NOT NULL AUTO_INCREMENT COMMENT '员工ID',
-                                `employee_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '员工编号（唯一，可修改）',
-                                `name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '姓名',
-                                `company_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '所属公司',
-                                `department` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '部门',
-                                `employment_status` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '在职状态',
+                                `employee_code` varchar(32)  NOT NULL COMMENT '员工编号（唯一，可修改）',
+                                `name` varchar(64)  NOT NULL COMMENT '姓名',
+                                `company_name` varchar(128)  NULL DEFAULT NULL COMMENT '所属公司',
+                                `department` varchar(128)  NULL DEFAULT NULL COMMENT '部门',
+                                `employment_status` varchar(32)  NULL DEFAULT NULL COMMENT '在职状态',
                                 `is_transferred` tinyint(1) NULL DEFAULT 0 COMMENT '是否转岗',
-                                `accommodation_status` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '住宿情况',
+                                `accommodation_status` varchar(32)  NULL DEFAULT NULL COMMENT '住宿情况',
                                 `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
-                                `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                `create_by` varchar(64)  NOT NULL DEFAULT 'admin' COMMENT '创建者',
                                 `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                `update_by` varchar(64)  NOT NULL DEFAULT 'admin' COMMENT '修改者',
                                 `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
                                 PRIMARY KEY (`id`) USING BTREE,
                                 UNIQUE INDEX `uk_employee_code`(`employee_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '员工基本信息表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Records of hr_employee
--- ----------------------------
-INSERT INTO `hr_employee` VALUES (1, 'GL00055', 'alice', '平台财务中心', '产品开发01组', '在职', 0, '外宿', 0, 'admin', '2025-10-08 09:52:33', 'admin', '2025-11-09 13:05:19');
-
--- ----------------------------
--- Table structure for hr_exchange_rate_log
--- ----------------------------
+) ENGINE = InnoDB AUTO_INCREMENT = 1  COMMENT = '员工基本信息表' ;
+DROP TABLE IF EXISTS `hr_salary_period`;
+CREATE TABLE `hr_salary_period`  (
+                                     `id` bigint NOT NULL AUTO_INCREMENT COMMENT '周期ID',
+                                     `employee_id` bigint NOT NULL COMMENT '员工ID',
+                                     `work_month` varchar(255)  NOT NULL DEFAULT '' COMMENT '在岗月份',
+                                     `settlement_month` varchar(255)  NOT NULL DEFAULT '' COMMENT '结算月份（格式：YYYYMM）',
+                                     `start_date` date NULL DEFAULT NULL COMMENT '开始日期',
+                                     `end_date` date NULL DEFAULT NULL COMMENT '结束日期',
+                                     `month_days` int NULL DEFAULT NULL COMMENT '月天数',
+                                     `attendance_days` int NULL DEFAULT NULL COMMENT '出勤天数',
+                                     `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
+                                     `create_by` varchar(64)  NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                     `update_by` varchar(64)  NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+                                     PRIMARY KEY (`id`) USING BTREE,
+                                     INDEX `employee_id`(`employee_id` ASC) USING BTREE,
+                                     CONSTRAINT `hr_salary_period_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `hr_employee` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 1  COMMENT = '薪资周期信息表' ;
 DROP TABLE IF EXISTS `hr_exchange_rate_log`;
 CREATE TABLE `hr_exchange_rate_log`  (
                                          `id` bigint NOT NULL AUTO_INCREMENT,
-                                         `base_currency` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '本币',
-                                         `target_currency` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '目标币',
+                                         `base_currency` varchar(16)  NOT NULL DEFAULT '' COMMENT '本币',
+                                         `target_currency` varchar(16)  NOT NULL COMMENT '目标币',
                                          `exchange_rate` decimal(18, 8) NOT NULL DEFAULT 1.00000000 COMMENT '汇率值',
                                          `effective_date` date NULL DEFAULT NULL COMMENT '生效日期',
-                                         `source` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '汇率来源（如央行、CoinMarketCap等）',
+                                         `source` varchar(128)  NULL DEFAULT NULL COMMENT '汇率来源（如央行、CoinMarketCap等）',
                                          `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
-                                         `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                         `create_by` varchar(64)  NOT NULL DEFAULT 'admin' COMMENT '创建者',
                                          `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                         `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                         `update_by` varchar(64)  NOT NULL DEFAULT 'admin' COMMENT '修改者',
                                          `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
                                          PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '汇率记录表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5  COMMENT = '汇率记录表' ;
 
--- ----------------------------
--- Records of hr_exchange_rate_log
--- ----------------------------
-INSERT INTO `hr_exchange_rate_log` VALUES (1, 'USDT', '比索', 55.50000000, '2025-05-01', 'YH', 0, 'admin', '2025-10-09 01:15:39', 'admin', '2025-10-26 11:38:05');
-INSERT INTO `hr_exchange_rate_log` VALUES (2, 'USDT', '泰铢', 32.40000000, '2025-05-01', 'YH', 0, 'admin', '2025-10-09 01:20:10', 'admin', '2025-10-26 11:38:26');
-INSERT INTO `hr_exchange_rate_log` VALUES (3, 'USDT', '比索', 56.00000000, '2025-06-01', 'YH', 0, 'admin', '2025-10-26 11:37:56', 'admin', '2025-10-26 11:38:35');
-INSERT INTO `hr_exchange_rate_log` VALUES (4, 'USDT', '泰铢', 32.10000000, '2025-06-01', 'YH', 0, 'admin', '2025-10-26 11:39:21', 'admin', '2025-10-26 11:39:21');
-
--- ----------------------------
--- Table structure for hr_salary_deduction
--- ----------------------------
 DROP TABLE IF EXISTS `hr_salary_deduction`;
 CREATE TABLE `hr_salary_deduction`  (
                                         `id` bigint NOT NULL AUTO_INCREMENT COMMENT '扣款ID',
@@ -404,22 +63,15 @@ CREATE TABLE `hr_salary_deduction`  (
                                         `passport_deduction` decimal(10, 2) NULL DEFAULT NULL COMMENT '护照费用代扣(负数)',
                                         `annual_leave_downgrade` decimal(10, 2) NULL DEFAULT NULL COMMENT '年假降级',
                                         `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
-                                        `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                        `create_by` varchar(64)  NOT NULL DEFAULT 'admin' COMMENT '创建者',
                                         `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                        `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                        `update_by` varchar(64)  NOT NULL DEFAULT 'admin' COMMENT '修改者',
                                         `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
                                         PRIMARY KEY (`id`) USING BTREE,
                                         INDEX `period_id`(`period_id` ASC) USING BTREE,
                                         CONSTRAINT `hr_salary_deduction_ibfk_1` FOREIGN KEY (`period_id`) REFERENCES `hr_salary_period` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '员工扣款项表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB  COMMENT = '员工扣款项表' ;
 
--- ----------------------------
--- Records of hr_salary_deduction
--- ----------------------------
-
--- ----------------------------
--- Table structure for hr_salary_deposit
--- ----------------------------
 DROP TABLE IF EXISTS `hr_salary_deposit`;
 CREATE TABLE `hr_salary_deposit`  (
                                       `id` bigint NOT NULL AUTO_INCREMENT COMMENT '押金ID',
@@ -429,22 +81,15 @@ CREATE TABLE `hr_salary_deposit`  (
                                       `deposit_current_returned` decimal(10, 2) NULL DEFAULT NULL COMMENT '本月返还',
                                       `deposit_total_returned` decimal(10, 2) NULL DEFAULT NULL COMMENT '截止本月返还',
                                       `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
-                                      `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                      `create_by` varchar(64)  NOT NULL DEFAULT 'admin' COMMENT '创建者',
                                       `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                      `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                      `update_by` varchar(64)  NOT NULL DEFAULT 'admin' COMMENT '修改者',
                                       `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
                                       PRIMARY KEY (`id`) USING BTREE,
                                       INDEX `period_id`(`period_id` ASC) USING BTREE,
                                       CONSTRAINT `hr_salary_deposit_ibfk_1` FOREIGN KEY (`period_id`) REFERENCES `hr_salary_period` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '押金记录表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB  COMMENT = '押金记录表' ;
 
--- ----------------------------
--- Records of hr_salary_deposit
--- ----------------------------
-
--- ----------------------------
--- Table structure for hr_salary_income
--- ----------------------------
 DROP TABLE IF EXISTS `hr_salary_income`;
 CREATE TABLE `hr_salary_income`  (
                                      `id` bigint NOT NULL AUTO_INCREMENT COMMENT '收入ID',
@@ -468,9 +113,9 @@ CREATE TABLE `hr_salary_income`  (
                                      `resignation_settlement` decimal(10, 2) NULL DEFAULT NULL COMMENT '离职费用结算',
                                      `last_month_adjustment` decimal(10, 2) NULL DEFAULT NULL COMMENT '上月补发/续扣',
                                      `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
-                                     `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                     `create_by` varchar(64)  NOT NULL DEFAULT 'admin' COMMENT '创建者',
                                      `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                     `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                     `update_by` varchar(64)  NOT NULL DEFAULT 'admin' COMMENT '修改者',
                                      `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
                                      `employee_id` bigint NOT NULL COMMENT '员工ID',
                                      `dragon_boat_festival_gift` decimal(10, 2) NULL DEFAULT NULL COMMENT '端午节礼金',
@@ -483,133 +128,517 @@ CREATE TABLE `hr_salary_income`  (
                                      INDEX `employee_id`(`employee_id` ASC) USING BTREE,
                                      CONSTRAINT `hr_salary_income_ibfk_1` FOREIGN KEY (`period_id`) REFERENCES `hr_salary_period` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
                                      CONSTRAINT `hr_salary_income_ibfk_2` FOREIGN KEY (`employee_id`) REFERENCES `hr_employee` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '员工收入项表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1  COMMENT = '员工收入项表' ;
 
--- ----------------------------
--- Records of hr_salary_income
--- ----------------------------
-INSERT INTO `hr_salary_income` VALUES (1, 2, 5840.00, 0.00, 0.00, 1168.00, 0.00, 0.00, 0.00, 300.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 'admin', '2025-10-10 23:58:24', 'admin', '2025-10-26 11:26:01', 1, 0.00, 0.00, 0.00, 0.00, 0.00);
-INSERT INTO `hr_salary_income` VALUES (2, 1, 5840.00, 0.00, 0.00, 2920.00, 0.00, 0.00, 0.00, 300.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 'admin', '2025-10-26 11:21:51', 'admin', '2025-10-26 11:26:42', 1, 180.00, 376.77, 0.00, 0.00, 0.00);
-INSERT INTO `hr_salary_income` VALUES (3, 3, 5840.00, 0.00, 0.00, 1168.00, 0.00, 0.00, 0.00, 300.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 'admin', '2025-10-26 11:30:43', 'admin', '2025-10-26 11:30:43', 1, 0.00, 0.00, 0.00, 0.00, 0.00);
-INSERT INTO `hr_salary_income` VALUES (4, 4, 5840.00, 0.00, 0.00, 2920.00, 0.00, 0.00, 0.00, 300.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 'admin', '2025-10-26 14:09:29', 'admin', '2025-10-26 14:09:53', 1, 0.00, 0.00, 0.00, 0.00, 0.00);
-INSERT INTO `hr_salary_income` VALUES (5, 5, 5840.00, 0.00, 0.00, 1168.00, 0.00, 0.00, 0.00, 300.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 859.05, 0, 'admin', '2025-10-26 14:19:37', 'admin', '2025-10-26 15:10:05', 1, 0.00, 0.00, 0.00, 0.00, 0.00);
-INSERT INTO `hr_salary_income` VALUES (6, 6, 7008.00, 0.00, 0.00, 1401.60, 0.00, 0.00, 0.00, 300.00, 0.00, 70.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 'admin', '2025-10-26 15:14:28', 'admin', '2025-11-07 22:41:31', 1, 0.00, 0.00, 0.00, 0.00, 0.00);
-INSERT INTO `hr_salary_income` VALUES (7, 7, 7008.00, 0.00, 0.00, 3504.00, 0.00, 0.00, 0.00, 300.00, 0.00, 70.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 'admin', '2025-11-07 22:40:54', 'admin', '2025-11-07 22:40:54', 1, 0.00, 452.13, 180.00, 0.00, 0.00);
 
--- ----------------------------
--- Table structure for hr_salary_period
--- ----------------------------
-DROP TABLE IF EXISTS `hr_salary_period`;
-CREATE TABLE `hr_salary_period`  (
-                                     `id` bigint NOT NULL AUTO_INCREMENT COMMENT '周期ID',
-                                     `employee_id` bigint NOT NULL COMMENT '员工ID',
-                                     `work_month` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '在岗月份',
-                                     `settlement_month` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '结算月份（格式：YYYYMM）',
-                                     `start_date` date NULL DEFAULT NULL COMMENT '开始日期',
-                                     `end_date` date NULL DEFAULT NULL COMMENT '结束日期',
-                                     `month_days` int NULL DEFAULT NULL COMMENT '月天数',
-                                     `attendance_days` int NULL DEFAULT NULL COMMENT '出勤天数',
-                                     `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
-                                     `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
-                                     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                     `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
-                                     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                                     PRIMARY KEY (`id`) USING BTREE,
-                                     INDEX `employee_id`(`employee_id` ASC) USING BTREE,
-                                     CONSTRAINT `hr_salary_period_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `hr_employee` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '薪资周期信息表' ROW_FORMAT = Dynamic;
 
--- ----------------------------
--- Records of hr_salary_period
--- ----------------------------
-INSERT INTO `hr_salary_period` VALUES (1, 1, '13', '2025-05', '2025-05-01', '2025-05-31', 31, 31, 0, 'admin', '2025-10-09 23:00:33', 'admin', '2025-10-09 23:00:33');
-INSERT INTO `hr_salary_period` VALUES (2, 1, '12', '2025-04', '2025-04-01', '2025-04-30', 30, 30, 0, 'admin', '2025-10-09 23:08:47', 'admin', '2025-10-09 23:08:47');
-INSERT INTO `hr_salary_period` VALUES (3, 1, '14', '2025-06', '2025-06-01', '2025-06-30', 30, 30, 0, 'admin', '2025-10-09 23:24:23', 'admin', '2025-10-09 23:24:23');
-INSERT INTO `hr_salary_period` VALUES (4, 1, '15', '2025-07', '2025-07-01', '2025-07-31', 31, 31, 0, 'admin', '2025-10-26 14:04:10', 'admin', '2025-10-26 14:04:10');
-INSERT INTO `hr_salary_period` VALUES (5, 1, '16', '2025-08', '2025-08-01', '2025-08-31', 31, 31, 0, 'admin', '2025-10-26 14:15:28', 'admin', '2025-10-26 14:15:28');
-INSERT INTO `hr_salary_period` VALUES (6, 1, '17', '2025-09', '2025-09-01', '2025-09-30', 30, 30, 0, 'admin', '2025-10-26 15:12:52', 'admin', '2025-10-26 15:12:52');
-INSERT INTO `hr_salary_period` VALUES (7, 1, '18', '2025-10', '2025-10-01', '2025-10-31', 31, 31, 0, 'admin', '2025-11-07 22:37:37', 'admin', '2025-11-07 22:37:37');
-
--- ----------------------------
--- Table structure for hr_salary_summary
--- ----------------------------
 DROP TABLE IF EXISTS `hr_salary_summary`;
 CREATE TABLE `hr_salary_summary`  (
                                       `id` bigint NOT NULL AUTO_INCREMENT COMMENT '汇总ID',
                                       `period_id` bigint NOT NULL COMMENT '薪资周期ID',
-                                      `currency` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT 'CNY' COMMENT '结算币种',
+                                      `currency` varchar(16)  NULL DEFAULT 'CNY' COMMENT '结算币种',
                                       `exchange_rate` decimal(10, 4) NULL DEFAULT 1.0000 COMMENT '汇率（本币兑目标币）',
                                       `salary_subtotal` decimal(10, 2) NULL DEFAULT NULL COMMENT '应发小计（本币）',
                                       `salary_total` decimal(10, 2) NULL DEFAULT NULL COMMENT '结算薪资（本币）',
                                       `salary_converted` decimal(10, 2) NULL DEFAULT NULL COMMENT '结算薪资（目标币）',
                                       `salary_rmb` decimal(10, 2) NULL DEFAULT NULL COMMENT '人民币金额（如需展示）',
                                       `salary_usdt` decimal(10, 2) NULL DEFAULT NULL COMMENT 'USDT金额（如需展示）',
-                                      `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '备注',
+                                      `remark` text  NULL COMMENT '备注',
                                       `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
-                                      `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
+                                      `create_by` varchar(64)  NOT NULL DEFAULT 'admin' COMMENT '创建者',
                                       `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                      `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
+                                      `update_by` varchar(64)  NOT NULL DEFAULT 'admin' COMMENT '修改者',
                                       `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
                                       PRIMARY KEY (`id`) USING BTREE,
                                       INDEX `period_id`(`period_id` ASC) USING BTREE,
                                       CONSTRAINT `hr_salary_summary_ibfk_1` FOREIGN KEY (`period_id`) REFERENCES `hr_salary_period` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '薪资汇总与结算表（含币种与汇率）' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB  COMMENT = '薪资汇总与结算表（含币种与汇率）' ;
 
--- ----------------------------
--- Records of hr_salary_summary
--- ----------------------------
 
--- ----------------------------
--- Table structure for sys_dict_item
--- ----------------------------
-DROP TABLE IF EXISTS `sys_dict_item`;
-CREATE TABLE `sys_dict_item`  (
-                                  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-                                  `dict_type_code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '所属字典类型code',
-                                  `dict_item_label` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '字典项标签（如 男、女）',
-                                  `dict_item_value` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '字典项值（如 1、0）',
-                                  `sort` int NOT NULL DEFAULT 0 COMMENT '排序值，越小越靠前',
-                                  `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否启用，0表示启用',
-                                  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '备注说明',
-                                  `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
-                                  `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
-                                  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                  `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
-                                  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                                  PRIMARY KEY (`id`) USING BTREE,
-                                  UNIQUE INDEX `uk_dict_type_value`(`dict_type_code` ASC, `dict_item_value` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统字典项表' ROW_FORMAT = Dynamic;
 
--- ----------------------------
--- Records of sys_dict_item
--- ----------------------------
-INSERT INTO `sys_dict_item` VALUES (1, 'gender', '男', '1', 1, 0, '', 0, 'admin', '2025-08-16 20:25:34', 'admin', '2025-09-30 10:49:19');
-INSERT INTO `sys_dict_item` VALUES (2, 'gender', '女', '0', 3, 0, '', 0, 'admin', '2025-08-16 20:25:34', 'admin', '2025-09-30 10:49:36');
-INSERT INTO `sys_dict_item` VALUES (3, 'status', '启用', '1', 1, 1, '', 0, 'admin', '2025-08-16 20:25:49', 'admin', '2025-08-16 20:25:49');
-INSERT INTO `sys_dict_item` VALUES (4, 'status', '禁用', '0', 2, 1, '', 0, 'admin', '2025-08-16 20:25:49', 'admin', '2025-08-16 20:25:49');
+INSERT INTO `hr_employee`(`id`, `employee_code`, `name`, `company_name`, `department`, `employment_status`, `is_transferred`, `accommodation_status`, `delete_flag`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES (1, '208021', 'test_k', NULL, NULL, NULL, 0, NULL, 0, 'admin', '2025-12-31 17:51:59', 'admin', '2025-12-31 17:51:59');
+INSERT INTO `hr_employee`(`id`, `employee_code`, `name`, `company_name`, `department`, `employment_status`, `is_transferred`, `accommodation_status`, `delete_flag`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES (2, '208022', 'test_j', NULL, NULL, NULL, 0, NULL, 0, 'admin', '2025-12-31 17:52:14', 'admin', '2025-12-31 17:52:14');
+INSERT INTO `hr_employee`(`id`, `employee_code`, `name`, `company_name`, `department`, `employment_status`, `is_transferred`, `accommodation_status`, `delete_flag`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES (3, '208024', 'test_h', NULL, NULL, NULL, 0, NULL, 0, 'admin', '2025-12-31 17:52:39', 'admin', '2025-12-31 17:52:39');
+INSERT INTO `hr_employee`(`id`, `employee_code`, `name`, `company_name`, `department`, `employment_status`, `is_transferred`, `accommodation_status`, `delete_flag`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES (4, '209694', 'test_n', NULL, NULL, NULL, 0, NULL, 0, 'admin', '2025-12-31 17:52:57', 'admin', '2025-12-31 17:52:57');
+INSERT INTO `hr_employee`(`id`, `employee_code`, `name`, `company_name`, `department`, `employment_status`, `is_transferred`, `accommodation_status`, `delete_flag`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES (5, '202525', 'test_o', NULL, NULL, NULL, 0, NULL, 0, 'admin', '2025-12-31 17:53:14', 'admin', '2025-12-31 17:53:14');
+INSERT INTO `hr_employee`(`id`, `employee_code`, `name`, `company_name`, `department`, `employment_status`, `is_transferred`, `accommodation_status`, `delete_flag`, `create_by`, `create_time`, `update_by`, `update_time`) VALUES (6, '205771', 'test_b', NULL, NULL, NULL, 0, NULL, 0, 'admin', '2025-12-31 17:53:54', 'admin', '2025-12-31 17:53:54');
 
--- ----------------------------
--- Table structure for sys_dict_type
--- ----------------------------
-DROP TABLE IF EXISTS `sys_dict_type`;
-CREATE TABLE `sys_dict_type`  (
-                                  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-                                  `dict_type_code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '字典类型编码（如 gender、status）',
-                                  `dict_type_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '字典类型名称（如 性别、状态）',
-                                  `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否启用,0 表示启用',
-                                  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '备注说明',
-                                  `delete_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除',
-                                  `create_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '创建者',
-                                  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                  `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'admin' COMMENT '修改者',
-                                  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                                  PRIMARY KEY (`id`) USING BTREE,
-                                  UNIQUE INDEX `uk_dict_code`(`dict_type_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统字典类型表' ROW_FORMAT = Dynamic;
 
--- ----------------------------
--- Records of sys_dict_type
--- ----------------------------
-INSERT INTO `sys_dict_type` VALUES (1, 'gender', '性别', 0, '性别字典', 0, 'admin', '2025-08-16 20:25:16', 'admin', '2025-09-30 10:50:31');
-INSERT INTO `sys_dict_type` VALUES (2, 'status', '状态', 0, '通用状态字典', 0, 'admin', '2025-08-16 20:25:16', 'admin', '2025-08-16 20:25:16');
-INSERT INTO `sys_dict_type` VALUES (3, 'channel', '渠道1', 0, '渠道字典1', 0, 'admin', '2025-09-19 09:50:56', 'admin', '2025-09-19 10:11:59');
+INSERT INTO hr_salary_period (id,employee_id, work_month, settlement_month, start_date, end_date, month_days, attendance_days, delete_flag, create_by,create_time, update_by,update_time )
+VALUES
+-- (2024年,闰年2月29天)
+ (217, 1, '202401', '202401', '2024-01-01', '2024-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (218, 1, '202402', '202402', '2024-02-01', '2024-02-29', 29, 29, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (219, 1, '202403', '202403', '2024-03-01', '2024-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (220, 1, '202404', '202404', '2024-04-01', '2024-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (221, 1, '202405', '202405', '2024-05-01', '2024-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (222, 1, '202406', '202406', '2024-06-01', '2024-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (223, 1, '202407', '202407', '2024-07-01', '2024-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (224, 1, '202408', '202408', '2024-08-01', '2024-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (225, 1, '202409', '202409', '2024-09-01', '2024-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (226, 1, '202410', '202410', '2024-10-01', '2024-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (227, 1, '202411', '202411', '2024-11-01', '2024-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (228, 1, '202412', '202412', '2024-12-01', '2024-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2025年,平年2月28天)
+ (229, 1, '202501', '202501', '2025-01-01', '2025-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (230, 1, '202502', '202502', '2025-02-01', '2025-02-28', 28, 28, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (231, 1, '202503', '202503', '2025-03-01', '2025-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (232, 1, '202504', '202504', '2025-04-01', '2025-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (233, 1, '202505', '202505', '2025-05-01', '2025-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (234, 1, '202506', '202506', '2025-06-01', '2025-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (235, 1, '202507', '202507', '2025-07-01', '2025-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (236, 1, '202508', '202508', '2025-08-01', '2025-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (237, 1, '202509', '202509', '2025-09-01', '2025-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (238, 1, '202510', '202510', '2025-10-01', '2025-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (239, 1, '202511', '202511', '2025-11-01', '2025-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (240, 1, '202512', '202512', '2025-12-01', '2025-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2026年,平年2月28天)
+ (241, 1, '202601', '202601', '2026-01-01', '2026-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (242, 1, '202602', '202602', '2026-02-01', '2026-02-28', 28, 28, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (243, 1, '202603', '202603', '2026-03-01', '2026-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (244, 1, '202604', '202604', '2026-04-01', '2026-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (245, 1, '202605', '202605', '2026-05-01', '2026-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (246, 1, '202606', '202606', '2026-06-01', '2026-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (247, 1, '202607', '202607', '2026-07-01', '2026-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (248, 1, '202608', '202608', '2026-08-01', '2026-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (249, 1, '202609', '202609', '2026-09-01', '2026-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (250, 1, '202610', '202610', '2026-10-01', '2026-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (251, 1, '202611', '202611', '2026-11-01', '2026-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (252, 1, '202612', '202612', '2026-12-01', '2026-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ -- (2024年,闰年2月29天)
+ (253, 2, '202401', '202401', '2024-01-01', '2024-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (254, 2, '202402', '202402', '2024-02-01', '2024-02-29', 29, 29, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (255, 2, '202403', '202403', '2024-03-01', '2024-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (256, 2, '202404', '202404', '2024-04-01', '2024-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (257, 2, '202405', '202405', '2024-05-01', '2024-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (258, 2, '202406', '202406', '2024-06-01', '2024-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (259, 2, '202407', '202407', '2024-07-01', '2024-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (260, 2, '202408', '202408', '2024-08-01', '2024-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (261, 2, '202409', '202409', '2024-09-01', '2024-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (262, 2, '202410', '202410', '2024-10-01', '2024-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (263, 2, '202411', '202411', '2024-11-01', '2024-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (264, 2, '202412', '202412', '2024-12-01', '2024-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2025年,平年2月28天)
+ (265, 2, '202501', '202501', '2025-01-01', '2025-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (266, 2, '202502', '202502', '2025-02-01', '2025-02-28', 28, 28, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (267, 2, '202503', '202503', '2025-03-01', '2025-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (268, 2, '202504', '202504', '2025-04-01', '2025-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (269, 2, '202505', '202505', '2025-05-01', '2025-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (270, 2, '202506', '202506', '2025-06-01', '2025-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (271, 2, '202507', '202507', '2025-07-01', '2025-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (272, 2, '202508', '202508', '2025-08-01', '2025-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (273, 2, '202509', '202509', '2025-09-01', '2025-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (274, 2, '202510', '202510', '2025-10-01', '2025-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (275, 2, '202511', '202511', '2025-11-01', '2025-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (276, 2, '202512', '202512', '2025-12-01', '2025-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2026年,平年2月28天)
+ (277, 2, '202601', '202601', '2026-01-01', '2026-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (278, 2, '202602', '202602', '2026-02-01', '2026-02-28', 28, 28, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (279, 2, '202603', '202603', '2026-03-01', '2026-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (280, 2, '202604', '202604', '2026-04-01', '2026-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (281, 2, '202605', '202605', '2026-05-01', '2026-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (282, 2, '202606', '202606', '2026-06-01', '2026-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (283, 2, '202607', '202607', '2026-07-01', '2026-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (284, 2, '202608', '202608', '2026-08-01', '2026-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (285, 2, '202609', '202609', '2026-09-01', '2026-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (286, 2, '202610', '202610', '2026-10-01', '2026-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (287, 2, '202611', '202611', '2026-11-01', '2026-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (288, 2, '202612', '202612', '2026-12-01', '2026-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (289, 3, '202401', '202401', '2024-01-01', '2024-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2024年,闰年2月29天)
+ (290, 3, '202402', '202402', '2024-02-01', '2024-02-29', 29, 29, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (291, 3, '202403', '202403', '2024-03-01', '2024-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (292, 3, '202404', '202404', '2024-04-01', '2024-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (293, 3, '202405', '202405', '2024-05-01', '2024-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (294, 3, '202406', '202406', '2024-06-01', '2024-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (295, 3, '202407', '202407', '2024-07-01', '2024-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (296, 3, '202408', '202408', '2024-08-01', '2024-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (297, 3, '202409', '202409', '2024-09-01', '2024-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (298, 3, '202410', '202410', '2024-10-01', '2024-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (299, 3, '202411', '202411', '2024-11-01', '2024-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (300, 3, '202412', '202412', '2024-12-01', '2024-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2025年,平年2月28天)
+ (301, 3, '202501', '202501', '2025-01-01', '2025-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (302, 3, '202502', '202502', '2025-02-01', '2025-02-28', 28, 28, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (303, 3, '202503', '202503', '2025-03-01', '2025-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (304, 3, '202504', '202504', '2025-04-01', '2025-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (305, 3, '202505', '202505', '2025-05-01', '2025-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (306, 3, '202506', '202506', '2025-06-01', '2025-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (307, 3, '202507', '202507', '2025-07-01', '2025-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (308, 3, '202508', '202508', '2025-08-01', '2025-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (309, 3, '202509', '202509', '2025-09-01', '2025-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (310, 3, '202510', '202510', '2025-10-01', '2025-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (311, 3, '202511', '202511', '2025-11-01', '2025-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (312, 3, '202512', '202512', '2025-12-01', '2025-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2026年,平年2月28天)
+ (313, 3, '202601', '202601', '2026-01-01', '2026-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (314, 3, '202602', '202602', '2026-02-01', '2026-02-28', 28, 28, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (315, 3, '202603', '202603', '2026-03-01', '2026-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (316, 3, '202604', '202604', '2026-04-01', '2026-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (317, 3, '202605', '202605', '2026-05-01', '2026-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (318, 3, '202606', '202606', '2026-06-01', '2026-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (319, 3, '202607', '202607', '2026-07-01', '2026-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (320, 3, '202608', '202608', '2026-08-01', '2026-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (321, 3, '202609', '202609', '2026-09-01', '2026-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (322, 3, '202610', '202610', '2026-10-01', '2026-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (323, 3, '202611', '202611', '2026-11-01', '2026-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (324, 3, '202612', '202612', '2026-12-01', '2026-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2024年,闰年2月29天)
+ (325, 4, '202401', '202401', '2024-01-01', '2024-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (326, 4, '202402', '202402', '2024-02-01', '2024-02-29', 29, 29, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (327, 4, '202403', '202403', '2024-03-01', '2024-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (328, 4, '202404', '202404', '2024-04-01', '2024-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (329, 4, '202405', '202405', '2024-05-01', '2024-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (330, 4, '202406', '202406', '2024-06-01', '2024-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (331, 4, '202407', '202407', '2024-07-01', '2024-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (332, 4, '202408', '202408', '2024-08-01', '2024-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (333, 4, '202409', '202409', '2024-09-01', '2024-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (334, 4, '202410', '202410', '2024-10-01', '2024-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (335, 4, '202411', '202411', '2024-11-01', '2024-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (336, 4, '202412', '202412', '2024-12-01', '2024-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2025年,平年2月28天)
+ (337, 4, '202501', '202501', '2025-01-01', '2025-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (338, 4, '202502', '202502', '2025-02-01', '2025-02-28', 28, 28, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (339, 4, '202503', '202503', '2025-03-01', '2025-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (340, 4, '202504', '202504', '2025-04-01', '2025-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (341, 4, '202505', '202505', '2025-05-01', '2025-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (342, 4, '202506', '202506', '2025-06-01', '2025-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (343, 4, '202507', '202507', '2025-07-01', '2025-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (344, 4, '202508', '202508', '2025-08-01', '2025-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (345, 4, '202509', '202509', '2025-09-01', '2025-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (346, 4, '202510', '202510', '2025-10-01', '2025-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (347, 4, '202511', '202511', '2025-11-01', '2025-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (348, 4, '202512', '202512', '2025-12-01', '2025-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2026年,平年2月28天)
+ (349, 4, '202601', '202601', '2026-01-01', '2026-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (350, 4, '202602', '202602', '2026-02-01', '2026-02-28', 28, 28, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (351, 4, '202603', '202603', '2026-03-01', '2026-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (352, 4, '202604', '202604', '2026-04-01', '2026-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (353, 4, '202605', '202605', '2026-05-01', '2026-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (354, 4, '202606', '202606', '2026-06-01', '2026-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (355, 4, '202607', '202607', '2026-07-01', '2026-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (356, 4, '202608', '202608', '2026-08-01', '2026-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (357, 4, '202609', '202609', '2026-09-01', '2026-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (358, 4, '202610', '202610', '2026-10-01', '2026-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (359, 4, '202611', '202611', '2026-11-01', '2026-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (360, 4, '202612', '202612', '2026-12-01', '2026-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2024年,闰年2月29天)
+ (361, 5, '202401', '202401', '2024-01-01', '2024-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (362, 5, '202402', '202402', '2024-02-01', '2024-02-29', 29, 29, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (363, 5, '202403', '202403', '2024-03-01', '2024-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (364, 5, '202404', '202404', '2024-04-01', '2024-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (365, 5, '202405', '202405', '2024-05-01', '2024-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (366, 5, '202406', '202406', '2024-06-01', '2024-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (367, 5, '202407', '202407', '2024-07-01', '2024-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (368, 5, '202408', '202408', '2024-08-01', '2024-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (369, 5, '202409', '202409', '2024-09-01', '2024-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (370, 5, '202410', '202410', '2024-10-01', '2024-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (371, 5, '202411', '202411', '2024-11-01', '2024-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (372, 5, '202412', '202412', '2024-12-01', '2024-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2025年,平年2月28天)
+ (373, 5, '202501', '202501', '2025-01-01', '2025-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (374, 5, '202502', '202502', '2025-02-01', '2025-02-28', 28, 28, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (375, 5, '202503', '202503', '2025-03-01', '2025-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (376, 5, '202504', '202504', '2025-04-01', '2025-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (377, 5, '202505', '202505', '2025-05-01', '2025-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (378, 5, '202506', '202506', '2025-06-01', '2025-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (379, 5, '202507', '202507', '2025-07-01', '2025-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (380, 5, '202508', '202508', '2025-08-01', '2025-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (381, 5, '202509', '202509', '2025-09-01', '2025-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (382, 5, '202510', '202510', '2025-10-01', '2025-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (383, 5, '202511', '202511', '2025-11-01', '2025-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (384, 5, '202512', '202512', '2025-12-01', '2025-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2026年,平年2月28天)
+ (385, 5, '202601', '202601', '2026-01-01', '2026-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (386, 5, '202602', '202602', '2026-02-01', '2026-02-28', 28, 28, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (387, 5, '202603', '202603', '2026-03-01', '2026-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (388, 5, '202604', '202604', '2026-04-01', '2026-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (389, 5, '202605', '202605', '2026-05-01', '2026-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (390, 5, '202606', '202606', '2026-06-01', '2026-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (391, 5, '202607', '202607', '2026-07-01', '2026-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (392, 5, '202608', '202608', '2026-08-01', '2026-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (393, 5, '202609', '202609', '2026-09-01', '2026-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (394, 5, '202610', '202610', '2026-10-01', '2026-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (395, 5, '202611', '202611', '2026-11-01', '2026-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (396, 5, '202612', '202612', '2026-12-01', '2026-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2024年,闰年2月29天)
+ (397, 6, '202401', '202401', '2024-01-01', '2024-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (398, 6, '202402', '202402', '2024-02-01', '2024-02-29', 29, 29, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (399, 6, '202403', '202403', '2024-03-01', '2024-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (400, 6, '202404', '202404', '2024-04-01', '2024-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (401, 6, '202405', '202405', '2024-05-01', '2024-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (402, 6, '202406', '202406', '2024-06-01', '2024-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (403, 6, '202407', '202407', '2024-07-01', '2024-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (404, 6, '202408', '202408', '2024-08-01', '2024-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (405, 6, '202409', '202409', '2024-09-01', '2024-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (406, 6, '202410', '202410', '2024-10-01', '2024-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (407, 6, '202411', '202411', '2024-11-01', '2024-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (408, 6, '202412', '202412', '2024-12-01', '2024-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2025年,平年2月28天)
+ (409, 6, '202501', '202501', '2025-01-01', '2025-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (410, 6, '202502', '202502', '2025-02-01', '2025-02-28', 28, 28, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (411, 6, '202503', '202503', '2025-03-01', '2025-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (412, 6, '202504', '202504', '2025-04-01', '2025-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (413, 6, '202505', '202505', '2025-05-01', '2025-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (414, 6, '202506', '202506', '2025-06-01', '2025-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (415, 6, '202507', '202507', '2025-07-01', '2025-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (416, 6, '202508', '202508', '2025-08-01', '2025-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (417, 6, '202509', '202509', '2025-09-01', '2025-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (418, 6, '202510', '202510', '2025-10-01', '2025-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (419, 6, '202511', '202511', '2025-11-01', '2025-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (420, 6, '202512', '202512', '2025-12-01', '2025-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+-- (2026年,平年2月28天)
+ (421, 6, '202601', '202601', '2026-01-01', '2026-01-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (422, 6, '202602', '202602', '2026-02-01', '2026-02-28', 28, 28, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (423, 6, '202603', '202603', '2026-03-01', '2026-03-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (424, 6, '202604', '202604', '2026-04-01', '2026-04-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (425, 6, '202605', '202605', '2026-05-01', '2026-05-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (426, 6, '202606', '202606', '2026-06-01', '2026-06-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (427, 6, '202607', '202607', '2026-07-01', '2026-07-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (428, 6, '202608', '202608', '2026-08-01', '2026-08-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (429, 6, '202609', '202609', '2026-09-01', '2026-09-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (430, 6, '202610', '202610', '2026-10-01', '2026-10-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (431, 6, '202611', '202611', '2026-11-01', '2026-11-30', 30, 30, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17'),
+ (432, 6, '202612', '202612', '2026-12-01', '2026-12-31', 31, 31, 0, 'admin', '2025-12-31 17:55:17', 'admin', '2025-12-31 17:55:17');
+
+
+INSERT INTO hr_salary_summary (
+    period_id, currency, exchange_rate, salary_subtotal, salary_total,
+    salary_converted, salary_rmb, salary_usdt, remark, delete_flag,
+    create_by, update_by
+)
+VALUES
+-- 员工 1 (2024 年)
+ (217, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年1月薪资结算', 0, 'admin', 'admin'),
+ (218, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年2月薪资结算', 0, 'admin', 'admin'),
+ (219, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年3月薪资结算', 0, 'admin', 'admin'),
+ (220, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年4月薪资结算', 0, 'admin', 'admin'),
+ (221, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年5月薪资结算', 0, 'admin', 'admin'),
+ (222, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年6月薪资结算', 0, 'admin', 'admin'),
+ (223, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年7月薪资结算', 0, 'admin', 'admin'),
+ (224, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年8月薪资结算', 0, 'admin', 'admin'),
+ (225, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年9月薪资结算', 0, 'admin', 'admin'),
+ (226, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年10月薪资结算', 0, 'admin', 'admin'),
+ (227, 'USD', 7.2000, 9477.46, 9477.46, 9477.46, 0.00, 9477.46, '2024年11月薪资结算', 0, 'admin', 'admin'),
+ (228, 'USD', 7.2000, 7760.00, 7760.00, 7760.00, 0.00, 7760.00, '2024年12月薪资结算', 0, 'admin', 'admin'),
+ -- 员工 1 (2025 年)
+ (229, 'USD', 7.2000, 8756.45, 8756.45, 8756.45, 0.00, 8756.45, '2025年1月薪资结算', 0, 'admin', 'admin'),
+ (230, 'USD', 7.2000, 14697.32, 14697.32, 14697.32, 0.00, 14697.32, '2025年2月薪资结算', 0, 'admin', 'admin'),
+ (231, 'USD', 7.2000, 7800.00, 7800.00, 7800.00, 0.00, 7800.00, '2025年3月薪资结算', 0, 'admin', 'admin'),
+ (232, 'USD', 7.2000, 10425.00, 10425.00, 10425.00, 0.00, 10425.00, '2025年4月薪资结算', 0, 'admin', 'admin'),
+ (233, 'USD', 7.2000, 9208.23, 9208.23, 9208.23, 0.00, 9208.23, '2025年5月薪资结算', 0, 'admin', 'admin'),
+ (234, 'USD', 7.2000, 8750.00, 8750.00, 8750.00, 0.00, 8750.00, '2025年6月薪资结算', 0, 'admin', 'admin'),
+ (235, 'USD', 7.2000, 10212.15, 10212.15, 10212.15, 0.00, 10212.15, '2025年7月薪资结算', 0, 'admin', 'admin'),
+ (236, 'USD', 7.2000, 8205.00, 8205.00, 8205.00, 0.00, 8205.00, '2025年8月薪资结算', 0, 'admin', 'admin'),
+ (237, 'USD', 7.2000, 7165.00, 7165.00, 7165.00, 0.00, 7165.00, '2025年9月薪资结算', 0, 'admin', 'admin'),
+ (238, 'USD', 7.2000, 10663.23, 10663.23, 10663.23, 0.00, 10663.23, '2025年10月薪资结算', 0, 'admin', 'admin'),
+ (239, 'USD', 7.2000, 8190.00, 8190.00, 8190.00, 0.00, 8190.00, '2025年11月薪资结算', 0, 'admin', 'admin'),
+ (240, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2025年12月薪资结算', 0, 'admin', 'admin'),
+ -- 员工 1 (2026 年)
+ (241, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年1月薪资结算', 0, 'admin', 'admin'),
+ (242, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年2月薪资结算', 0, 'admin', 'admin'),
+ (243, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年3月薪资结算', 0, 'admin', 'admin'),
+ (244, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年4月薪资结算', 0, 'admin', 'admin'),
+ (245, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年5月薪资结算', 0, 'admin', 'admin'),
+ (246, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年6月薪资结算', 0, 'admin', 'admin'),
+ (247, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年7月薪资结算', 0, 'admin', 'admin'),
+ (248, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年8月薪资结算', 0, 'admin', 'admin'),
+ (249, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年9月薪资结算', 0, 'admin', 'admin'),
+ (250, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年10月薪资结算', 0, 'admin', 'admin'),
+ (251, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年11月薪资结算', 0, 'admin', 'admin'),
+ (252, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年12月薪资结算', 0, 'admin', 'admin'),
+ -- 员工 2 (2024 年)
+ (253, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年1月薪资结算', 0, 'admin', 'admin'),
+ (254, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年2月薪资结算', 0, 'admin', 'admin'),
+ (255, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年3月薪资结算', 0, 'admin', 'admin'),
+ (256, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年4月薪资结算', 0, 'admin', 'admin'),
+ (257, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年5月薪资结算', 0, 'admin', 'admin'),
+ (258, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年6月薪资结算', 0, 'admin', 'admin'),
+ (259, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年7月薪资结算', 0, 'admin', 'admin'),
+ (260, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年8月薪资结算', 0, 'admin', 'admin'),
+ (261, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年9月薪资结算', 0, 'admin', 'admin'),
+ (262, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年10月薪资结算', 0, 'admin', 'admin'),
+ (263, 'USD', 7.2000, 6868.17, 6868.17, 6868.17, 0.00, 6868.17, '2024年11月薪资结算', 0, 'admin', 'admin'),
+ (264, 'USD', 7.2000, 9020.00, 9020.00, 9020.00, 0.00, 9020.00, '2024年12月薪资结算', 0, 'admin', 'admin'),
+  -- 员工 2 (2025 年)
+ (265, 'USD', 7.2000, 8211.55, 8211.55, 8211.55, 0.00, 8211.55, '2025年1月薪资结算', 0, 'admin', 'admin'),
+ (266, 'USD', 7.2000, 12063.43, 12063.43, 12063.43, 0.00, 12063.43, '2025年2月薪资结算', 0, 'admin', 'admin'),
+ (267, 'USD', 7.2000, 9060.00, 9060.00, 9060.00, 0.00, 9060.00, '2025年3月薪资结算', 0, 'admin', 'admin'),
+ (268, 'USD', 7.2000, 7308.00, 7308.00, 7308.00, 0.00, 7308.00, '2025年4月薪资结算', 0, 'admin', 'admin'),
+ (269, 'USD', 7.2000, 10036.77, 10036.77, 10036.77, 0.00, 10036.77, '2025年5月薪资结算', 0, 'admin', 'admin'),
+ (270, 'USD', 7.2000, 7728.00, 7728.00, 7728.00, 0.00, 7728.00, '2025年6月薪资结算', 0, 'admin', 'admin'),
+ (271, 'USD', 7.2000, 9620.00, 9620.00, 9620.00, 0.00, 9620.00, '2025年7月薪资结算', 0, 'admin', 'admin'),
+ (272, 'USD', 7.2000, 8237.05, 8237.05, 8237.05, 0.00, 8237.05, '2025年8月薪资结算', 0, 'admin', 'admin'),
+ (273, 'USD', 7.2000, 8779.60, 8779.60, 8779.60, 0.00, 8779.60, '2025年9月薪资结算', 0, 'admin', 'admin'),
+ (274, 'USD', 7.2000, 13014.13, 13014.13, 13014.13, 0.00, 13014.13, '2025年10月薪资结算', 0, 'admin', 'admin'),
+ (275, 'USD', 7.2000, 8779.60, 8779.60, 8779.60, 0.00, 8779.60, '2025年11月薪资结算', 0, 'admin', 'admin'),
+ (276, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2025年12月薪资结算', 0, 'admin', 'admin'),
+   -- 员工 2 (2026 年)
+ (277, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年1月薪资结算', 0, 'admin', 'admin'),
+ (278, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年2月薪资结算', 0, 'admin', 'admin'),
+ (279, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年3月薪资结算', 0, 'admin', 'admin'),
+ (280, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年4月薪资结算', 0, 'admin', 'admin'),
+ (281, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年5月薪资结算', 0, 'admin', 'admin'),
+ (282, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年6月薪资结算', 0, 'admin', 'admin'),
+ (283, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年7月薪资结算', 0, 'admin', 'admin'),
+ (284, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年8月薪资结算', 0, 'admin', 'admin'),
+ (285, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年9月薪资结算', 0, 'admin', 'admin'),
+ (286, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年10月薪资结算', 0, 'admin', 'admin'),
+ (287, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年11月薪资结算', 0, 'admin', 'admin'),
+ (288, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年12月薪资结算', 0, 'admin', 'admin'),
+  -- 员工 3 (2024 年)
+ (289, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年1月薪资结算', 0, 'admin', 'admin'),
+ (290, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年2月薪资结算', 0, 'admin', 'admin'),
+ (291, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年3月薪资结算', 0, 'admin', 'admin'),
+ (292, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年4月薪资结算', 0, 'admin', 'admin'),
+ (293, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年5月薪资结算', 0, 'admin', 'admin'),
+ (294, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年6月薪资结算', 0, 'admin', 'admin'),
+ (295, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年7月薪资结算', 0, 'admin', 'admin'),
+ (296, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年8月薪资结算', 0, 'admin', 'admin'),
+ (297, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年9月薪资结算', 0, 'admin', 'admin'),
+ (298, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年10月薪资结算', 0, 'admin', 'admin'),
+ (299, 'USD', 7.2000, 8171.11, 8171.11, 8171.11, 0.00, 8171.11, '2024年11月薪资结算', 0, 'admin', 'admin'),
+ (300, 'USD', 7.2000, 6932.00, 6932.00, 6932.00, 0.00, 6932.00, '2024年12月薪资结算', 0, 'admin', 'admin'),
+   -- 员工 3 (2025 年)
+ (301, 'USD', 7.2000, 9207.42, 9207.42, 9207.42, 0.00, 9207.42, '2025年1月薪资结算', 0, 'admin', 'admin'),
+ (302, 'USD', 7.2000, 11027.49, 11027.49, 11027.49, 0.00, 11027.49, '2025年2月薪资结算', 0, 'admin', 'admin'),
+ (303, 'USD', 7.2000, 7293.29, 7293.29, 7293.29, 0.00, 7293.29, '2025年3月薪资结算', 0, 'admin', 'admin'),
+ (304, 'USD', 7.2000, 7362.00, 7362.00, 7362.00, 0.00, 7362.00, '2025年4月薪资结算', 0, 'admin', 'admin'),
+ (305, 'USD', 7.2000, 7223.71, 7223.71, 7223.71, 0.00, 7223.71, '2025年5月薪资结算', 0, 'admin', 'admin'),
+ (306, 'USD', 7.2000, 9649.17, 9649.17, 9649.17, 0.00, 9649.17, '2025年6月薪资结算', 0, 'admin', 'admin'),
+ (307, 'USD', 7.2000, 7937.00, 7937.00, 7937.00, 0.00, 7937.00, '2025年7月薪资结算', 0, 'admin', 'admin'),
+ (308, 'USD', 7.2000, 5757.58, 5757.58, 5757.58, 0.00, 5757.58, '2025年8月薪资结算', 0, 'admin', 'admin'),
+ (309, 'USD', 7.2000, 9030.00, 9030.00, 9030.00, 0.00, 9030.00, '2025年9月薪资结算', 0, 'admin', 'admin'),
+ (310, 'USD', 7.2000, 7915.71, 7915.71, 7915.71, 0.00, 7915.71, '2025年10月薪资结算', 0, 'admin', 'admin'),
+ (311, 'USD', 7.2000, 9030.00, 9030.00, 9030.00, 0.00, 9030.00, '2025年11月薪资结算', 0, 'admin', 'admin'),
+ (312, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2025年12月薪资结算', 0, 'admin', 'admin'),
+ (313, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年1月薪资结算', 0, 'admin', 'admin'),
+    -- 员工 3 (2026 年)
+ (314, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年2月薪资结算', 0, 'admin', 'admin'),
+ (315, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年3月薪资结算', 0, 'admin', 'admin'),
+ (316, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年4月薪资结算', 0, 'admin', 'admin'),
+ (317, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年5月薪资结算', 0, 'admin', 'admin'),
+ (318, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年6月薪资结算', 0, 'admin', 'admin'),
+ (319, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年7月薪资结算', 0, 'admin', 'admin'),
+ (320, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年8月薪资结算', 0, 'admin', 'admin'),
+ (321, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年9月薪资结算', 0, 'admin', 'admin'),
+ (322, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年10月薪资结算', 0, 'admin', 'admin'),
+ (323, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年11月薪资结算', 0, 'admin', 'admin'),
+ (324, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年12月薪资结算', 0, 'admin', 'admin'),
+    -- 员工 4 (2024 年)
+ (325, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年1月薪资结算', 0, 'admin', 'admin'),
+ (326, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年2月薪资结算', 0, 'admin', 'admin'),
+ (327, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年3月薪资结算', 0, 'admin', 'admin'),
+ (328, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年4月薪资结算', 0, 'admin', 'admin'),
+ (329, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年5月薪资结算', 0, 'admin', 'admin'),
+ (330, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年6月薪资结算', 0, 'admin', 'admin'),
+ (331, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年7月薪资结算', 0, 'admin', 'admin'),
+ (332, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年8月薪资结算', 0, 'admin', 'admin'),
+ (333, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年9月薪资结算', 0, 'admin', 'admin'),
+ (334, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年10月薪资结算', 0, 'admin', 'admin'),
+ (335, 'USD', 7.2000, 4047.13, 4047.13, 4047.13, 0.00, 4047.13, '2024年11月薪资结算', 0, 'admin', 'admin'),
+ (336, 'USD', 7.2000, 4984.00, 4984.00, 4984.00, 0.00, 4984.00, '2024年12月薪资结算', 0, 'admin', 'admin'),
+    -- 员工 4 (2025年)
+ (337, 'USD', 7.2000, 5712.06, 5712.06, 5712.06, 0.00, 5712.06, '2025年1月薪资结算', 0, 'admin', 'admin'),
+ (338, 'USD', 7.2000, 8004.57, 8004.57, 8004.57, 0.00, 8004.57, '2025年2月薪资结算', 0, 'admin', 'admin'),
+ (339, 'USD', 7.2000, 4461.26, 4461.26, 4461.26, 0.00, 4461.26, '2025年3月薪资结算', 0, 'admin', 'admin'),
+ (340, 'USD', 7.2000, 5304.00, 5304.00, 5304.00, 0.00, 5304.00, '2025年4月薪资结算', 0, 'admin', 'admin'),
+ (341, 'USD', 7.2000, 11158.44, 11158.44, 11158.44, 0.00, 11158.44, '2025年5月薪资结算', 0, 'admin', 'admin'),
+ (342, 'USD', 7.2000, 4890.00, 4890.00, 4890.00, 0.00, 4890.00, '2025年6月薪资结算', 0, 'admin', 'admin'),
+ (343, 'USD', 7.2000, 5724.00, 5724.00, 5724.00, 0.00, 5724.00, '2025年7月薪资结算', 0, 'admin', 'admin'),
+ (344, 'USD', 7.2000, 7045.00, 7045.00, 7045.00, 0.00, 7045.00, '2025年8月薪资结算', 0, 'admin', 'admin'),
+ (345, 'USD', 7.2000, 5295.38, 5295.38, 5295.38, 0.00, 5295.38, '2025年9月薪资结算', 0, 'admin', 'admin'),
+ (346, 'USD', 7.2000, 5753.03, 5753.03, 5753.03, 0.00, 5753.03, '2025年10月薪资结算', 0, 'admin', 'admin'),
+ (347, 'USD', 7.2000, 4470.00, 4470.00, 4470.00, 0.00, 4470.00, '2025年11月薪资结算', 0, 'admin', 'admin'),
+ (348, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2025年12月薪资结算', 0, 'admin', 'admin'),
+     -- 员工 4 (2026年)
+ (349, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年1月薪资结算', 0, 'admin', 'admin'),
+ (350, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年2月薪资结算', 0, 'admin', 'admin'),
+ (351, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年3月薪资结算', 0, 'admin', 'admin'),
+ (352, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年4月薪资结算', 0, 'admin', 'admin'),
+ (353, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年5月薪资结算', 0, 'admin', 'admin'),
+ (354, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年6月薪资结算', 0, 'admin', 'admin'),
+ (355, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年7月薪资结算', 0, 'admin', 'admin'),
+ (356, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年8月薪资结算', 0, 'admin', 'admin'),
+ (357, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年9月薪资结算', 0, 'admin', 'admin'),
+ (358, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年10月薪资结算', 0, 'admin', 'admin'),
+ (359, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年11月薪资结算', 0, 'admin', 'admin'),
+ (360, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年12月薪资结算', 0, 'admin', 'admin'),
+   -- 员工5 (2024年)
+ (361, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年1月薪资结算', 0, 'admin', 'admin'),
+ (362, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年2月薪资结算', 0, 'admin', 'admin'),
+ (363, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年3月薪资结算', 0, 'admin', 'admin'),
+ (364, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年4月薪资结算', 0, 'admin', 'admin'),
+ (365, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年5月薪资结算', 0, 'admin', 'admin'),
+ (366, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年6月薪资结算', 0, 'admin', 'admin'),
+ (367, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年7月薪资结算', 0, 'admin', 'admin'),
+ (368, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年8月薪资结算', 0, 'admin', 'admin'),
+ (369, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年9月薪资结算', 0, 'admin', 'admin'),
+ (370, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年10月薪资结算', 0, 'admin', 'admin'),
+ (371, 'USD', 7.2000, 5968.24, 5968.24, 5968.24, 0.00, 5968.24, '2024年11月薪资结算', 0, 'admin', 'admin'),
+ (372, 'USD', 7.2000, 6005.00, 6005.00, 6005.00, 0.00, 6005.00, '2024年12月薪资结算', 0, 'admin', 'admin'),
+    -- 员工5 (2025年)
+ (373, 'USD', 7.2000, 6928.87, 6928.87, 6928.87, 0.00, 6928.87, '2025年1月薪资结算', 0, 'admin', 'admin'),
+ (374, 'USD', 7.2000, 10196.79, 10196.79, 10196.79, 0.00, 10196.79, '2025年2月薪资结算', 0, 'admin', 'admin'),
+ (375, 'USD', 7.2000, 9786.26, 9786.26, 9786.26, 0.00, 9786.26, '2025年3月薪资结算', 0, 'admin', 'admin'),
+ (376, 'USD', 7.2000, 9795.00, 9795.00, 9795.00, 0.00, 9795.00, '2025年4月薪资结算', 0, 'admin', 'admin'),
+ (377, 'USD', 7.2000, 10216.94, 10216.94, 10216.94, 0.00, 10216.94, '2025年5月薪资结算', 0, 'admin', 'admin'),
+ (378, 'USD', 7.2000, 9795.00, 9795.00, 9795.00, 0.00, 9795.00, '2025年6月薪资结算', 0, 'admin', 'admin'),
+ (379, 'USD', 7.2000, 6832.57, 6832.57, 6832.57, 0.00, 6832.57, '2025年7月薪资结算', 0, 'admin', 'admin'),
+ (380, 'USD', 7.2000, 6803.86, 6803.86, 6803.86, 0.00, 6803.86, '2025年8月薪资结算', 0, 'admin', 'admin'),
+ (381, 'USD', 7.2000, 6752.22, 6752.22, 6752.22, 0.00, 6752.22, '2025年9月薪资结算', 0, 'admin', 'admin'),
+ (382, 'USD', 7.2000, 7249.11, 7249.11, 7249.11, 0.00, 7249.11, '2025年10月薪资结算', 0, 'admin', 'admin'),
+ (383, 'USD', 7.2000, 6787.82, 6787.82, 6787.82, 0.00, 6787.82, '2025年11月薪资结算', 0, 'admin', 'admin'),
+ (384, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2025年12月薪资结算', 0, 'admin', 'admin'),
+    -- 员工5 (2026年)
+ (385, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年1月薪资结算', 0, 'admin', 'admin'),
+ (386, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年2月薪资结算', 0, 'admin', 'admin'),
+ (387, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年3月薪资结算', 0, 'admin', 'admin'),
+ (388, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年4月薪资结算', 0, 'admin', 'admin'),
+ (389, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年5月薪资结算', 0, 'admin', 'admin'),
+ (390, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年6月薪资结算', 0, 'admin', 'admin'),
+ (391, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年7月薪资结算', 0, 'admin', 'admin'),
+ (392, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年8月薪资结算', 0, 'admin', 'admin'),
+ (393, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年9月薪资结算', 0, 'admin', 'admin'),
+ (394, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年10月薪资结算', 0, 'admin', 'admin'),
+ (395, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年11月薪资结算', 0, 'admin', 'admin'),
+ (396, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年12月薪资结算', 0, 'admin', 'admin'),
+   -- 员工6 (2024年)
+ (397, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年1月薪资结算', 0, 'admin', 'admin'),
+ (398, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年2月薪资结算', 0, 'admin', 'admin'),
+ (399, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年3月薪资结算', 0, 'admin', 'admin'),
+ (400, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年4月薪资结算', 0, 'admin', 'admin'),
+ (401, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年5月薪资结算', 0, 'admin', 'admin'),
+ (402, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年6月薪资结算', 0, 'admin', 'admin'),
+ (403, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年7月薪资结算', 0, 'admin', 'admin'),
+ (404, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年8月薪资结算', 0, 'admin', 'admin'),
+ (405, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年9月薪资结算', 0, 'admin', 'admin'),
+ (406, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2024年10月薪资结算', 0, 'admin', 'admin'),
+ (407, 'USD', 7.2000, 5242.49, 5242.49, 5242.49, 0.00, 5242.49, '2024年11月薪资结算', 0, 'admin', 'admin'),
+ (408, 'USD', 7.2000, 5616.17, 5616.17, 5616.17, 0.00, 5616.17, '2024年12月薪资结算', 0, 'admin', 'admin'),
+      -- 员工6 (2025年)
+ (409, 'USD', 7.2000, 5154.00, 5154.00, 5154.00, 0.00, 5154.00, '2025年1月薪资结算', 0, 'admin', 'admin'),
+ (410, 'USD', 7.2000, 10746.50, 10746.50, 10746.50, 0.00, 10746.50, '2025年2月薪资结算', 0, 'admin', 'admin'),
+ (411, 'USD', 7.2000, 5424.00, 5424.00, 5424.00, 0.00, 5424.00, '2025年3月薪资结算', 0, 'admin', 'admin'),
+ (412, 'USD', 7.2000, 6815.00, 6815.00, 6815.00, 0.00, 6815.00, '2025年4月薪资结算', 0, 'admin', 'admin'),
+ (413, 'USD', 7.2000, 5004.00, 5004.00, 5004.00, 0.00, 5004.00, '2025年5月薪资结算', 0, 'admin', 'admin'),
+ (414, 'USD', 7.2000, 5004.00, 5004.00, 5004.00, 0.00, 5004.00, '2025年6月薪资结算', 0, 'admin', 'admin'),
+ (415, 'USD', 7.2000, 7305.67, 7305.67, 7305.67, 0.00, 7305.67, '2025年7月薪资结算', 0, 'admin', 'admin'),
+ (416, 'USD', 7.2000, 7876.00, 7876.00, 7876.00, 0.00, 7876.00, '2025年8月薪资结算', 0, 'admin', 'admin'),
+ (417, 'USD', 7.2000, 6374.80, 6374.80, 6374.80, 0.00, 6374.80, '2025年9月薪资结算', 0, 'admin', 'admin'),
+ (418, 'USD', 7.2000, 7001.63, 7001.63, 7001.63, 0.00, 7001.63, '2025年10月薪资结算', 0, 'admin', 'admin'),
+ (419, 'USD', 7.2000, 7876.00, 7876.00, 7876.00, 0.00, 7876.00, '2025年11月薪资结算', 0, 'admin', 'admin'),
+ (420, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2025年12月薪资结算', 0, 'admin', 'admin'),
+     -- 员工6 (2026年)
+ (421, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年1月薪资结算', 0, 'admin', 'admin'),
+ (422, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年2月薪资结算', 0, 'admin', 'admin'),
+ (423, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年3月薪资结算', 0, 'admin', 'admin'),
+ (424, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年4月薪资结算', 0, 'admin', 'admin'),
+ (425, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年5月薪资结算', 0, 'admin', 'admin'),
+ (426, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年6月薪资结算', 0, 'admin', 'admin'),
+ (427, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年7月薪资结算', 0, 'admin', 'admin'),
+ (428, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年8月薪资结算', 0, 'admin', 'admin'),
+ (429, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年9月薪资结算', 0, 'admin', 'admin'),
+ (430, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年10月薪资结算', 0, 'admin', 'admin'),
+ (431, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年11月薪资结算', 0, 'admin', 'admin'),
+ (432, 'USD', 7.2000, 0.00, 0.00, 0.00, 0.00, 0.00, '2026年12月薪资结算', 0, 'admin', 'admin');
