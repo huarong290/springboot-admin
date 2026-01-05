@@ -2,6 +2,7 @@ package com.springboot.admin.controller;
 
 import com.springboot.admin.annotation.Logable;
 import com.springboot.admin.common.ApiResult;
+import com.springboot.admin.model.dto.BindResultDTO;
 import com.springboot.admin.model.dto.rolemenu.SysRoleMenuDTO;
 import com.springboot.admin.model.entity.sys.SysRoleMenu;
 import com.springboot.admin.model.vo.rolemenu.SysRoleMenuVO;
@@ -23,6 +24,7 @@ import java.util.List;
  * - 删除角色菜单绑定
  * - 查询所有角色菜单关联
  */
+
 @RestController
 @RequestMapping("/api/roleMenu")
 @Tag(name = "角色菜单关联", description = "角色与菜单绑定接口")
@@ -40,8 +42,16 @@ public class SysRoleMenuController {
                 .map(ApiResult::successResult);
     }
 
+    @PostMapping("/bindRoleMenus/{roleId}")
+    @Operation(summary = "增量绑定角色菜单")
+    @Logable(logRequest = true, logResponse = true)
+    public Mono<ApiResult<BindResultDTO>> bindRoleMenus(@PathVariable Long roleId, @RequestBody List<Long> menuIds) {
+        return roleMenuService.bindRoleMenus(roleId, menuIds)
+                .map(result -> ApiResult.successResult("角色菜单绑定成功", result));
+    }
+
     @PostMapping("/addRoleMenu")
-    @Operation(summary = "新增角色菜单关联")
+    @Operation(summary = "新增单条角色菜单关联")
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<Long>> addRoleMenu(@RequestBody SysRoleMenuDTO sysRoleMenuDTO) {
         return roleMenuService.addRoleMenu(sysRoleMenuDTO)
@@ -53,13 +63,13 @@ public class SysRoleMenuController {
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<Long>> deleteRoleMenu(@PathVariable Long id) {
         return roleMenuService.deleteRoleMenu(id)
-                .thenReturn(ApiResult.successResult("删除成功", null));
+                .map(ApiResult::successResult);
     }
 
-    @GetMapping("/getRoleMenuList")
+    @GetMapping("/list")
     @Operation(summary = "查询所有角色菜单关联")
     @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<List<SysRoleMenuVO>>> getRoleMenuList() {
+    public Mono<ApiResult<List<SysRoleMenuVO>>> listRoleMenus() {
         return roleMenuService.getRoleMenuList()
                 .collectList()
                 .map(ApiResult::successResult);
