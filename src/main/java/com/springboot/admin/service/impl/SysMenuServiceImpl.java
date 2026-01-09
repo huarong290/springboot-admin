@@ -60,20 +60,35 @@ public class SysMenuServiceImpl implements ISysMenuService {
     }
 
     /**
-     * 根据父菜单ID查询子菜单
+     * 根据父菜单ID查询子菜单（带 isLeaf 标识）
      *
      * 用途：
-     * - 构建树形结构时，查询某个父菜单下的所有子菜单
-     * - 后台管理：查看某个目录下的菜单列表
+     * - 懒加载菜单树：前端 el-tree 的 lazy 模式需要知道某个节点是否还有子节点。构建树形结构时，查询某个父菜单下的所有子菜单
+     * - 后台管理：在菜单维护页面，查看某个目录下的菜单列表 避免一次性加载所有节点，提升性能。
+     *
+     * 实现思路：
+     * 1. 调用 Repository 的 findByMenuParentId 查询指定父节点下的所有子菜单。
+     * 2. 对每个子菜单，调用 existsByMenuParentId 判断该菜单是否还有子节点。
+     * 3. 使用 SysMenuConvert.toVOWithLeaf 将 SysMenu 转换为 SysMenuVO，并动态设置 isLeaf：
+     *    - hasChildren = true  → isLeaf = false（不是叶子节点）
+     *    - hasChildren = false → isLeaf = true（是叶子节点）
+     *
+     * 返回值：
+     * - Flux<SysMenuVO> 响应式流，包含多个菜单对象，每个对象带有 isLeaf 字段。
+     * - 前端可以直接使用该字段来控制懒加载树的展开逻辑。
      *
      * @param parentId 父菜单ID
-     * @return Flux<SysMenuVO> 响应式流，返回多个菜单对象
+     * @return Flux<SysMenuVO> 响应式流，返回多个菜单对象（带 isLeaf）
      */
     @Override
     public Flux<SysMenuVO> getMenusByParentId(Long parentId) {
         return sysMenuRepository.findByMenuParentId(parentId)
-                .map(sysMenuConvert::toVO);
+                .flatMap(menu -> sysMenuRepository.existsByMenuParentId(menu.getId())
+                        .map(hasChildren -> sysMenuConvert.toVOWithLeaf(menu, hasChildren))
+                );
     }
+
+
 
     /**
      * 新增菜单

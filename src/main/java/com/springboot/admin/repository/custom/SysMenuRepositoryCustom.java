@@ -267,7 +267,7 @@ public class SysMenuRepositoryCustom {
                     menu.setMenuComponent(row.get("menu_component", String.class));
                     menu.setMenuIcon(row.get("menu_icon", String.class));
                     menu.setMenuType(row.get("menu_type", Integer.class));
-                    menu.setMenuPermission(row.get("menu_permission", String.class));
+//                    menu.setMenuPermission(row.get("menu_permission", String.class));
                     menu.setMenuSort(row.get("menu_sort", Integer.class));
                     menu.setMenuVisible(row.get("menu_visible", Integer.class));
                     menu.setMenuStatus(row.get("menu_status", Integer.class));

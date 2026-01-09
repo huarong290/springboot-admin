@@ -3,6 +3,7 @@ package com.springboot.admin.repository.single;
 import com.springboot.admin.model.entity.sys.SysMenu;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 
 /**
@@ -20,5 +21,10 @@ public interface SysMenuRepository extends ReactiveCrudRepository<SysMenu, Long>
      * @return Flux<SysMenu> 响应式流，返回多个菜单对象
      */
     Flux<SysMenu> findByMenuParentId(Long parentId);
+
+    /**
+     * 判断某个菜单是否有子节点
+     * */
+    Mono<Boolean> existsByMenuParentId(Long parentId);
 }
 

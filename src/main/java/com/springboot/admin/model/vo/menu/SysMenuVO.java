@@ -110,4 +110,9 @@ public class SysMenuVO {
      */
     @Schema(description = "修改时间")
     private LocalDateTime updateTime;
+
+    /**
+     * 是否叶子节点，用于前端懒加载树
+     */
+    private Boolean isLeaf;
 }

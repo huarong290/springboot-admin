@@ -100,4 +100,31 @@ public interface SysMenuConvert {
 
         return treeVO;
     }
+
+    /**
+     * Entity -> VO (带叶子节点标识)
+     * <p>
+     * 用途：
+     * - 在懒加载菜单树场景下，前端需要知道某个菜单节点是否还有子节点。
+     * - 数据库 SysMenu 实体本身没有 isLeaf 字段，因此需要在转换时动态补充。
+     * - Service 层会调用 Repository 判断该菜单是否有子节点，然后传入 hasChildren。
+     * - 根据 hasChildren 的值，设置 SysMenuVO.isLeaf：
+     *   - hasChildren = true  → isLeaf = false（不是叶子节点）
+     *   - hasChildren = false → isLeaf = true（是叶子节点）
+     *
+     * 使用场景：
+     * - 懒加载菜单树：前端 el-tree 的 lazy 模式依赖 isLeaf 来判断是否继续加载。
+     * - 菜单管理：在后台管理页面展示树形结构时，避免一次性加载所有节点，提升性能。
+     *
+     * @param entity      数据库查询得到的菜单实体对象
+     * @param hasChildren 是否存在子节点（true 表示有子节点，false 表示没有子节点）
+     * @return SysMenuVO  前端展示对象，包含 isLeaf 字段，用于懒加载树判断
+     */
+    default SysMenuVO toVOWithLeaf(SysMenu entity, boolean hasChildren) {
+        SysMenuVO vo = toVO(entity);
+        vo.setIsLeaf(!hasChildren); // 没有子节点时标记为叶子
+        return vo;
+    }
+
+
 }

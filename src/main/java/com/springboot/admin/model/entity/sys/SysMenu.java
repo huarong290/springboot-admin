@@ -54,11 +54,11 @@ public class SysMenu {
     @Column("menu_type")
     private Integer menuType;
 
-    /**
-     * 权限标识
-     */
-    @Column("menu_permission")
-    private String menuPermission;
+//    /**
+//     * 权限标识
+//     */
+//    @Column("menu_permission")
+//    private String menuPermission;
 
     /**
      * 排序值
