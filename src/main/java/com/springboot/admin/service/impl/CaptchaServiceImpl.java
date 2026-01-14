@@ -7,6 +7,7 @@ import com.springboot.admin.service.ICaptchaService;
 import com.springboot.admin.service.IRedisService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -98,21 +99,31 @@ public class CaptchaServiceImpl implements ICaptchaService {
      */
     @Override
     public Mono<Boolean> validateCaptcha(String captchaId, String userInput) {
+        // 1. 入参非空校验：防御性编程
+        if (StringUtils.isBlank(captchaId) || StringUtils.isBlank(userInput)) {
+            return Mono.just(false);
+        }
+
         String key = CAPTCHA_PREFIX + captchaId;
         return redisService.getValue(key)
-                .flatMap(storedCode -> {
-                    if (storedCode == null) {
-                        log.warn("验证码为空: id={}", captchaId);
-                        return Mono.just(false);
-                    }
+                // 2. 使用 map 替代 flatMap，因为比对逻辑是同步的
+                .map(storedCode -> {
                     boolean valid = storedCode.trim().equalsIgnoreCase(userInput.trim());
-                    log.info("校验验证码: id={}, userInput={}, storedCode={}, result={}", captchaId, userInput, storedCode, valid);
-                    return Mono.just(valid);
+                    if (valid) {
+                        log.info("验证码校验通过: id={}", captchaId);
+                    } else {
+                        log.warn("验证码匹配失败: id={}, userInput={}, storedCode={}", captchaId, userInput, storedCode);
+                    }
+                    return valid;
                 })
-                .switchIfEmpty(Mono.defer(() -> {
-                    log.warn("Redis中未找到验证码: id={}", captchaId);
-                    return Mono.just(false);
-                }));
+                // 3. 如果 Redis 中没查到该 key，直接返回 false
+                .defaultIfEmpty(false)
+                // 4. 记录最终未通过的日志（可选）
+                .doOnNext(isValid -> {
+                    if (!isValid) {
+                        log.warn("验证码验证不通过（可能已过期或ID不存在）: id={}", captchaId);
+                    }
+                });
     }
 
     /**

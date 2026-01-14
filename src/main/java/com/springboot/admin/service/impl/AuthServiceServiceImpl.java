@@ -64,55 +64,48 @@ public class AuthServiceServiceImpl implements IAuthService {
      */
     @Override
     public Mono<TokenResDTO> login(UserLoginReqDTO dto) {
-        return sysUserService.getUserByUsername(dto.getUsername())
+        // 1. 优先校验并删除验证码 (防止重放)
+        return captchaService.validateCaptcha(dto.getCaptchaId(), dto.getCaptchaCode())
+                .flatMap(valid -> {
+                    if (!valid) {
+                        return Mono.error(new BusinessException(BusinessResultCode.PARAM_INVALID.getCode(), "验证码错误或已过期"));
+                    }
+                    // 校验通过立即删除，不等待删除结果即可继续业务 不阻塞后续流程
+                    // 即使删除失败（网络波动），由于我们在后续业务逻辑前已判定 valid，保证了本次登录安全性
+                    return captchaService.deleteCaptchaReturnBoolean(dto.getCaptchaId()).thenReturn(true);
+                })
+                // 2. 扁平化调用：接续查询用户信息
+                .then(sysUserService.getUserByUsername(dto.getUsername()))
                 .switchIfEmpty(Mono.error(new BusinessException(BusinessResultCode.USER_NOT_FOUND)))
+                // 3. 密码比对
                 .flatMap(user -> {
-                    log.info("pass={}", passwordEncoder.encode(dto.getPassword()));
+                    // 密码校验
                     if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
                         return Mono.error(new BusinessException(BusinessResultCode.USER_PASSWORD_ERROR));
                     }
 
-                    //  登录成功后更新 lastLoginTime
-                    Mono<Long> updateLoginTimeMono = sysUserService.updateLastLoginTime(user.getId(), LocalDateTime.now());
-
+                    // 4. 并行处理：生成Token、更新登录时间
                     Mono<String> accessTokenMono = jwtUtil.generateAccessToken(user.getUsername(), null);
                     Mono<String> refreshTokenMono = jwtUtil.generateRefreshToken(user.getUsername());
+                    Mono<Long> updateLoginTimeMono = sysUserService.updateLastLoginTime(user.getId(), LocalDateTime.now());
 
-                    //  把更新登录时间放进链里，保证执行
-                    return updateLoginTimeMono.then(
-                            Mono.zip(accessTokenMono, refreshTokenMono)
-                                    .flatMap(tuple -> {
-                                        String accessToken = tuple.getT1();
-                                        String refreshToken = tuple.getT2();
-                                        // 删除验证码（可选失败不影响登录）
-                                        Mono<Boolean> deleteCaptchaMono = Mono.empty();
-                                        if (dto.getCaptchaId() != null) {
-                                            deleteCaptchaMono = captchaService.deleteCaptchaReturnBoolean(dto.getCaptchaId())
-                                                    .doOnNext(success -> {
-                                                        if (success) {
-                                                            log.info("验证码已删除: {}", dto.getCaptchaId());
-                                                        } else {
-                                                            log.warn("验证码删除失败: {}", dto.getCaptchaId());
-                                                        }
-                                                    })
-                                                    .onErrorResume(e -> {
-                                                        log.warn("删除验证码异常: {}", e.getMessage(), e);
-                                                        return Mono.just(false);
-                                                    });
-                                        }
-                                        // 存储 RefreshToken
-                                        return redisService.storeRefreshToken(refreshToken, user.getUsername())
-                                                .then(Mono.defer(() -> {
-                                                    TokenResDTO tokenResDTO = new TokenResDTO();
-                                                    tokenResDTO.setAccessToken(accessToken);
-                                                    tokenResDTO.setRefreshToken(refreshToken);
-                                                    tokenResDTO.setExpiresIn(jwtProperties.getAccessTokenExpiration() / 1000);
-                                                    log.info("用户 {} 登录成功，生成 Token 并更新 lastLoginTime", dto.getUsername());
-                                                    return Mono.just(tokenResDTO);
-                                                }));
-                                    })
-                    );
+                    return Mono.zip(accessTokenMono, refreshTokenMono, updateLoginTimeMono)
+                            .flatMap(tuple -> {
+                                String accessToken = tuple.getT1();
+                                String refreshToken = tuple.getT2();
+                                // 5. 存储 RefreshToken 到 Redis
+                                return redisService.storeRefreshToken(refreshToken, user.getUsername())
+                                        .thenReturn(buildTokenRes(accessToken, refreshToken));
+                            });
                 });
+    }
+
+    private TokenResDTO buildTokenRes(String accessToken, String refreshToken) {
+        TokenResDTO res = new TokenResDTO();
+        res.setAccessToken(accessToken);
+        res.setRefreshToken(refreshToken);
+        res.setExpiresIn(jwtProperties.getAccessTokenExpiration() / 1000);
+        return res;
     }
 
     /**
