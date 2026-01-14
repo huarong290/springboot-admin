@@ -1,5 +1,6 @@
 package com.springboot.admin.service.impl;
 
+import com.springboot.admin.common.BusinessResultCode;
 import com.springboot.admin.config.JwtProperties;
 import com.springboot.admin.exception.BusinessException;
 import com.springboot.admin.model.dto.TokenRefreshReqDTO;
@@ -52,6 +53,9 @@ public class AuthServiceServiceImpl implements IAuthService {
     private ISysPermissionService sysPermissionService;
     @Autowired
     private ISysMenuService sysMenuService;
+
+    @Autowired
+    private ICaptchaService captchaService;
     /**
      * 用户登录：验证密码，生成并存储 Access 和 Refresh Token
      *
@@ -61,11 +65,11 @@ public class AuthServiceServiceImpl implements IAuthService {
     @Override
     public Mono<TokenResDTO> login(UserLoginReqDTO dto) {
         return sysUserService.getUserByUsername(dto.getUsername())
+                .switchIfEmpty(Mono.error(new BusinessException(BusinessResultCode.USER_NOT_FOUND)))
                 .flatMap(user -> {
                     log.info("pass={}", passwordEncoder.encode(dto.getPassword()));
                     if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-                        log.warn("用户 {} 登录失败：密码错误", dto.getUsername());
-                        return Mono.error(new RuntimeException("用户名或密码错误"));
+                        return Mono.error(new BusinessException(BusinessResultCode.USER_PASSWORD_ERROR));
                     }
 
                     //  登录成功后更新 lastLoginTime
@@ -80,7 +84,22 @@ public class AuthServiceServiceImpl implements IAuthService {
                                     .flatMap(tuple -> {
                                         String accessToken = tuple.getT1();
                                         String refreshToken = tuple.getT2();
-
+                                        // 删除验证码（可选失败不影响登录）
+                                        Mono<Boolean> deleteCaptchaMono = Mono.empty();
+                                        if (dto.getCaptchaId() != null) {
+                                            deleteCaptchaMono = captchaService.deleteCaptchaReturnBoolean(dto.getCaptchaId())
+                                                    .doOnNext(success -> {
+                                                        if (success) {
+                                                            log.info("验证码已删除: {}", dto.getCaptchaId());
+                                                        } else {
+                                                            log.warn("验证码删除失败: {}", dto.getCaptchaId());
+                                                        }
+                                                    })
+                                                    .onErrorResume(e -> {
+                                                        log.warn("删除验证码异常: {}", e.getMessage(), e);
+                                                        return Mono.just(false);
+                                                    });
+                                        }
                                         // 存储 RefreshToken
                                         return redisService.storeRefreshToken(refreshToken, user.getUsername())
                                                 .then(Mono.defer(() -> {
@@ -93,8 +112,7 @@ public class AuthServiceServiceImpl implements IAuthService {
                                                 }));
                                     })
                     );
-                })
-                .switchIfEmpty(Mono.error(new RuntimeException("用户不存在")));
+                });
     }
 
     /**

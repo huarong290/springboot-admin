@@ -3,6 +3,7 @@ package com.springboot.admin.controller;
 import com.springboot.admin.annotation.Logable;
 import com.springboot.admin.common.ApiResult;
 import com.springboot.admin.common.ApiResultCode;
+import com.springboot.admin.common.BusinessResultCode;
 import com.springboot.admin.exception.BusinessException;
 import com.springboot.admin.model.dto.CaptchaDTO;
 import com.springboot.admin.model.dto.TokenRefreshReqDTO;
@@ -13,13 +14,12 @@ import com.springboot.admin.model.vo.menu.MetaVO;
 import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
 import com.springboot.admin.service.IAuthService;
 import com.springboot.admin.service.ICaptchaService;
+import com.springboot.admin.utils.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -48,29 +48,16 @@ public class AuthController {
     @Operation(summary = "用户登录", description = "用户使用用户名密码和验证码登录系统")
     @Logable(logRequest = true, logResponse = true)
     public Mono<ApiResult<TokenResDTO>> login(@RequestBody UserLoginReqDTO dto) {
-        // 先校验验证码
         return captchaService.validateCaptcha(dto.getCaptchaId(), dto.getCaptchaCode())
                 .flatMap(valid -> {
-//                    if (!valid) {
-//                        return Mono.just(ApiResult.<TokenResDTO>failResult(ApiResultCode.FAILED, "验证码错误或已过期"));
-//                    }
-                    // 验证码正确，继续登录逻辑
-                    return authService.login(dto)
-                            .flatMap(tokenRes ->
-                                    // 登录成功后删除验证码（返回布尔值）
-                                    captchaService.deleteCaptchaReturnBoolean(dto.getCaptchaId())
-                                            .doOnNext(success -> {
-                                                if (success) {
-                                                    log.info("验证码已删除: {}", dto.getCaptchaId());
-                                                } else {
-                                                    log.warn("验证码删除失败: {}", dto.getCaptchaId());
-                                                }
-                                            })
-                                            .thenReturn(ApiResult.successResult(tokenRes))
-                            )
-                            .onErrorResume(e -> Mono.just(ApiResult.<TokenResDTO>failResult(ApiResultCode.FAILED, "登录失败")));
-                });
+                    if (!valid) {
+                        return Mono.error(new BusinessException(BusinessResultCode.PARAM_INVALID.getCode(), "验证码错误或已过期"));
+                    }
+                    return authService.login(dto);
+                })
+                .map(ApiResult::successResult);
     }
+
 
 
     @PostMapping("/refresh")
@@ -105,16 +92,15 @@ public class AuthController {
     @GetMapping("/userInfo")
     @Operation(summary = "获取用户信息", description = "登录后获取角色、权限、菜单")
     @Logable(logRequest = true, logResponse = true)
-    public Mono<ApiResult<UserInfoDTO>> getUserInfo(ServerHttpRequest request) {
-        String token = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        if (StringUtils.isNotBlank(token) && token.startsWith("Bearer ")) {
-            token = token.substring(7);
-        }
-        log.info("token={}", token);
+    public Mono<ApiResult<UserInfoDTO>> getUserInfo(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+        String token = JwtUtil.extractBearerToken(authHeader);
+        log.info("token={}", token.substring(0, 6) + "...");
+
         return authService.getUserInfoByToken(token)
-                .map(ApiResult::successResult)
-                .onErrorResume(e -> Mono.just(ApiResult.failResult(ApiResultCode.FAILED, "获取用户信息失败")));
+                .map(ApiResult::successResult);
     }
+
     @GetMapping("/userInfoStep5")
     @Operation(summary = "测试用户信息 Step5", description = "返回完整菜单结构")
     public Mono<ApiResult<UserInfoDTO>> getUserInfoStep5() {
