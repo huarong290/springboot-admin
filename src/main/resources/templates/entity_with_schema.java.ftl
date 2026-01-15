@@ -1,9 +1,7 @@
 <#-- 智能识别版本字段，自动添加@Version注解 -->
 package ${package.Entity};
 
-<#if swagger>
 import io.swagger.v3.oas.annotations.media.Schema;
-</#if>
 import com.baomidou.mybatisplus.annotation.*;
 import com.baomidou.mybatisplus.extension.activerecord.Model;
 import lombok.Data;
@@ -20,8 +18,6 @@ import ${pkg};
  * @author ${author}
  * @since ${date}
  */
-</#if>
-<#if swagger && table.comment??>
 @Schema(name = "${entity}", description = "${table.comment}")
 </#if>
 @Data
@@ -41,9 +37,7 @@ public class ${entity} extends Model<${entity}> {
      * ${field.comment}
      */
         </#if>
-        <#if swagger>
     @Schema(description = "${field.comment}")
-        </#if>
     </#if>
     <#if field.keyFlag>
         <#assign keyPropertyName = field.propertyName>

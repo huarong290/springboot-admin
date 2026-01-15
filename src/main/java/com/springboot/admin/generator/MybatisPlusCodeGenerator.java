@@ -15,15 +15,15 @@ public class MybatisPlusCodeGenerator {
     public static void main(String[] args) {
 
         List<String> tableList = List.of(
-//                "sys_user",
-//                "sys_role",
-//                "sys_menu",
-//                "sys_permission",
-//                "sys_user_role",
-//                "sys_role_menu",
-//                "sys_role_permission",
-//                "sys_menu_permission",
-//                "sys_org",
+                "sys_user",
+                "sys_role",
+                "sys_menu",
+                "sys_permission",
+                "sys_user_role",
+                "sys_role_menu",
+                "sys_role_permission",
+                "sys_menu_permission",
+                "sys_org",
                 "sys_dept"
         );
 
