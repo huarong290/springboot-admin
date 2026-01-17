@@ -25,6 +25,12 @@ public class SysMenu {
     private Long menuParentId;
 
     /**
+     * 所有上级菜单ID序列，逗号分隔（如：0,1,5）
+     */
+    @Column("menu_parent_ids")
+    private String menuParentIds;
+
+    /**
      * 菜单名称
      */
     @Column("menu_name")

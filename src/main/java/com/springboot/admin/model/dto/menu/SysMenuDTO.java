@@ -3,6 +3,7 @@ package com.springboot.admin.model.dto.menu;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import org.springframework.data.relational.core.mapping.Column;
 
 /**
  * 菜单 DTO（Data Transfer Object）
@@ -27,6 +28,11 @@ public class SysMenuDTO {
     @Schema(description = "父菜单ID")
     private Long menuParentId;
 
+    /**
+     * 所有上级菜单ID序列，逗号分隔（如：0,1,5）
+     */
+    @Schema(description = "所有上级菜单ID序列，逗号分隔")
+    private String menuParentIds;
     /**
      * 菜单名称
      * 示例："用户管理"

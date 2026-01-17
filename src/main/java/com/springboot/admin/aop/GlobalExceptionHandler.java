@@ -96,4 +96,12 @@ public class GlobalExceptionHandler {
         log.error("系统异常: {}", e.getMessage(), e);
         return Mono.just(ApiResult.failResult(ApiResultCode.INTERNAL_SERVER_ERROR));
     }
+    /**
+     * 处理权限不足异常 (AccessDeniedException)
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public Mono<ApiResult<Void>> handleAccessDeniedException(Exception e) {
+        log.warn("权限不足: {}", e.getMessage());
+        return Mono.just(ApiResult.failResult(ApiResultCode.FORBIDDEN.getCode(), "您没有权限访问该资源"));
+    }
 }

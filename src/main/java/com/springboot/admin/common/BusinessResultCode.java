@@ -20,7 +20,7 @@ public enum BusinessResultCode implements IApiResult {
     TOKEN_INVALID("0100102", "令牌无效或已过期"),
     TOKEN_REVOKED("0100103", "令牌已被撤销"),
     AUTH_PROCESSING_ERROR("0100104", "认证处理失败"),
-
+    TOKEN_NOT_FOUND("0100105", "令牌不存在"),
     // ================== 用户系统 (02) ==================
     USER_NOT_FOUND("0210001", "用户不存在"),
     USER_DISABLED("0210002", "用户账号已被禁用"),
