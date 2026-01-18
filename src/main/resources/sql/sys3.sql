@@ -515,3 +515,15 @@ INSERT INTO sys_role_data_scope
 VALUES
 (1, 1, 0, 0, 'system', NOW(), 'system', NOW()),
 (2, 3, 0, 0, 'system', NOW(), 'system', NOW());
+
+=========================
+12 菜单-数据权限关联初始化
+=========================
+
+INSERT INTO sys_menu_closure
+(ancestor_id, descendant_id, depth, delete_flag, version, create_by, create_time, update_by, update_time)
+VALUES
+    (1, 1, 0, 0, 0, 'system', NOW(), 'system', NOW()),
+    (1, 2, 1, 0, 0, 'system', NOW(), 'system', NOW()),
+    (2, 2, 0, 0, 0, 'system', NOW(), 'system', NOW());
+
