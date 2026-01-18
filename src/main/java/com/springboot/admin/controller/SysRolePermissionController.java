@@ -5,11 +5,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * <p>
- * 角色与权限点关联表 前端控制器
+ * 角色-权限关联表 前端控制器
  * </p>
  *
  * @author system
- * @since 2026-01-15
+ * @since 2026-01-18
  */
 @RestController
 @RequestMapping("/sys-role-permission")

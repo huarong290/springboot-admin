@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
  * </p>
  *
  * @author system
- * @since 2026-01-15
+ * @since 2026-01-18
  */
 @RestController
 @RequestMapping("/sys-permission")

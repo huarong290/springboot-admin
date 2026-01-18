@@ -17,12 +17,12 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 角色与权限点关联表
+ * 角色-权限关联表
  *
  * @author system
- * @since 2026-01-15
+ * @since 2026-01-18
  */
-@Schema(name = "SysRolePermission", description = "角色与权限点关联表")
+@Schema(name = "SysRolePermission", description = "角色-权限关联表")
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Accessors(chain = true)
@@ -50,9 +50,9 @@ public class SysRolePermission extends Model<SysRolePermission> {
     @TableField("permission_id")
     private Long permissionId;
     /**
-     * 是否删除：0未删除 1已删除
+     * 删除标志
      */
-    @Schema(description = "是否删除：0未删除 1已删除")
+    @Schema(description = "删除标志")
     @TableLogic
     @TableField("delete_flag")
     private Byte deleteFlag;
@@ -62,7 +62,7 @@ public class SysRolePermission extends Model<SysRolePermission> {
     @Schema(description = "乐观锁版本号")
     @Version
     @TableField("version")
-    private Integer version;
+    private Long version;
     /**
      * 创建人
      */
@@ -76,15 +76,15 @@ public class SysRolePermission extends Model<SysRolePermission> {
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     /**
-     * 修改人
+     * 更新人
      */
-    @Schema(description = "修改人")
+    @Schema(description = "更新人")
     @TableField("update_by")
     private String updateBy;
     /**
-     * 修改时间
+     * 更新时间
      */
-    @Schema(description = "修改时间")
+    @Schema(description = "更新时间")
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 

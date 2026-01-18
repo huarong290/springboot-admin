@@ -1,18 +1,12 @@
 package com.springboot.admin.model.entity.sys;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import com.baomidou.mybatisplus.annotation.*;
 import com.baomidou.mybatisplus.extension.activerecord.Model;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.extension.activerecord.Model;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -20,7 +14,7 @@ import java.time.LocalDateTime;
  * 系统用户表
  *
  * @author system
- * @since 2026-01-15
+ * @since 2026-01-18
  */
 @Schema(name = "SysUser", description = "系统用户表")
 @Data
@@ -37,16 +31,21 @@ public class SysUser extends Model<SysUser> {
     @Schema(description = "主键ID")
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
+
+    /** * 租户ID */
+    @Schema(description = "租户ID")
+    @TableField("tenant_id")
+    private Long tenantId;
     /**
-     * 用户名，唯一
+     * 登录用户名
      */
-    @Schema(description = "用户名，唯一")
+    @Schema(description = "登录用户名")
     @TableField("username")
     private String username;
     /**
-     * 加密密码
+     * 登录密码（加密）
      */
-    @Schema(description = "加密密码")
+    @Schema(description = "登录密码（加密）")
     @TableField("password")
     private String password;
     /**
@@ -56,35 +55,23 @@ public class SysUser extends Model<SysUser> {
     @TableField("nickname")
     private String nickname;
     /**
-     * 邮箱地址
-     */
-    @Schema(description = "邮箱地址")
-    @TableField("email")
-    private String email;
-    /**
      * 手机号
      */
     @Schema(description = "手机号")
     @TableField("phone")
     private String phone;
     /**
-     * 用户头像URL
+     * 邮箱
      */
-    @Schema(description = "用户头像URL")
+    @Schema(description = "邮箱")
+    @TableField("email")
+    private String email;
+    /**
+     * 头像
+     */
+    @Schema(description = "头像")
     @TableField("avatar")
     private String avatar;
-    /**
-     * 状态：1启用，0禁用
-     */
-    @Schema(description = "状态：1启用，0禁用")
-    @TableField("status")
-    private Byte status;
-    /**
-     * 所属部门ID
-     */
-    @Schema(description = "所属部门ID")
-    @TableField("dept_id")
-    private Long deptId;
     /**
      * 所属组织ID
      */
@@ -92,15 +79,27 @@ public class SysUser extends Model<SysUser> {
     @TableField("org_id")
     private Long orgId;
     /**
+     * 所属部门ID
+     */
+    @Schema(description = "所属部门ID")
+    @TableField("dept_id")
+    private Long deptId;
+    /**
+     * 状态：1启用 0禁用
+     */
+    @Schema(description = "状态：1启用 0禁用")
+    @TableField("user_status")
+    private Byte userStatus;
+    /**
      * 最后登录时间
      */
     @Schema(description = "最后登录时间")
     @TableField("last_login_time")
     private LocalDateTime lastLoginTime;
     /**
-     * 是否删除：0未删除，1已删除
+     * 删除标志
      */
-    @Schema(description = "是否删除：0未删除，1已删除")
+    @Schema(description = "删除标志")
     @TableLogic
     @TableField("delete_flag")
     private Byte deleteFlag;
@@ -110,7 +109,7 @@ public class SysUser extends Model<SysUser> {
     @Schema(description = "乐观锁版本号")
     @Version
     @TableField("version")
-    private Integer version;
+    private Long version;
     /**
      * 创建人
      */
@@ -124,15 +123,15 @@ public class SysUser extends Model<SysUser> {
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     /**
-     * 修改人
+     * 更新人
      */
-    @Schema(description = "修改人")
+    @Schema(description = "更新人")
     @TableField("update_by")
     private String updateBy;
     /**
-     * 修改时间
+     * 更新时间
      */
-    @Schema(description = "修改时间")
+    @Schema(description = "更新时间")
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 

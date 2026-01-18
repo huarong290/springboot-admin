@@ -26,4 +26,9 @@ public class TokenRefreshReqDTO {
      * 用于多设备登录场景下的令牌管理（可选字段）
      */
     private String deviceId;
+
+    /**
+     * 客户端类型：WEB/APP/...
+     */
+    private String clientType;
 }

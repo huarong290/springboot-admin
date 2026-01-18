@@ -1,5 +1,6 @@
 package com.springboot.admin.model.dto;
 
+import com.springboot.admin.constants.CommonConstants;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -32,8 +33,7 @@ public class TokenResDTO {
     /**
      * 令牌类型，固定为 "Bearer"
      */
-
-    private  String tokenType = "Bearer";
+    private String tokenType = CommonConstants.JWT_BEARER_PREFIX.trim();
 
     // ============================
     // 🟡【优化新增】可选字段，前端/后台显示或风控
@@ -53,4 +53,8 @@ public class TokenResDTO {
      * 登录IP
      */
     private String ip;
+    /**
+     * RefreshToken 剩余有效期
+     */
+    private Long refreshExpiresIn;
 }

@@ -1,6 +1,7 @@
 package com.springboot.admin.utils;
 
 import com.springboot.admin.config.JwtProperties;
+import com.springboot.admin.constants.CommonConstants;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -13,10 +14,18 @@ import reactor.core.publisher.Mono;
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.Map;
+
 /**
  * Jwt 工具类
  * 完全兼容 jjwt 0.13.x
  * 纯响应式设计，返回 Mono<T>
+ *
+ * 功能：
+ * 1. 生成 AccessToken / RefreshToken
+ * 2. 解析 JWT 获取 Claims
+ * 3. 校验 Token 是否有效
+ * 4. 获取剩余有效时间
+ * 5. 从 Authorization Header 提取 Bearer Token
  */
 @Slf4j
 @Component
@@ -28,6 +37,7 @@ public class JwtUtil {
     public JwtUtil(JwtProperties jwtProperties) {
         this.jwtProperties = jwtProperties;
     }
+
     /**
      * 初始化 SecretKey
      * 使用 HS256 算法
@@ -95,17 +105,18 @@ public class JwtUtil {
     public Mono<Claims> parseToken(String token) {
         return Mono.fromCallable(() -> {
             try {
-                return Jwts.parser()   // 0.13.0 用 parser()
-                        .verifyWith(key)   // 用 verifyWith 替代 setSigningKey 校验签名
+                return Jwts.parser()           // jjwt 0.13.x parser
+                        .verifyWith(key)       // 用 verifyWith 校验签名
                         .build()
-                        .parseSignedClaims(token) // 解析 JWT
-                        .getPayload();     // 新版用 getPayload() 获取 Claims
+                        .parseSignedClaims(token)
+                        .getPayload();         // 获取 Claims
             } catch (Exception e) {
                 log.error("解析 Token 失败: {}", e.getMessage(), e);
                 throw e;
             }
         });
     }
+
     /**
      * 获取用户名
      *
@@ -115,6 +126,7 @@ public class JwtUtil {
     public Mono<String> getUsername(String token) {
         return parseToken(token).map(Claims::getSubject);
     }
+
     /**
      * 获取 Token 类型（access / refresh）
      *
@@ -127,8 +139,6 @@ public class JwtUtil {
 
     /**
      * 校验 AccessToken 是否有效
-     * - 未过期
-     * - 类型匹配
      *
      * @param token JWT
      * @return Mono<Boolean>
@@ -136,6 +146,7 @@ public class JwtUtil {
     public Mono<Boolean> isAccessTokenValid(String token) {
         return isTokenValid(token, "access");
     }
+
     /**
      * 校验 RefreshToken 是否有效
      *
@@ -145,6 +156,7 @@ public class JwtUtil {
     public Mono<Boolean> isRefreshTokenValid(String token) {
         return isTokenValid(token, "refresh");
     }
+
     /**
      * 校验 Token 是否有效（未过期，类型匹配）
      *
@@ -158,6 +170,7 @@ public class JwtUtil {
                         && expectedType.equals(claims.get("type", String.class)))
                 .onErrorReturn(false);
     }
+
     /**
      * 获取 Token 剩余有效时间（毫秒）
      *
@@ -167,13 +180,20 @@ public class JwtUtil {
     public Mono<Long> getRemainingTime(String token) {
         return parseToken(token)
                 .map(claims -> claims.getExpiration().getTime() - System.currentTimeMillis())
-                .onErrorReturn(0L); // 解析失败返回 0;
+                .onErrorReturn(0L);
     }
 
     // -------------------- 从 Authorization Header 提取 Bearer Token --------------------
+
+    /**
+     * 从请求头 Authorization 提取 Bearer Token
+     *
+     * @param authHeader Authorization Header
+     * @return JWT 字符串，如果不存在返回空字符串
+     */
     public static String extractBearerToken(String authHeader) {
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            return authHeader.substring(7);
+        if (authHeader != null && authHeader.startsWith(CommonConstants.JWT_BEARER_PREFIX)) {
+            return authHeader.substring(CommonConstants.JWT_BEARER_PREFIX.length());
         }
         return "";
     }

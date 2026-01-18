@@ -17,12 +17,12 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 用户与角色关联表
+ * 用户-角色关联表
  *
  * @author system
- * @since 2026-01-15
+ * @since 2026-01-18
  */
-@Schema(name = "SysUserRole", description = "用户与角色关联表")
+@Schema(name = "SysUserRole", description = "用户-角色关联表")
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Accessors(chain = true)
@@ -50,9 +50,9 @@ public class SysUserRole extends Model<SysUserRole> {
     @TableField("role_id")
     private Long roleId;
     /**
-     * 是否删除：0未删除 1已删除
+     * 删除标志
      */
-    @Schema(description = "是否删除：0未删除 1已删除")
+    @Schema(description = "删除标志")
     @TableLogic
     @TableField("delete_flag")
     private Byte deleteFlag;
@@ -62,7 +62,7 @@ public class SysUserRole extends Model<SysUserRole> {
     @Schema(description = "乐观锁版本号")
     @Version
     @TableField("version")
-    private Integer version;
+    private Long version;
     /**
      * 创建人
      */
@@ -76,15 +76,15 @@ public class SysUserRole extends Model<SysUserRole> {
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     /**
-     * 修改人
+     * 更新人
      */
-    @Schema(description = "修改人")
+    @Schema(description = "更新人")
     @TableField("update_by")
     private String updateBy;
     /**
-     * 修改时间
+     * 更新时间
      */
-    @Schema(description = "修改时间")
+    @Schema(description = "更新时间")
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 

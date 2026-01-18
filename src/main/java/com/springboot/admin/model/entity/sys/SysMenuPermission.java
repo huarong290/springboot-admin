@@ -1,18 +1,12 @@
 package com.springboot.admin.model.entity.sys;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import com.baomidou.mybatisplus.annotation.*;
 import com.baomidou.mybatisplus.extension.activerecord.Model;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.extension.activerecord.Model;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -20,7 +14,7 @@ import java.time.LocalDateTime;
  * 菜单与权限关联表
  *
  * @author system
- * @since 2026-01-15
+ * @since 2026-01-18
  */
 @Schema(name = "SysMenuPermission", description = "菜单与权限关联表")
 @Data
@@ -62,7 +56,7 @@ public class SysMenuPermission extends Model<SysMenuPermission> {
     @Schema(description = "乐观锁版本号")
     @Version
     @TableField("version")
-    private Integer version;
+    private Long version;
     /**
      * 创建人
      */

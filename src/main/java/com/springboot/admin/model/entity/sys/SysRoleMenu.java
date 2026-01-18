@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
  * 角色与菜单关联表
  *
  * @author system
- * @since 2026-01-15
+ * @since 2026-01-18
  */
 @Schema(name = "SysRoleMenu", description = "角色与菜单关联表")
 @Data
@@ -62,7 +62,7 @@ public class SysRoleMenu extends Model<SysRoleMenu> {
     @Schema(description = "乐观锁版本号")
     @Version
     @TableField("version")
-    private Integer version;
+    private Long version;
     /**
      * 创建人
      */

@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.IOException;
 import java.util.UUID;
 
+import static com.springboot.admin.constants.CommonConstants.TRACE_HEADER;
+
 /**
  * TraceId 过滤器
  *
@@ -22,8 +24,7 @@ import java.util.UUID;
 @Slf4j
 public class TraceIdFilter implements Filter {
 
-    public static final String TRACE_ID = "traceId";
-    public static final String TRACE_HEADER = "X-Trace-Id";
+
 
     @Override
     public void doFilter(

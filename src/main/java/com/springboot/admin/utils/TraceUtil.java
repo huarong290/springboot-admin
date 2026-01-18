@@ -4,6 +4,8 @@ import org.slf4j.MDC;
 
 import java.util.UUID;
 
+import static com.springboot.admin.constants.CommonConstants.TRACE_ID;
+
 /**
  * TraceId 工具类
  *
@@ -11,11 +13,6 @@ import java.util.UUID;
  * 能让日志自动携带 traceId
  */
 public class TraceUtil {
-
-    /**
-     * 日志上下文中的 key
-     */
-    public static final String TRACE_ID = "traceId";
 
     /**
      * 生成 traceId

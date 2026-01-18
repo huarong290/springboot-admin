@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
  * 系统权限点表
  *
  * @author system
- * @since 2026-01-15
+ * @since 2026-01-18
  */
 @Schema(name = "SysPermission", description = "系统权限点表")
 @Data
@@ -50,9 +50,9 @@ public class SysPermission extends Model<SysPermission> {
     @TableField("permission_name")
     private String permissionName;
     /**
-     * 权限类型：1接口权限 2数据权限
+     * 权限类型：1接口 2按钮 3数据
      */
-    @Schema(description = "权限类型：1接口权限 2数据权限")
+    @Schema(description = "权限类型：1接口 2按钮 3数据")
     @TableField("permission_type")
     private Byte permissionType;
     /**
@@ -62,9 +62,9 @@ public class SysPermission extends Model<SysPermission> {
     @TableField("permission_status")
     private Byte permissionStatus;
     /**
-     * 是否删除：0未删除 1已删除
+     * 删除标志
      */
-    @Schema(description = "是否删除：0未删除 1已删除")
+    @Schema(description = "删除标志")
     @TableLogic
     @TableField("delete_flag")
     private Byte deleteFlag;
@@ -74,7 +74,7 @@ public class SysPermission extends Model<SysPermission> {
     @Schema(description = "乐观锁版本号")
     @Version
     @TableField("version")
-    private Integer version;
+    private Long version;
     /**
      * 创建人
      */
@@ -88,15 +88,15 @@ public class SysPermission extends Model<SysPermission> {
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     /**
-     * 修改人
+     * 更新人
      */
-    @Schema(description = "修改人")
+    @Schema(description = "更新人")
     @TableField("update_by")
     private String updateBy;
     /**
-     * 修改时间
+     * 更新时间
      */
-    @Schema(description = "修改时间")
+    @Schema(description = "更新时间")
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 

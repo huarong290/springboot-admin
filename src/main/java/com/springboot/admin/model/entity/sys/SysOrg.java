@@ -1,28 +1,22 @@
 package com.springboot.admin.model.entity.sys;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import com.baomidou.mybatisplus.annotation.*;
 import com.baomidou.mybatisplus.extension.activerecord.Model;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.extension.activerecord.Model;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 组织表
+ * 组织表（高并发版，仅存自身信息）
  *
  * @author system
- * @since 2026-01-15
+ * @since 2026-01-18
  */
-@Schema(name = "SysOrg", description = "组织表")
+@Schema(name = "SysOrg", description = "组织表（高并发版，仅存自身信息）")
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Accessors(chain = true)
@@ -38,17 +32,11 @@ public class SysOrg extends Model<SysOrg> {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
     /**
-     * 父组织ID，顶级组织为0
+     * 父组织ID，顶级为0
      */
-    @Schema(description = "父组织ID，顶级组织为0")
+    @Schema(description = "父组织ID，顶级为0")
     @TableField("parent_id")
     private Long parentId;
-    /**
-     * 父级ID路径，例如 0/1/3
-     */
-    @Schema(description = "父级ID路径，例如 0/1/3")
-    @TableField("parent_ids")
-    private String parentIds;
     /**
      * 组织名称
      */
@@ -56,9 +44,9 @@ public class SysOrg extends Model<SysOrg> {
     @TableField("org_name")
     private String orgName;
     /**
-     * 组织编码，唯一
+     * 组织唯一编码
      */
-    @Schema(description = "组织编码，唯一")
+    @Schema(description = "组织唯一编码")
     @TableField("org_code")
     private String orgCode;
     /**
@@ -68,21 +56,21 @@ public class SysOrg extends Model<SysOrg> {
     @TableField("org_type")
     private String orgType;
     /**
-     * 排序值
+     * 排序号
      */
-    @Schema(description = "排序值")
+    @Schema(description = "排序号")
     @TableField("org_sort")
     private Integer orgSort;
     /**
-     * 状态：1启用，0禁用
+     * 状态：1启用 0禁用
      */
-    @Schema(description = "状态：1启用，0禁用")
+    @Schema(description = "状态：1启用 0禁用")
     @TableField("org_status")
     private Byte orgStatus;
     /**
-     * 是否删除：0未删除，1已删除
+     * 删除标志：0未删除 1已删除
      */
-    @Schema(description = "是否删除：0未删除，1已删除")
+    @Schema(description = "删除标志：0未删除 1已删除")
     @TableLogic
     @TableField("delete_flag")
     private Byte deleteFlag;
@@ -92,7 +80,7 @@ public class SysOrg extends Model<SysOrg> {
     @Schema(description = "乐观锁版本号")
     @Version
     @TableField("version")
-    private Integer version;
+    private Long version;
     /**
      * 创建人
      */
@@ -106,15 +94,15 @@ public class SysOrg extends Model<SysOrg> {
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     /**
-     * 修改人
+     * 更新人
      */
-    @Schema(description = "修改人")
+    @Schema(description = "更新人")
     @TableField("update_by")
     private String updateBy;
     /**
-     * 修改时间
+     * 更新时间
      */
-    @Schema(description = "修改时间")
+    @Schema(description = "更新时间")
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
