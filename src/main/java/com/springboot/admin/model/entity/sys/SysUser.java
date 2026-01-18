@@ -89,7 +89,7 @@ public class SysUser extends Model<SysUser> {
      */
     @Schema(description = "状态：1启用 0禁用")
     @TableField("user_status")
-    private Byte userStatus;
+    private Integer userStatus;
     /**
      * 最后登录时间
      */
@@ -102,7 +102,7 @@ public class SysUser extends Model<SysUser> {
     @Schema(description = "删除标志")
     @TableLogic
     @TableField("delete_flag")
-    private Byte deleteFlag;
+    private Integer deleteFlag;
     /**
      * 乐观锁版本号
      */

@@ -1,11 +1,13 @@
 package com.springboot.admin.model.dto.user;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
 import com.springboot.admin.model.vo.permission.SysPermissionVO;
 import com.springboot.admin.model.vo.role.SysRoleVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -94,6 +96,14 @@ public class UserInfoDTO {
      */
     @Schema(description = "租户ID")
     private Long tenantId;
+
+    /**
+     *
+     * 上次登录时间
+     */
+    @Schema(description = "最后登录时间")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastLoginTime;
 
     /**
      * 用户角色列表（完整对象）

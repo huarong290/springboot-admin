@@ -6,7 +6,8 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 用户分页查询参数
- * 继承 PageQueryDTO，增加用户相关的查询条件。
+ * <p>
+ * 继承 PageQueryDTO，增加用户相关查询条件
  */
 @EqualsAndHashCode(callSuper = true)
 @Data

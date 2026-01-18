@@ -1,9 +1,9 @@
 package com.springboot.admin.service.impl;
 
 import com.springboot.admin.constants.CommonConstants;
-import com.springboot.admin.mapper.auto.SysUserMapper;
-import com.springboot.admin.mapper.auto.SysRoleMapper;
 import com.springboot.admin.mapper.auto.SysPermissionMapper;
+import com.springboot.admin.mapper.auto.SysRoleMapper;
+import com.springboot.admin.mapper.auto.SysUserMapper;
 import com.springboot.admin.model.dto.TokenRefreshReqDTO;
 import com.springboot.admin.model.dto.TokenResDTO;
 import com.springboot.admin.model.dto.UserLoginReqDTO;
@@ -14,6 +14,8 @@ import com.springboot.admin.model.vo.role.SysRoleVO;
 import com.springboot.admin.service.IAuthService;
 import com.springboot.admin.service.IRedisService;
 import com.springboot.admin.util.JwtTokenUtil;
+import com.springboot.admin.utils.JwtUtil;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -33,28 +35,15 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Service
+@AllArgsConstructor
 public class AuthServiceImpl implements IAuthService {
 
     private final SysUserMapper userMapper;
     private final SysRoleMapper roleMapper;
     private final SysPermissionMapper permissionMapper;
     private final IRedisService redisService;
-    private final JwtTokenUtil jwtTokenUtil;
-    private final BCryptPasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
-    public AuthServiceImpl(SysUserMapper userMapper,
-                           SysRoleMapper roleMapper,
-                           SysPermissionMapper permissionMapper,
-                           IRedisService redisService,
-                           JwtTokenUtil jwtTokenUtil,
-                           BCryptPasswordEncoder passwordEncoder) {
-        this.userMapper = userMapper;
-        this.roleMapper = roleMapper;
-        this.permissionMapper = permissionMapper;
-        this.redisService = redisService;
-        this.jwtTokenUtil = jwtTokenUtil;
-        this.passwordEncoder = passwordEncoder;
-    }
 
     /**
      * 用户登录
@@ -73,7 +62,7 @@ public class AuthServiceImpl implements IAuthService {
         }
 
         // 3. 生成 JWT 访问令牌
-        String accessToken = jwtTokenUtil.generateAccessToken(user.getId(), user.getUsername());
+        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getUsername());
 
         // 4. 生成刷新令牌
         String refreshToken = jwtTokenUtil.generateRefreshToken(user.getId(), user.getUsername());
