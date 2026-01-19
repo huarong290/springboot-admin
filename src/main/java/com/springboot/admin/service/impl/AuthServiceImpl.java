@@ -111,7 +111,7 @@ public class AuthServiceImpl implements IAuthService {
         }
 
         // 2. 生成新的访问令牌
-        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getUsername());
+        String accessToken = jwtUtil.generateAccessToken(user.getUsername(), null);
 
         // 3. 可选：刷新刷新令牌（此处不刷新）
         TokenResDTO tokenRes = new TokenResDTO();

@@ -1,10 +1,11 @@
 package com.springboot.admin.model.dto;
 
-import com.springboot.admin.constants.CommonConstants;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import static com.springboot.admin.constants.security.JwtConstants.JWT_BEARER_PREFIX;
 
 @Data
 @NoArgsConstructor
@@ -25,7 +26,7 @@ public class TokenResDTO {
     private String refreshToken;
 
     /**
-     * AccessToken 过期时间（秒）
+     * AccessToken 过期时间（豪秒）
      * 前端用于倒计时或刷新策略
      */
     private Long expiresIn;
@@ -33,7 +34,7 @@ public class TokenResDTO {
     /**
      * 令牌类型，固定为 "Bearer"
      */
-    private String tokenType = CommonConstants.JWT_BEARER_PREFIX.trim();
+    private String tokenType = JWT_BEARER_PREFIX.trim();
 
     // ============================
     // 🟡【优化新增】可选字段，前端/后台显示或风控
