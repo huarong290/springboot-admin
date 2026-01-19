@@ -386,7 +386,7 @@ CREATE TABLE sys_role_custom_dept
 -- =========================
 -- =========================
 -- 1.组织初始化数据
---=========================
+-- =========================
 -- 组织：集团 / 分公司
 INSERT INTO sys_org
 (id, org_name, org_code, org_type, org_status, org_sort,
