@@ -1,17 +1,26 @@
 package com.springboot.admin.constants;
 
 /**
- * 系统全局常量类
- * 1. 请求相关
- * 2. 日志/链路相关
- * 3. 默认分页/超时等
- * 4. 可扩展存放其他固定值
+ * 系统全局通用常量类
+ * <p>
+ * 存放与具体业务无关、跨模块使用的常量
  */
 public final class CommonConstants {
 
-    private CommonConstants() {} // 私有构造，防止实例化
+    private CommonConstants() {}
 
+    // ---------------- Encoding ----------------
 
-    // ---------------- 其他 ----------------
+    /**
+     * UTF-8 编码
+     */
     public static final String UTF8 = "UTF-8";
+
+    // ---------------- Redis ----------------
+
+    /**
+     * Redis Key 分隔符
+     */
+    public static final String REDIS_KEY_SEPARATOR = ":";
 }
+
