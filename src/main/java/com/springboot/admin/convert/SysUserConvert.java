@@ -4,6 +4,7 @@ import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.entity.sys.SysUser;
 import com.springboot.admin.model.vo.user.SysUserVO;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
@@ -51,6 +52,7 @@ public interface SysUserConvert {
      * @param dto DTO 对象
      * @return SysUserVO
      */
+    @Mapping(target = "password", ignore = true)
     SysUserVO dtoToVO(SysUserDTO dto);
 
     /**

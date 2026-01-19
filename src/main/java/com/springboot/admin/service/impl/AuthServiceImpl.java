@@ -1,24 +1,25 @@
 package com.springboot.admin.service.impl;
 
 import com.springboot.admin.constants.CommonConstants;
+import com.springboot.admin.constants.security.JwtConstants;
 import com.springboot.admin.mapper.auto.SysPermissionMapper;
 import com.springboot.admin.mapper.auto.SysRoleMapper;
-import com.springboot.admin.mapper.auto.SysUserMapper;
 import com.springboot.admin.model.dto.TokenRefreshReqDTO;
 import com.springboot.admin.model.dto.TokenResDTO;
 import com.springboot.admin.model.dto.UserLoginReqDTO;
+import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.dto.user.UserInfoDTO;
 import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
 import com.springboot.admin.model.vo.permission.SysPermissionVO;
 import com.springboot.admin.model.vo.role.SysRoleVO;
 import com.springboot.admin.service.IAuthService;
 import com.springboot.admin.service.IRedisService;
-import com.springboot.admin.util.JwtTokenUtil;
+import com.springboot.admin.service.ISysUserService;
 import com.springboot.admin.utils.JwtUtil;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -38,12 +39,12 @@ import java.util.concurrent.TimeUnit;
 @AllArgsConstructor
 public class AuthServiceImpl implements IAuthService {
 
-    private final SysUserMapper userMapper;
+    private final ISysUserService iSysUserService;
     private final SysRoleMapper roleMapper;
     private final SysPermissionMapper permissionMapper;
     private final IRedisService redisService;
     private final JwtUtil jwtUtil;
-
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * 用户登录
@@ -51,7 +52,7 @@ public class AuthServiceImpl implements IAuthService {
     @Override
     public TokenResDTO login(UserLoginReqDTO dto) {
         // 1. 根据用户名查询用户
-        var user = userMapper.selectByUsername(dto.getUsername());
+        SysUserDTO user = iSysUserService.getUserByUsername(dto.getUsername());
         if (user == null) {
             throw new RuntimeException("用户不存在");
         }
@@ -62,26 +63,29 @@ public class AuthServiceImpl implements IAuthService {
         }
 
         // 3. 生成 JWT 访问令牌
-        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getUsername());
+        String accessToken = jwtUtil.generateAccessToken(user.getUsername(), null);
+        String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
-        // 4. 生成刷新令牌
-        String refreshToken = jwtTokenUtil.generateRefreshToken(user.getId(), user.getUsername());
+        // 3. 解析 refreshToken 的 jti
+        String refreshJti = jwtUtil.getJti(refreshToken);
 
-        // 5. 保存刷新令牌到 Redis
+
+        // 4. refreshToken jti 存 Redis（防重放核心）
+        String redisKey = JwtConstants.REFRESH_TOKEN_PREFIX + refreshToken;
         redisService.setValue(
-                CommonConstants.JWT_BEARER_PREFIX + refreshToken,
+                redisKey,
                 user.getId().toString(),
-                jwtTokenUtil.getRefreshTokenExpireMinutes(),
-                TimeUnit.MINUTES
+                jwtUtil.getRemainingTime(refreshToken),
+                TimeUnit.MILLISECONDS
         );
 
         TokenResDTO tokenRes = new TokenResDTO();
         tokenRes.setAccessToken(accessToken);
         tokenRes.setRefreshToken(refreshToken);
         tokenRes.setTokenType("Bearer");
-        tokenRes.setExpiresIn(jwtTokenUtil.getAccessTokenExpireSeconds());
+        tokenRes.setExpiresIn(jwtUtil.getRemainingTime(accessToken) / 1000);
 
-        log.info("用户登录成功: username={}", user.getUsername());
+        log.info("用户登录成功 username={}, userId={}", user.getUsername(), user.getId());
         return tokenRes;
     }
 
@@ -94,27 +98,27 @@ public class AuthServiceImpl implements IAuthService {
             throw new RuntimeException("刷新令牌不能为空");
         }
 
-        String redisKey = CommonConstants.JWT_BEARER_PREFIX + dto.getRefreshToken();
+        String redisKey = JwtConstants.REFRESH_TOKEN_PREFIX + dto.getRefreshToken();
         String userId = redisService.getValue(redisKey);
         if (StringUtils.isBlank(userId)) {
             throw new RuntimeException("刷新令牌无效或已过期");
         }
 
         // 1. 根据用户 ID 查询用户名
-        var user = userMapper.selectById(Long.parseLong(userId));
+        var user = iSysUserService.getById(Long.parseLong(userId));
         if (user == null) {
             throw new RuntimeException("用户不存在");
         }
 
         // 2. 生成新的访问令牌
-        String accessToken = jwtTokenUtil.generateAccessToken(user.getId(), user.getUsername());
+        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getUsername());
 
         // 3. 可选：刷新刷新令牌（此处不刷新）
         TokenResDTO tokenRes = new TokenResDTO();
         tokenRes.setAccessToken(accessToken);
         tokenRes.setRefreshToken(dto.getRefreshToken());
         tokenRes.setTokenType("Bearer");
-        tokenRes.setExpiresIn(jwtTokenUtil.getAccessTokenExpireSeconds());
+        tokenRes.setExpiresIn(jwtUtil.getAccessTokenExpireSeconds());
 
         log.info("刷新令牌成功: userId={}", userId);
         return tokenRes;
@@ -124,14 +128,32 @@ public class AuthServiceImpl implements IAuthService {
      * 用户登出
      */
     @Override
-    public void logout(String refreshToken) {
-        if (StringUtils.isBlank(refreshToken)) return;
+    public void logout(String accessToken, String refreshToken) {
+        // 1. 删除 refreshToken
+        if (StringUtils.isNotBlank(refreshToken)) {
+            redisService.deleteKey(
+                    JwtConstants.REFRESH_TOKEN_PREFIX + refreshToken
+            );
+        }
 
-        String redisKey = CommonConstants.JWT_BEARER_PREFIX + refreshToken;
-        redisService.deleteKey(redisKey);
+        // 2. 拉黑 accessToken 的 jti（防重放）
+        if (StringUtils.isNotBlank(accessToken)) {
+            String jti = jwtUtil.getJti(accessToken);
+            long ttl = jwtUtil.getRemainingTime(accessToken);
 
-        log.info("用户登出成功, refreshToken={}", refreshToken);
+            if (ttl > 0) {
+                redisService.setValue(
+                        JwtConstants.JTI_BLACKLIST_PREFIX + jti,
+                        "1",
+                        ttl,
+                        TimeUnit.MILLISECONDS
+                );
+            }
+        }
+
+        log.info("用户登出成功");
     }
+
 
     /**
      * 根据 token 获取用户信息

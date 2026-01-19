@@ -2,10 +2,12 @@ package com.springboot.admin.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.springboot.admin.convert.SysUserConvert;
 import com.springboot.admin.mapper.ext.SysUserExtMapper;
 import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.entity.sys.SysUser;
 import com.springboot.admin.service.ISysUserService;
+import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
@@ -23,8 +25,10 @@ import org.springframework.stereotype.Service;
  * @since 2026-01-18
  */
 @Service
+@AllArgsConstructor
 public class SysUserServiceImpl extends ServiceImpl<SysUserExtMapper, SysUser> implements ISysUserService {
 
+    private final SysUserConvert sysUserConvert;
     /**
      * 根据用户名查询用户信息
      * <p>
@@ -37,37 +41,24 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserExtMapper, SysUser> i
      */
     @Override
     public SysUserDTO getUserByUsername(String username) {
-        // 防御性编程：用户名为空直接返回 null
+        // 1️⃣ 防御性校验
         if (StringUtils.isBlank(username)) {
             return null;
         }
 
-        // 构建查询条件：username 等于传入值，且 delete_flag = 0（未删除）
+        // 2️⃣ 构建查询条件
         LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, username)
                 .eq(SysUser::getDeleteFlag, 0);
 
-        // 查询数据库
+        // 3️⃣ 查询实体
         SysUser sysUser = this.getOne(queryWrapper);
         if (sysUser == null) {
             return null;
         }
 
-        // 构建 DTO 并拷贝属性
-        SysUserDTO dto = new SysUserDTO();
-        dto.setId(sysUser.getId());
-        dto.setUsername(sysUser.getUsername());
-        dto.setPassword(sysUser.getPassword()); // 注意：密码敏感，返回 DTO 供业务处理，不要直接暴露给前端
-        dto.setNickname(sysUser.getNickname());
-        dto.setEmail(sysUser.getEmail());
-        dto.setPhone(sysUser.getPhone());
-        dto.setDeptId(sysUser.getDeptId());
-        dto.setOrgId(sysUser.getOrgId());
-        dto.setUserStatus(sysUser.getUserStatus());
-        dto.setAvatar(sysUser.getAvatar());
-        dto.setLastLoginTime(sysUser.getLastLoginTime());
-
-        return dto;
+        // 4️⃣ Entity → DTO（统一交给 Convert）
+        return sysUserConvert.entityToDTO(sysUser);
     }
 }
 

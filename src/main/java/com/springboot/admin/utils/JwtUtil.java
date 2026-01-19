@@ -4,16 +4,16 @@ import com.springboot.admin.config.JwtProperties;
 import com.springboot.admin.constants.CommonConstants;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Jwt 工具类
@@ -44,8 +44,9 @@ public class JwtUtil {
      */
     @PostConstruct
     public void init() {
-        this.key = Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes());
+        this.key = Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8));
     }
+    // ===================== Token 生成 =====================
 
     /**
      * 生成 AccessToken
@@ -54,8 +55,9 @@ public class JwtUtil {
      * @param extraClaims 可选额外 Claims，例如权限列表
      * @return Mono<String> AccessToken
      */
-    public Mono<String> generateAccessToken(String username, Map<String, Object> extraClaims) {
-        return Mono.fromSupplier(() -> generateToken(username, "access", jwtProperties.getAccessTokenExpiration(), extraClaims));
+    public String generateAccessToken(String username, Map<String, Object> extraClaims) {
+        return generateToken(username, "access",
+                jwtProperties.getAccessTokenExpiration(), extraClaims);
     }
 
     /**
@@ -64,10 +66,10 @@ public class JwtUtil {
      * @param username 用户名
      * @return Mono<String> RefreshToken
      */
-    public Mono<String> generateRefreshToken(String username) {
-        return Mono.fromSupplier(() -> generateToken(username, "refresh", jwtProperties.getRefreshTokenExpiration(), null));
+    public String generateRefreshToken(String username) {
+        return generateToken(username, "refresh",
+                jwtProperties.getRefreshTokenExpiration(), null);
     }
-
     /**
      * 通用生成 Token 方法
      *
@@ -77,24 +79,36 @@ public class JwtUtil {
      * @param extraClaims 可选额外 claims
      * @return token 字符串
      */
-    private String generateToken(String username, String type, long expirationMillis, Map<String, Object> extraClaims) {
+    private String generateToken(String username,
+                                 String type,
+                                 long expirationMillis,
+                                 Map<String, Object> extraClaims) {
+
         Date now = new Date();
         Date exp = new Date(now.getTime() + expirationMillis);
+        // 生成全局唯一 jti
+        String jti = UUID.randomUUID().toString();
+        // 构建 Claims
+        var claimsBuilder = Jwts.builder()
+                .claims()
+                .subject(username)      // 标准字段：sub
+                .issuedAt(now)          // 标准字段：iat
+                .expiration(exp)        // 标准字段：exp
+                .add("type", type)      // 自定义字段：token 类型
+                .id(jti) ;       // 自定义字段：JWT ID（防重放核心）
 
-        var builder = Jwts.builder()
-                .setSubject(username)      // 用户名
-                .claim("type", type)       // token 类型
-                .setIssuedAt(now)          // 签发时间
-                .setExpiration(exp)        // 过期时间
-                .signWith(key, SignatureAlgorithm.HS256); // 签名算法
-
+        // 扩展 claims（如角色、权限、orgId）
         if (extraClaims != null && !extraClaims.isEmpty()) {
-            builder.addClaims(extraClaims);
+            claimsBuilder.add(extraClaims);
         }
-
-        return builder.compact();
+        // 签名并生成 Token
+        return claimsBuilder
+                .and()
+                .signWith(key)   // ✅ 不再传 SignatureAlgorithm
+                .compact();
     }
 
+    // ===================== Token 解析 =====================
     /**
      * 解析 Token，返回 Claims
      * 调整点：兼容 jjwt 0.13.x
@@ -102,19 +116,17 @@ public class JwtUtil {
      * @param token JWT 字符串
      * @return Mono<Claims> 响应式返回 Claims
      */
-    public Mono<Claims> parseToken(String token) {
-        return Mono.fromCallable(() -> {
-            try {
-                return Jwts.parser()           // jjwt 0.13.x parser
-                        .verifyWith(key)       // 用 verifyWith 校验签名
-                        .build()
-                        .parseSignedClaims(token)
-                        .getPayload();         // 获取 Claims
-            } catch (Exception e) {
-                log.error("解析 Token 失败: {}", e.getMessage(), e);
-                throw e;
-            }
-        });
+    public Claims parseToken(String token) {
+        try {
+            return Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (Exception e) {
+            log.error("JWT 解析失败: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     /**
@@ -123,8 +135,8 @@ public class JwtUtil {
      * @param token JWT
      * @return Mono<String> 用户名
      */
-    public Mono<String> getUsername(String token) {
-        return parseToken(token).map(Claims::getSubject);
+    public String getUsername(String token) {
+        return parseToken(token).getSubject();
     }
 
     /**
@@ -133,30 +145,28 @@ public class JwtUtil {
      * @param token JWT
      * @return Mono<String> token type
      */
-    public Mono<String> getTokenType(String token) {
-        return parseToken(token).map(c -> c.get("type", String.class));
+    public String getTokenType(String token) {
+        return parseToken(token).get("type", String.class);
     }
-
+    // ===================== Token 校验 =====================
     /**
      * 校验 AccessToken 是否有效
      *
      * @param token JWT
      * @return Mono<Boolean>
      */
-    public Mono<Boolean> isAccessTokenValid(String token) {
+    public boolean isAccessTokenValid(String token) {
         return isTokenValid(token, "access");
     }
-
     /**
      * 校验 RefreshToken 是否有效
      *
      * @param token JWT
      * @return Mono<Boolean>
      */
-    public Mono<Boolean> isRefreshTokenValid(String token) {
+    public boolean isRefreshTokenValid(String token) {
         return isTokenValid(token, "refresh");
     }
-
     /**
      * 校验 Token 是否有效（未过期，类型匹配）
      *
@@ -164,11 +174,14 @@ public class JwtUtil {
      * @param expectedType access / refresh
      * @return Mono<Boolean>
      */
-    private Mono<Boolean> isTokenValid(String token, String expectedType) {
-        return parseToken(token)
-                .map(claims -> claims.getExpiration().after(new Date())
-                        && expectedType.equals(claims.get("type", String.class)))
-                .onErrorReturn(false);
+    private boolean isTokenValid(String token, String expectedType) {
+        try {
+            Claims claims = parseToken(token);
+            return claims.getExpiration().after(new Date())
+                    && expectedType.equals(claims.get("type", String.class));
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
@@ -177,10 +190,13 @@ public class JwtUtil {
      * @param token JWT
      * @return Mono<Long> 毫秒
      */
-    public Mono<Long> getRemainingTime(String token) {
-        return parseToken(token)
-                .map(claims -> claims.getExpiration().getTime() - System.currentTimeMillis())
-                .onErrorReturn(0L);
+    public long getRemainingTime(String token) {
+        try {
+            return parseToken(token).getExpiration().getTime()
+                    - System.currentTimeMillis();
+        } catch (Exception e) {
+            return 0L;
+        }
     }
 
     // -------------------- 从 Authorization Header 提取 Bearer Token --------------------
@@ -196,5 +212,15 @@ public class JwtUtil {
             return authHeader.substring(CommonConstants.JWT_BEARER_PREFIX.length());
         }
         return "";
+    }
+
+    /**
+     * 获取 JWT 的 jti（唯一标识，用于防重放）
+     *
+     * @param token JWT 字符串
+     * @return jti
+     */
+    public String getJti(String token) {
+        return parseToken(token).getId();
     }
 }
