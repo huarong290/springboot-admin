@@ -1,53 +1,65 @@
-server:
-  port: 18080
-#  servlet:
-#    context-path: /springboot-admin
+# ======================================================
+# Spring Boot 全局配置文件
+# 支持 Mac/Linux（Sentinel Redis + MySQL 33061）和 Windows（单机 Redis + MySQL 3306）
+# 使用 Spring Profiles 实现多环境切换
+# ======================================================
 
+# ------------------------
+# 服务端口
+# ------------------------
+server:
+  port: 18080  # Spring Boot 默认 HTTP 服务端口
+#  servlet:
+#    context-path: /springboot-admin   # 可选自定义上下文路径
+
+# ------------------------
+# 应用名
+# ------------------------
 spring:
   application:
     name: springboot-admin
-
-  # 数据源配置（同步 MySQL）
-  datasource:
-    url: jdbc:mysql://localhost:33061/sys_admin?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false
-    username: root
-    password: 123456
-    driver-class-name: com.mysql.cj.jdbc.Driver
-
-  # Redis 同步配置
-  redis:
-    host: localhost
-    port: 6379
-    database: 0
-    password: 123456
-    timeout: 6000ms
-    lettuce:
-      pool:
-        max-active: 20
-        max-idle: 10
-        min-idle: 5
-
-  # Jackson 序列化配置
+  # ------------------------
+  # 激活的 Spring Profile
+  # 可通过环境变量 SPRING_PROFILE 或命令行参数 --spring.profiles.active 设置
+  # ------------------------
+  profiles:
+    active: ${SPRING_PROFILE:mac}  # 默认 windows，可在 Mac/Linux 环境覆盖为 mac
+  # ======================================================
+  # Jackson 配置（通用）
+  # ======================================================
   jackson:
     serialization:
-      indent_output: true
+      indent_output: true   # 输出 JSON 格式化
+# ======================================================
+# 公共配置（跨环境通用）
+# ======================================================
 
+# ------------------------
 # JWT 配置
+# ------------------------
 jwt:
-  secret: "mySecretKey2025mySecretKey2025mySecretKey2025"
-  access-token-expiration: 3600000
-  refresh-token-expiration: 604800000
-  algorithm: HS256
+  secret: "mySecretKey2025mySecretKey2025mySecretKey2025" # JWT 秘钥，建议 32 位以上 Base64
+  access-token-expiration: 3600000        # AccessToken 过期时间 1 小时（毫秒）
+  refresh-token-expiration: 604800000    # RefreshToken 过期时间 7 天（毫秒）
+  algorithm: HS256                        # 签名算法
+  access-token-prefix: "access"           # AccessToken Redis 前缀
+  refresh-token-prefix: "refresh"         # RefreshToken Redis 前缀
+  jti-blacklist-prefix: "jwt:blacklist:"  # 被拉黑的 JTI 前缀，用于登出或强制失效
 
+# ------------------------
 # 日志配置
+# ------------------------
 logging:
   debugMode: true
   level:
     root: INFO
-    org.springframework.web: DEBUG
-    org.springframework.data.redis: DEBUG
+    org.springframework.web: DEBUG           # Web 请求详细日志
+    org.springframework.data.redis: DEBUG    # Redis 调试日志
+    org.springframework.r2dbc: DEBUG          # R2DBC MySQL 调试日志
 
-# 安全白名单
+# ------------------------
+# 安全白名单（Spring Security）
+# ------------------------
 security:
   whitelist:
     - /api/auth/login

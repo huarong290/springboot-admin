@@ -1,4 +1,4 @@
-package com.springboot.admin.handlers;
+package com.springboot.admin.handler;
 
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import org.apache.ibatis.reflection.MetaObject;

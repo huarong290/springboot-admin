@@ -1,7 +1,9 @@
 package com.springboot.admin.service;
 
-import com.springboot.admin.model.entity.sys.SysUserRole;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.springboot.admin.model.entity.sys.SysUserRole;
+
+import java.util.List;
 
 /**
  * <p>
@@ -13,4 +15,12 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface ISysUserRoleService extends IService<SysUserRole> {
 
+    /**
+     * 根据用户ID查询关联的角色ID集合
+     *
+     * @param userId 用户ID
+     * @return 角色ID列表
+     */
+    List<Long> listRoleIdsByUserId(Long userId);
 }
+

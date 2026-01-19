@@ -51,13 +51,15 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "用户登出", description = "作废当前刷新令牌")
+    @Operation(summary = "用户登出", description = "作废当前 accessToken 和 refreshToken，需要 deviceId")
     @Logable(logRequest = true, logResponse = true)
-    public ApiResult<Void> logout(@RequestBody TokenRefreshReqDTO dto) {
-        authService.logout(dto.getRefreshToken());
+    public ApiResult<Void> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,
+                                  @RequestBody TokenRefreshReqDTO dto) {
+        String accessToken = JwtUtil.extractBearerToken(authHeader);
+        authService.logout(accessToken, dto.getRefreshToken(), dto.getDeviceId());
         return ApiResult.defaultFailResult();
-
     }
+
 
     @GetMapping("/userInfo")
     @Operation(summary = "获取用户信息", description = "拉取当前登录用户的角色、权限标识及菜单树")

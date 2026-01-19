@@ -2,6 +2,7 @@ package com.springboot.admin.service.impl;
 
 import cn.hutool.captcha.CaptchaUtil;
 import cn.hutool.captcha.LineCaptcha;
+import com.springboot.admin.constants.captcha.CaptchaConstants;
 import com.springboot.admin.model.dto.CaptchaDTO;
 import com.springboot.admin.service.ICaptchaService;
 import com.springboot.admin.service.IRedisService;
@@ -11,8 +12,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
-
-import static com.springboot.admin.constants.CommonConstants.*;
 
 /**
  * 验证码服务实现类
@@ -44,9 +43,9 @@ public class CaptchaServiceImpl implements ICaptchaService {
 
         // 1. 使用 Hutool 生成验证码
         LineCaptcha lineCaptcha = CaptchaUtil.createLineCaptcha(
-                CAPTCHA_WIDTH,
-                CAPTCHA_HEIGHT,
-                CAPTCHA_LENGTH,
+                CaptchaConstants.CAPTCHA_WIDTH,
+                CaptchaConstants.CAPTCHA_HEIGHT,
+                CaptchaConstants.CAPTCHA_LENGTH,
                 10
         );
 
@@ -59,9 +58,9 @@ public class CaptchaServiceImpl implements ICaptchaService {
 
         // 4. 存储到 Redis
         boolean success = redisService.setValue(
-                CAPTCHA_PREFIX + captchaId,
+                CaptchaConstants.CAPTCHA_PREFIX + captchaId,
                 captchaCode,
-                CAPTCHA_EXPIRE_MINUTES,
+                CaptchaConstants.CAPTCHA_EXPIRE_MINUTES,
                 TimeUnit.MINUTES
         );
 
@@ -74,7 +73,7 @@ public class CaptchaServiceImpl implements ICaptchaService {
         CaptchaDTO dto = new CaptchaDTO();
         dto.setCaptchaId(captchaId);
         dto.setCaptchaImage(imageBase64);
-        dto.setExpireTime(System.currentTimeMillis() + CAPTCHA_EXPIRE_MINUTES * 60 * 1000);
+        dto.setExpireTime(System.currentTimeMillis() + CaptchaConstants.CAPTCHA_EXPIRE_MINUTES * 60 * 1000);
         dto.setCaptchaEnabled(true);
 
         log.info("生成验证码成功: captchaId={}", captchaId);
@@ -95,7 +94,7 @@ public class CaptchaServiceImpl implements ICaptchaService {
             return false;
         }
 
-        String key = CAPTCHA_PREFIX + captchaId;
+        String key = CaptchaConstants.CAPTCHA_PREFIX + captchaId;
 
         // 2. 从 Redis 获取验证码
         String storedCode = redisService.getValue(key);
@@ -128,7 +127,7 @@ public class CaptchaServiceImpl implements ICaptchaService {
         if (StringUtils.isBlank(captchaId)) {
             return false;
         }
-        boolean success = redisService.deleteKey(CAPTCHA_PREFIX + captchaId) > 0;
+        boolean success = redisService.deleteKey(CaptchaConstants.CAPTCHA_PREFIX + captchaId) > 0;
         log.info("删除验证码: id={}, success={}", captchaId, success);
         return success;
     }
@@ -145,7 +144,7 @@ public class CaptchaServiceImpl implements ICaptchaService {
             return 0L;
         }
 
-        String key = CAPTCHA_PREFIX + captchaId;
+        String key = CaptchaConstants.CAPTCHA_PREFIX + captchaId;
         return redisService.deleteKey(key);
     }
 }

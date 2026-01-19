@@ -18,7 +18,12 @@ public class SysUserDTO {
      */
     @Schema(description = "用户ID（更新时必填）")
     private Long id;
-
+    /**
+     * 租户ID
+     * 多租户场景下使用，对应 sys_user.tenant_id
+     */
+    @Schema(description = "租户ID")
+    private Long tenantId;
     /**
      * 用户名
      */

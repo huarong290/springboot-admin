@@ -7,8 +7,9 @@ import com.springboot.admin.mapper.ext.SysUserExtMapper;
 import com.springboot.admin.model.dto.user.SysUserDTO;
 import com.springboot.admin.model.entity.sys.SysUser;
 import com.springboot.admin.service.ISysUserService;
-import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 
@@ -25,10 +26,14 @@ import org.springframework.stereotype.Service;
  * @since 2026-01-18
  */
 @Service
-@AllArgsConstructor
+@Slf4j
 public class SysUserServiceImpl extends ServiceImpl<SysUserExtMapper, SysUser> implements ISysUserService {
+    @Autowired
+    private SysUserExtMapper sysUserExtMapper;
+    @Autowired
+    private  SysUserConvert sysUserConvert;
 
-    private final SysUserConvert sysUserConvert;
+
     /**
      * 根据用户名查询用户信息
      * <p>
@@ -58,6 +63,14 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserExtMapper, SysUser> i
         }
 
         // 4️⃣ Entity → DTO（统一交给 Convert）
+        return sysUserConvert.entityToDTO(sysUser);
+    }
+
+    @Override
+    public SysUserDTO getSysUserDtoByUserId(long useId) {
+        // 1️⃣  查询实体
+        SysUser sysUser = this.getById(useId);
+        // 2️⃣ Entity → DTO（统一交给 Convert）
         return sysUserConvert.entityToDTO(sysUser);
     }
 }

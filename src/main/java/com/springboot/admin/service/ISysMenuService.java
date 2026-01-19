@@ -1,7 +1,10 @@
 package com.springboot.admin.service;
 
-import com.springboot.admin.model.entity.sys.SysMenu;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.springboot.admin.model.entity.sys.SysMenu;
+import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
+
+import java.util.List;
 
 /**
  * <p>
@@ -13,4 +16,11 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface ISysMenuService extends IService<SysMenu> {
 
+    /**
+     * 根据用户ID查询菜单树
+     *
+     * @param userId 用户ID
+     * @return 菜单树VO集合
+     */
+    List<SysMenuTreeVO> listMenusByUserId(Long userId);
 }

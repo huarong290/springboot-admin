@@ -22,4 +22,5 @@ public interface ISysUserService extends IService<SysUser> {
      */
     SysUserDTO getUserByUsername(String username);
 
+    SysUserDTO getSysUserDtoByUserId(long l);
 }

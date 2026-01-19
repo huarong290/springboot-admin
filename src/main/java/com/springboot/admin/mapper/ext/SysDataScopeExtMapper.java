@@ -1,6 +1,8 @@
 package com.springboot.admin.mapper.ext;
 
-import com.springboot.admin.mapper.auto.SysDeptClosureMapper;
+import com.springboot.admin.mapper.auto.SysDataScopeMapper;
+import org.apache.ibatis.annotations.Mapper;
+
 /**
  * <p>
  * 数据权限范围定义表 Mapper Ext接口
@@ -9,5 +11,6 @@ import com.springboot.admin.mapper.auto.SysDeptClosureMapper;
  * @author system
  * @since 2026-01-18
  */
-public interface SysDataScopeExtMapper extends SysDeptClosureMapper {
+@Mapper
+public interface SysDataScopeExtMapper extends SysDataScopeMapper {
 }

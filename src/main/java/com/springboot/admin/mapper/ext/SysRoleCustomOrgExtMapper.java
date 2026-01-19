@@ -1,6 +1,7 @@
 package com.springboot.admin.mapper.ext;
 
 import com.springboot.admin.mapper.auto.SysRoleCustomOrgMapper;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * <p>
@@ -10,5 +11,6 @@ import com.springboot.admin.mapper.auto.SysRoleCustomOrgMapper;
  * @author system
  * @since 2026-01-18
  */
+@Mapper
 public interface SysRoleCustomOrgExtMapper extends SysRoleCustomOrgMapper {
 }

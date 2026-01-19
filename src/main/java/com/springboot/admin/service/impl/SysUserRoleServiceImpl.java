@@ -1,10 +1,13 @@
 package com.springboot.admin.service.impl;
 
-import com.springboot.admin.model.entity.sys.SysUserRole;
-import com.springboot.admin.mapper.auto.SysUserRoleMapper;
-import com.springboot.admin.service.ISysUserRoleService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.springboot.admin.mapper.ext.SysUserRoleExtMapper;
+import com.springboot.admin.model.entity.sys.SysUserRole;
+import com.springboot.admin.service.ISysUserRoleService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * <p>
@@ -15,6 +18,13 @@ import org.springframework.stereotype.Service;
  * @since 2026-01-18
  */
 @Service
-public class SysUserRoleServiceImpl extends ServiceImpl<SysUserRoleMapper, SysUserRole> implements ISysUserRoleService {
+public class SysUserRoleServiceImpl extends ServiceImpl<SysUserRoleExtMapper, SysUserRole> implements ISysUserRoleService {
+    @Autowired
+    private SysUserRoleExtMapper sysUserRoleExtMapper;
 
+    @Override
+    public List<Long> listRoleIdsByUserId(Long userId) {
+        // 查询用户关联的角色ID
+        return sysUserRoleExtMapper.selectRoleIdsByUserId(userId);
+    }
 }

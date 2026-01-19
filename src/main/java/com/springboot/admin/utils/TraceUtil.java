@@ -4,7 +4,8 @@ import org.slf4j.MDC;
 
 import java.util.UUID;
 
-import static com.springboot.admin.constants.CommonConstants.TRACE_ID;
+import static com.springboot.admin.constants.log.TraceConstants.TRACE_ID;
+
 
 /**
  * TraceId 工具类

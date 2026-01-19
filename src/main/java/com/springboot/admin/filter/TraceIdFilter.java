@@ -9,7 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.IOException;
 import java.util.UUID;
 
-import static com.springboot.admin.constants.CommonConstants.TRACE_HEADER;
+import static com.springboot.admin.constants.log.TraceConstants.TRACE_HEADER;
+
 
 /**
  * TraceId 过滤器

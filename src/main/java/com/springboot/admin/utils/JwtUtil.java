@@ -1,7 +1,8 @@
 package com.springboot.admin.utils;
 
 import com.springboot.admin.config.JwtProperties;
-import com.springboot.admin.constants.CommonConstants;
+import com.springboot.admin.constants.security.JwtConstants;
+import com.springboot.admin.exception.BusinessException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -16,15 +17,16 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Jwt 工具类
- * 完全兼容 jjwt 0.13.x
- * 纯响应式设计，返回 Mono<T>
+ * JWT 工具类
+ * <p>
+ * 基于 jjwt 0.13.x
+ * 使用同步阻塞方式，适用于传统 Spring MVC 架构
  *
  * 功能：
  * 1. 生成 AccessToken / RefreshToken
  * 2. 解析 JWT 获取 Claims
  * 3. 校验 Token 是否有效
- * 4. 获取剩余有效时间
+ * 4. 获取 Token 剩余有效时间
  * 5. 从 Authorization Header 提取 Bearer Token
  */
 @Slf4j
@@ -32,7 +34,11 @@ import java.util.UUID;
 public class JwtUtil {
 
     private final JwtProperties jwtProperties;
-    private SecretKey key;
+
+    /**
+     * HMAC 密钥
+     */
+    private SecretKey secretKey;
 
     public JwtUtil(JwtProperties jwtProperties) {
         this.jwtProperties = jwtProperties;
@@ -44,183 +50,174 @@ public class JwtUtil {
      */
     @PostConstruct
     public void init() {
-        this.key = Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8));
+        this.secretKey = Keys.hmacShaKeyFor(
+                jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8)
+        );
     }
+
     // ===================== Token 生成 =====================
 
     /**
      * 生成 AccessToken
      *
-     * @param username 用户名
-     * @param extraClaims 可选额外 Claims，例如权限列表
-     * @return Mono<String> AccessToken
+     * @param username    用户名
+     * @param extraClaims 扩展 Claims（角色、权限、租户等）
+     * @return AccessToken
      */
     public String generateAccessToken(String username, Map<String, Object> extraClaims) {
-        return generateToken(username, "access",
-                jwtProperties.getAccessTokenExpiration(), extraClaims);
+        return generateToken(
+                username,
+                JwtConstants.TOKEN_TYPE_ACCESS,
+                jwtProperties.getAccessTokenExpiration(),
+                extraClaims
+        );
     }
 
     /**
      * 生成 RefreshToken
      *
      * @param username 用户名
-     * @return Mono<String> RefreshToken
+     * @return RefreshToken
      */
     public String generateRefreshToken(String username) {
-        return generateToken(username, "refresh",
-                jwtProperties.getRefreshTokenExpiration(), null);
+        return generateToken(
+                username,
+                JwtConstants.TOKEN_TYPE_REFRESH,
+                jwtProperties.getRefreshTokenExpiration(),
+                null
+        );
     }
+
     /**
      * 通用生成 Token 方法
-     *
-     * @param username 用户名
-     * @param type token 类型：access / refresh
-     * @param expirationMillis 过期时间（毫秒）
-     * @param extraClaims 可选额外 claims
-     * @return token 字符串
      */
     private String generateToken(String username,
-                                 String type,
+                                 String tokenType,
                                  long expirationMillis,
                                  Map<String, Object> extraClaims) {
 
         Date now = new Date();
-        Date exp = new Date(now.getTime() + expirationMillis);
-        // 生成全局唯一 jti
+        Date expiration = new Date(now.getTime() + expirationMillis);
+
+        // JWT ID（用于防重放）
         String jti = UUID.randomUUID().toString();
-        // 构建 Claims
+
         var claimsBuilder = Jwts.builder()
                 .claims()
-                .subject(username)      // 标准字段：sub
-                .issuedAt(now)          // 标准字段：iat
-                .expiration(exp)        // 标准字段：exp
-                .add("type", type)      // 自定义字段：token 类型
-                .id(jti) ;       // 自定义字段：JWT ID（防重放核心）
+                .subject(username)
+                .issuedAt(now)
+                .expiration(expiration)
+                .add(JwtConstants.CLAIM_TOKEN_TYPE, tokenType)
+                .id(jti);
 
-        // 扩展 claims（如角色、权限、orgId）
         if (extraClaims != null && !extraClaims.isEmpty()) {
             claimsBuilder.add(extraClaims);
         }
-        // 签名并生成 Token
+
         return claimsBuilder
                 .and()
-                .signWith(key)   // ✅ 不再传 SignatureAlgorithm
+                .signWith(secretKey)
                 .compact();
     }
 
     // ===================== Token 解析 =====================
+
     /**
-     * 解析 Token，返回 Claims
-     * 调整点：兼容 jjwt 0.13.x
+     * 解析 JWT，返回 Claims
      *
-     * @param token JWT 字符串
-     * @return Mono<Claims> 响应式返回 Claims
+     * @param token JWT
+     * @return Claims，解析失败返回 null
      */
     public Claims parseToken(String token) {
         try {
             return Jwts.parser()
-                    .verifyWith(key)
+                    .verifyWith(secretKey)
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
         } catch (Exception e) {
-            log.error("JWT 解析失败: {}", e.getMessage(), e);
-            throw e;
+            log.warn("JWT 解析失败: {}", e.getMessage());
+            throw new BusinessException("JWT解析失败或已过期");
         }
     }
 
     /**
      * 获取用户名
-     *
-     * @param token JWT
-     * @return Mono<String> 用户名
      */
     public String getUsername(String token) {
-        return parseToken(token).getSubject();
+        Claims claims = parseToken(token);
+        return claims == null ? null : claims.getSubject();
     }
 
     /**
-     * 获取 Token 类型（access / refresh）
-     *
-     * @param token JWT
-     * @return Mono<String> token type
+     * 获取 Token 类型
      */
     public String getTokenType(String token) {
-        return parseToken(token).get("type", String.class);
+        Claims claims = parseToken(token);
+        return claims == null
+                ? null
+                : claims.get(JwtConstants.CLAIM_TOKEN_TYPE, String.class);
     }
+
+    /**
+     * 获取 JWT 的 jti（唯一标识）
+     */
+    public String getJti(String token) {
+        Claims claims = parseToken(token);
+        return claims == null ? null : claims.getId();
+    }
+
     // ===================== Token 校验 =====================
+
     /**
      * 校验 AccessToken 是否有效
-     *
-     * @param token JWT
-     * @return Mono<Boolean>
      */
     public boolean isAccessTokenValid(String token) {
-        return isTokenValid(token, "access");
+        return isTokenValid(token, JwtConstants.TOKEN_TYPE_ACCESS);
     }
+
     /**
      * 校验 RefreshToken 是否有效
-     *
-     * @param token JWT
-     * @return Mono<Boolean>
      */
     public boolean isRefreshTokenValid(String token) {
-        return isTokenValid(token, "refresh");
+        return isTokenValid(token, JwtConstants.TOKEN_TYPE_REFRESH);
     }
+
     /**
-     * 校验 Token 是否有效（未过期，类型匹配）
-     *
-     * @param token JWT
-     * @param expectedType access / refresh
-     * @return Mono<Boolean>
+     * 通用 Token 校验逻辑
      */
+
     private boolean isTokenValid(String token, String expectedType) {
         try {
             Claims claims = parseToken(token);
-            return claims.getExpiration().after(new Date())
-                    && expectedType.equals(claims.get("type", String.class));
-        } catch (Exception e) {
+            return claims.getExpiration().after(new Date()) &&
+                    expectedType.equals(claims.get(JwtConstants.CLAIM_TOKEN_TYPE, String.class));
+        } catch (BusinessException e) {
             return false;
         }
     }
 
     /**
      * 获取 Token 剩余有效时间（毫秒）
-     *
-     * @param token JWT
-     * @return Mono<Long> 毫秒
      */
     public long getRemainingTime(String token) {
         try {
-            return parseToken(token).getExpiration().getTime()
-                    - System.currentTimeMillis();
-        } catch (Exception e) {
+            return parseToken(token).getExpiration().getTime() - System.currentTimeMillis();
+        } catch (BusinessException e) {
             return 0L;
         }
     }
 
-    // -------------------- 从 Authorization Header 提取 Bearer Token --------------------
+    // ===================== Header 解析 =====================
 
     /**
-     * 从请求头 Authorization 提取 Bearer Token
-     *
-     * @param authHeader Authorization Header
-     * @return JWT 字符串，如果不存在返回空字符串
+     * 从 Authorization Header 提取 Bearer Token
      */
     public static String extractBearerToken(String authHeader) {
-        if (authHeader != null && authHeader.startsWith(CommonConstants.JWT_BEARER_PREFIX)) {
-            return authHeader.substring(CommonConstants.JWT_BEARER_PREFIX.length());
+        if (authHeader != null
+                && authHeader.startsWith(JwtConstants.JWT_BEARER_PREFIX)) {
+            return authHeader.substring(JwtConstants.JWT_BEARER_PREFIX.length());
         }
         return "";
-    }
-
-    /**
-     * 获取 JWT 的 jti（唯一标识，用于防重放）
-     *
-     * @param token JWT 字符串
-     * @return jti
-     */
-    public String getJti(String token) {
-        return parseToken(token).getId();
     }
 }

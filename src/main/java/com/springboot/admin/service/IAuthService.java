@@ -33,7 +33,7 @@ public interface IAuthService {
      *
      * @param refreshToken 当前用户的刷新令牌
      */
-    void logout(String refreshToken);
+    void logout(String accessToken,String refreshToken, String deviceId);
 
     /**
      * 根据 Token 获取当前登录用户信息
