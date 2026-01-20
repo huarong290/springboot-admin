@@ -1,43 +1,42 @@
 package com.springboot.admin.config;
 
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
-import org.springframework.data.redis.connection.RedisPassword;
-import org.springframework.data.redis.connection.RedisSentinelConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+/**
+ * Redis 配置
+ *
+ * 说明：
+ * - Redis 连接信息全部来自 application.yml
+ * - 支持 单机 / Sentinel / Cluster
+ * - 通过 spring.profiles.active 自动切换
+ */
 @Configuration
 public class RedisConfig {
 
-    // Sentinel 集群模式
     @Bean
-    @Profile("mac")
-    public LettuceConnectionFactory sentinelConnectionFactory() {
-        RedisSentinelConfiguration sentinelConfig = new RedisSentinelConfiguration()
-                .master("mymaster")
-                .sentinel("127.0.0.1", 26379)
-                .sentinel("127.0.0.1", 26380)
-                .sentinel("127.0.0.1", 26381);
-        sentinelConfig.setPassword(RedisPassword.of("123456"));
-        return new LettuceConnectionFactory(sentinelConfig);
-    }
+    public RedisTemplate<String, Object> redisTemplate(
+            LettuceConnectionFactory connectionFactory) {
 
-    // 单机模式
-    @Bean
-    @Profile("windows")
-    public LettuceConnectionFactory singleConnectionFactory() {
-        return new LettuceConnectionFactory("127.0.0.1", 6379);
-    }
-
-    // RedisTemplate 通用
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate(LettuceConnectionFactory factory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(factory);
-        // 可加序列化器
+        template.setConnectionFactory(connectionFactory);
+
+        // key 使用 String
+        StringRedisSerializer keySerializer = new StringRedisSerializer();
+        // value 使用 JSON
+        GenericJackson2JsonRedisSerializer valueSerializer =
+                new GenericJackson2JsonRedisSerializer();
+
+        template.setKeySerializer(keySerializer);
+        template.setHashKeySerializer(keySerializer);
+        template.setValueSerializer(valueSerializer);
+        template.setHashValueSerializer(valueSerializer);
+
+        template.afterPropertiesSet();
         return template;
     }
 }

@@ -68,7 +68,7 @@ public class SysMenu extends Model<SysMenu> {
      */
     @Schema(description = "1目录 2菜单 3按钮")
     @TableField("menu_type")
-    private Byte menuType;
+    private Integer menuType;
     /**
      * 菜单排序值，数字越小越靠前
      */
@@ -79,15 +79,15 @@ public class SysMenu extends Model<SysMenu> {
      * 菜单是否可见：1可见 0隐藏，前端渲染控制
      */
     @Schema(description = "菜单是否可见：1可见 0隐藏，前端渲染控制")
-    @TableField("visible")
-    private Byte visible;
+    @TableField("menu_visible")
+    private Integer menuVisible;
 
     /**
      * 菜单状态：1启用 0禁用，控制权限访问
      */
     @Schema(description = "菜单状态：1启用 0禁用，控制权限访问")
     @TableField("menu_status")
-    private Byte menuStatus;
+    private Integer menuStatus;
 
     /**
      * 删除标志
@@ -95,7 +95,7 @@ public class SysMenu extends Model<SysMenu> {
     @Schema(description = "删除标志")
     @TableLogic
     @TableField("delete_flag")
-    private Byte deleteFlag;
+    private Integer deleteFlag;
     /**
      * 乐观锁版本号
      */

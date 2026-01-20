@@ -12,7 +12,7 @@
         <result column="menu_icon" property="menuIcon" />
         <result column="menu_type" property="menuType" />
         <result column="menu_sort" property="menuSort" />
-        <result column="visible" property="visible" />
+        <result column="menu_visible" property="menuVisible" />
         <result column="menu_status" property="menuStatus" />
         <result column="delete_flag" property="deleteFlag" />
         <result column="version" property="version" />
@@ -24,7 +24,7 @@
 
     <!-- 通用查询结果列 -->
     <sql id="Base_Column_List">
-        id, menu_parent_id, menu_name, menu_path, menu_component, menu_icon, menu_type, menu_sort, visible, menu_status, delete_flag, version, create_by, create_time, update_by, update_time
+        id, menu_parent_id, menu_name, menu_path, menu_component, menu_icon, menu_type, menu_sort, menu_visible, menu_status, delete_flag, version, create_by, create_time, update_by, update_time
     </sql>
 
 
@@ -54,7 +54,7 @@
             #{roleId}
         </foreach>
         AND m.menu_status = 1
-        AND m.visible = 1
+        AND m.menu_visible = 1
         AND m.delete_flag = 0
         AND m.menu_type IN (0,1,2)
         ORDER BY m.menu_parent_id, m.menu_sort

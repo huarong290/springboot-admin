@@ -63,7 +63,7 @@ public class AuthServiceImpl implements IAuthService {
         extraClaims.put("loginIp", dto.getLoginIp());
         extraClaims.put("clientType", dto.getClientType());
         extraClaims.put("deviceId", dto.getDeviceId());
-        String accessToken = jwtUtil.generateAccessToken(user.getUsername(), null);
+        String accessToken = jwtUtil.generateAccessToken(user.getUsername(), extraClaims);
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
         // 5. refreshToken 存 Redis，绑定设备ID

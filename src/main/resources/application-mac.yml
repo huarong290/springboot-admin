@@ -1,5 +1,5 @@
 # ======================================================
-# Mac/Linux 专用配置（profile: mac）
+# Mac / Linux 专用配置（profile: mac）
 # Redis Sentinel + MySQL 33061
 # ======================================================
 spring:
@@ -16,17 +16,25 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   # ------------------------
-  # Redis Sentinel 集群配置
+  # Redis Sentinel 配置（Spring Boot 3.x 正确写法）
   # ------------------------
-  redis:
-    sentinel:
-      master: mymaster  # Sentinel 配置中 master 名称
-      nodes: 127.0.0.1:26379,127.0.0.1:26380,127.0.0.1:26381  # Sentinel 节点
-      password: 123456  # Redis master 密码
-    timeout: 5000ms
-    lettuce:
-      pool:
-        max-active: 20
-        max-idle: 10
-        min-idle: 5
-        max-wait: 3000ms
+  data:
+    redis:
+      # Sentinel 模式
+      sentinel:
+        master: mymaster
+        nodes:
+          - 127.0.0.1:26379
+          - 127.0.0.1:26380
+          - 127.0.0.1:26381
+      # Redis Master 密码（Sentinel 会透传）
+      password: 123456
+      # 连接超时
+      timeout: 5000ms
+      # Lettuce 连接池
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+          max-wait: 3000ms

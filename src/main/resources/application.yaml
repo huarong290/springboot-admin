@@ -23,7 +23,7 @@ spring:
   # 可通过环境变量 SPRING_PROFILE 或命令行参数 --spring.profiles.active 设置
   # ------------------------
   profiles:
-    active: ${SPRING_PROFILE:mac}  # 默认 windows，可在 Mac/Linux 环境覆盖为 mac
+    active: ${SPRING_PROFILE:windows}  # 默认 windows，可在 Mac/Linux 环境覆盖为 mac
   # ======================================================
   # Jackson 配置（通用）
   # ======================================================

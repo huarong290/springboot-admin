@@ -1,19 +1,25 @@
 package com.springboot.admin.filter;
 
+import com.springboot.admin.constants.security.JwtConstants;
+import com.springboot.admin.exception.BusinessException;
 import com.springboot.admin.service.IRedisService;
 import com.springboot.admin.utils.JwtUtil;
+import io.jsonwebtoken.Claims;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Date;
 
 @Component
 @RequiredArgsConstructor
@@ -23,23 +29,45 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final IRedisService redisService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
-        String token = jwtUtil.extractBearerToken(request.getHeader("Authorization"));
-        if (token != null && jwtUtil.isAccessTokenValid(token)) {
-            // 检查 JTI 是否拉黑
-            String jti = jwtUtil.getJti(token);
-            if (redisService.hasKey("jti:blacklist:" + jti)) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                return;
+        String token = JwtUtil.extractBearerToken(request.getHeader(JwtConstants.JWT_HEADER));
+
+        if (StringUtils.isNotBlank(token)) {
+            Claims claims = jwtUtil.parseToken(token);
+
+            // 1️⃣ 校验 token 类型
+            if (!JwtConstants.TOKEN_TYPE_ACCESS.equals(claims.get("type", String.class))) {
+                throw new BusinessException("非法 Token 类型");
             }
 
-            // 设置 Spring Security 上下文
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(jwtUtil.getUsername(token), null, null);
-            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(auth);
+            // 2️⃣ 校验是否过期
+            if (claims.getExpiration().before(new Date())) {
+                throw new BusinessException("Token 已过期");
+            }
+
+            // 3️⃣ 校验 jti 是否拉黑
+            String jti = claims.get("jti", String.class);
+            if (redisService.hasKey(JwtConstants.JTI_BLACKLIST_PREFIX + jti)) {
+                throw new BusinessException("Token 已失效");
+            }
+
+            // 4️⃣ 设置 SecurityContext
+            String username = claims.getSubject();
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            username,
+                            null,
+                            Collections.emptyList()
+                    );
+            authentication.setDetails(
+                    new WebAuthenticationDetailsSource().buildDetails(request)
+            );
+            SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
         filterChain.doFilter(request, response);

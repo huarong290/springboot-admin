@@ -30,8 +30,4 @@ public interface ICaptchaService {
      */
     boolean deleteCaptchaReturnBoolean(String captchaId);
 
-    /**
-     * 删除验证码（返回删除数量）
-     */
-    long deleteCaptchaReturnCount(String captchaId);
 }

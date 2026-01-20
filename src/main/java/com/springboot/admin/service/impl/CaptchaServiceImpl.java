@@ -59,7 +59,7 @@ public class CaptchaServiceImpl implements ICaptchaService {
         // 4. 存储到 Redis
         boolean success = redisService.setValue(
                 CaptchaConstants.CAPTCHA_PREFIX + captchaId,
-                captchaCode,
+                captchaCode.toLowerCase(),
                 CaptchaConstants.CAPTCHA_EXPIRE_MINUTES,
                 TimeUnit.MINUTES
         );
@@ -117,34 +117,29 @@ public class CaptchaServiceImpl implements ICaptchaService {
     }
 
     /**
-     * 删除验证码，返回是否成功
+     * 删除验证码
+     *
+     * <p>
+     * 用于主动失效验证码（如刷新、异常处理）
+     * Redis 层已统一封装，不关心具体删除数量
+     * </p>
      *
      * @param captchaId 验证码 ID
      * @return true = 删除成功，false = 删除失败或 key 不存在
      */
     @Override
     public boolean deleteCaptchaReturnBoolean(String captchaId) {
+
         if (StringUtils.isBlank(captchaId)) {
             return false;
         }
-        boolean success = redisService.deleteKey(CaptchaConstants.CAPTCHA_PREFIX + captchaId) > 0;
+
+        String key = CaptchaConstants.CAPTCHA_PREFIX + captchaId;
+
+        boolean success = redisService.deleteKey(key);
+
         log.info("删除验证码: id={}, success={}", captchaId, success);
         return success;
     }
 
-    /**
-     * 删除验证码，返回删除数量
-     *
-     * @param captchaId 验证码 ID
-     * @return 删除数量（0 = 不存在或删除失败，1 = 删除成功）
-     */
-    @Override
-    public long deleteCaptchaReturnCount(String captchaId) {
-        if (StringUtils.isBlank(captchaId)) {
-            return 0L;
-        }
-
-        String key = CaptchaConstants.CAPTCHA_PREFIX + captchaId;
-        return redisService.deleteKey(key);
-    }
 }
