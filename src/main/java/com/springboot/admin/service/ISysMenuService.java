@@ -23,4 +23,11 @@ public interface ISysMenuService extends IService<SysMenu> {
      * @return 菜单树VO集合
      */
     List<SysMenuTreeVO> listMenusByUserId(Long userId);
+    /**
+     * 根据角色ID集合查询菜单列表
+     *
+     * @param roleIds 角色ID集合
+     * @return 菜单VO集合
+     */
+    List<SysMenu> selectMenusByRoleIds(List<Long> roleIds);
 }

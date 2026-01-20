@@ -23,4 +23,14 @@ public interface ISysPermissionService extends IService<SysPermission> {
      * @return 权限点VO集合
      */
     List<SysPermissionVO> listPermissionsByUserId(Long userId);
+
+
+    /**
+     * 根据角色ID列表查询权限点列表
+     *
+     * @param roleIds 角色ID列表
+     * @return 权限点code集合
+     */
+    List<String> selectPermissionCodesByRoleIds(List<Long> roleIds);
+
 }

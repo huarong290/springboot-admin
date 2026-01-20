@@ -25,15 +25,16 @@ import java.util.List;
 @Service
 @Slf4j
 public class SysRoleServiceImpl extends ServiceImpl<SysRoleExtMapper, SysRole> implements ISysRoleService {
-
+    @Autowired
+    private SysRoleExtMapper sysRoleExtMapper;
     @Autowired
     private ISysUserRoleService iSysUserRoleService;
     @Autowired
     private SysRoleConvert roleConvert;
     @Override
-    public List<SysRoleVO> listRolesByUserId(Long userId) {
+    public List<SysRoleVO> selectRolesByUserId(Long userId) {
         // 查询用户关联的角色ID
-        List<Long> roleIds = iSysUserRoleService.listRoleIdsByUserId(userId);
+        List<Long> roleIds = iSysUserRoleService.selectRoleIdsByUserId(userId);
         if (roleIds == null || roleIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -41,4 +42,5 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleExtMapper, SysRole> i
         List<SysRole> roles = this.listByIds(roleIds);
         return roleConvert.toVoList(roles);
     }
+
 }

@@ -38,6 +38,14 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuExtMapper, SysMenu> i
         return buildMenuTree(menuVOs);
     }
 
+    @Override
+    public List<SysMenu> selectMenusByRoleIds(List<Long> roleIds) {
+        if (roleIds == null || roleIds.isEmpty()) {
+            return List.of();
+        }
+        return sysMenuExtMapper.selectMenusByRoleIds(roleIds);
+    }
+
     private List<SysMenuTreeVO> buildMenuTree(List<SysMenuTreeVO> menuList) {
         Map<Long, SysMenuTreeVO> map = new HashMap<>();
         List<SysMenuTreeVO> tree = new ArrayList<>();

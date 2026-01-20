@@ -1,8 +1,8 @@
 package com.springboot.admin.model.dto.user;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.springboot.admin.model.dto.datascope.DataScopeDTO;
 import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
-import com.springboot.admin.model.vo.permission.SysPermissionVO;
 import com.springboot.admin.model.vo.role.SysRoleVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -19,7 +19,7 @@ import java.util.List;
  */
 @Data
 public class UserInfoDTO {
-
+    // ========== 用户基础信息 ==========
     /**
      * 用户ID
      * 对应 sys_user 表的主键 id
@@ -67,8 +67,23 @@ public class UserInfoDTO {
      * 1 = 启用，0 = 禁用
      */
     @Schema(description = "是否启用:1-启用 0-禁用")
-    private byte status;
+    private Integer userStatus;
 
+    /**
+     * 租户ID
+     * 多租户场景下使用，对应 sys_user.tenant_id
+     */
+    @Schema(description = "租户ID")
+    private Long tenantId;
+
+    /**
+     *
+     * 上次登录时间
+     */
+    @Schema(description = "最后登录时间")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastLoginTime;
+    // ========== 登录上下文 ==========
     /**
      * 登录设备ID
      * 对应用户本次登录使用的设备标识，用于刷新令牌绑定
@@ -90,21 +105,8 @@ public class UserInfoDTO {
     @Schema(description = "登录IP")
     private String loginIp;
 
-    /**
-     * 租户ID
-     * 多租户场景下使用，对应 sys_user.tenant_id
-     */
-    @Schema(description = "租户ID")
-    private Long tenantId;
 
-    /**
-     *
-     * 上次登录时间
-     */
-    @Schema(description = "最后登录时间")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime lastLoginTime;
-
+    // ========== 授权信息 ==========
     /**
      * 用户角色列表（完整对象）
      * 每个角色包含编码、名称、描述等信息
@@ -114,12 +116,11 @@ public class UserInfoDTO {
     private List<SysRoleVO> roles = new ArrayList<>();
 
     /**
-     * 用户权限列表（完整对象）
-     * 每个权限包含编码、名称、类型等信息
-     * 对应 sys_permission 表，通过角色或直接用户关联获取
+     * 功能权限（按钮 / 接口）
+     * ⚠️ 只保留必要字段（code）
      */
-    @Schema(description = "权限列表")
-    private List<SysPermissionVO> permissions = new ArrayList<>();
+    @Schema(description = "权限code列表")
+    private List<String> permissionCodes = new ArrayList<>();
 
     /**
      * 用户菜单列表（树形结构）
@@ -128,4 +129,10 @@ public class UserInfoDTO {
      */
     @Schema(description = "用户菜单列表", implementation = SysMenuTreeVO.class)
     private List<SysMenuTreeVO> menus = new ArrayList<>();
+
+    /**
+     * 数据权限（核心）
+     */
+    @Schema(description = "数据权限（核心）")
+    private DataScopeDTO dataScope;
 }

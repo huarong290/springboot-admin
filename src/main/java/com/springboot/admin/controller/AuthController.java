@@ -9,9 +9,11 @@ import com.springboot.admin.model.dto.UserLoginReqDTO;
 import com.springboot.admin.model.dto.user.UserInfoDTO;
 import com.springboot.admin.service.IAuthService;
 import com.springboot.admin.service.ICaptchaService;
+import com.springboot.admin.utils.IpUtil;
 import com.springboot.admin.utils.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +28,8 @@ public class AuthController {
     private final IAuthService authService;
     private final ICaptchaService captchaService;
 
+    private final IpUtil ipUtil; // 注入工具类
+
     @Operation(summary = "获取验证码", description = "返回 Base64 图片及验证码标识")
     @Logable(logRequest = false, logResponse = false) // 图片数据过大，不建议打入日志
     @GetMapping("/getCaptcha")
@@ -37,8 +41,11 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "用户登录", description = "包含验证码校验、账号密码验证及 Token 发放")
     @Logable(logRequest = true, logResponse = true)
-    public ApiResult<TokenResDTO> login(@RequestBody UserLoginReqDTO dto) {
+    public ApiResult<TokenResDTO> login(@RequestBody UserLoginReqDTO dto, HttpServletRequest request) {
         // 逻辑完全下沉至 Service，保持接口层清爽
+        // 获取客户端 IP
+        String clientIp = ipUtil.getClientIp(request);
+        dto.setLoginIp(clientIp);
         return ApiResult.successResult(authService.login(dto));
     }
 
@@ -46,6 +53,7 @@ public class AuthController {
     @Operation(summary = "刷新令牌", description = "通过旧的 RefreshToken 获取新的 AccessToken")
     @Logable(logRequest = true, logResponse = true)
     public ApiResult<TokenResDTO> refresh(@RequestBody TokenRefreshReqDTO dto) {
+
         return ApiResult.successResult(authService.refreshToken(dto));
 
     }
@@ -68,6 +76,7 @@ public class AuthController {
             @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
         // 仅负责解析 Token 标识，业务由 Service 处理
         String token = JwtUtil.extractBearerToken(authHeader);
+
         return ApiResult.successResult(authService.getUserInfoByToken(token));
 
     }

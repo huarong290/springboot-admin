@@ -65,4 +65,10 @@ public class UserLoginReqDTO {
      */
     @Schema(description = "浏览器", example = "Chrome 121")
     private String browser;
+
+    /**
+     * 登录IP
+     */
+    private String loginIp;
+
 }

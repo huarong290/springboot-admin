@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.springboot.admin.mapper.ext.SysRoleDataScopeExtMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.springboot.admin.model.entity.sys.SysRoleDataScope">
+        <id column="id" property="id" />
+        <result column="role_id" property="roleId" />
+        <result column="scope_id" property="scopeId" />
+        <result column="delete_flag" property="deleteFlag" />
+        <result column="version" property="version" />
+        <result column="create_by" property="createBy" />
+        <result column="create_time" property="createTime" />
+        <result column="update_by" property="updateBy" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, role_id, scope_id, delete_flag, version, create_by, create_time, update_by, update_time
+    </sql>
+
+
+    <!-- 根据角色ID集合查询指定类型的数据范围ID -->
+    <select id="selectScopeIdsByRoleIds" resultType="java.lang.Long">
+        SELECT ds.id
+        FROM sys_role_data_scope rds
+        JOIN sys_data_scope ds ON ds.id = rds.scope_id
+        WHERE rds.role_id IN
+        <foreach collection="roleIds" item="roleId" open="(" separator="," close=")">
+            #{roleId}
+        </foreach>
+        AND rds.delete_flag = 0
+        AND ds.delete_flag = 0
+        AND ds.scope_type = #{scopeType}
+    </select>
+
+</mapper>

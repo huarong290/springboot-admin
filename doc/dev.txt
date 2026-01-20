@@ -1,0 +1,14 @@
+1️⃣ 给你 完整 Spring Security + JWT 配置
+2️⃣ 给你 MyBatis Mapper SQL（角色 / 权限 / 菜单）
+3️⃣ 给你 数据权限 MyBatis 拦截器
+4️⃣ 给你 前端 Vue / React 对应数据结构
+5️⃣ 给你 微服务拆分建议（Auth / System / Business）
+
+
+✅ JwtAuthenticationFilter 标准实现
+
+✅ UserPrincipal 结构（permissions + dataScope）
+
+✅ 登录接口完整实现（Redis + 刷新 token）
+
+✅ 菜单 / 权限缓存设计

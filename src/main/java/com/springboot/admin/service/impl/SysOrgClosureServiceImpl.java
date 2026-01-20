@@ -1,10 +1,13 @@
 package com.springboot.admin.service.impl;
 
-import com.springboot.admin.model.entity.sys.SysOrgClosure;
-import com.springboot.admin.mapper.auto.SysOrgClosureMapper;
-import com.springboot.admin.service.ISysOrgClosureService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.springboot.admin.mapper.ext.SysOrgClosureExtMapper;
+import com.springboot.admin.model.entity.sys.SysOrgClosure;
+import com.springboot.admin.service.ISysOrgClosureService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * <p>
@@ -15,6 +18,13 @@ import org.springframework.stereotype.Service;
  * @since 2026-01-18
  */
 @Service
-public class SysOrgClosureServiceImpl extends ServiceImpl<SysOrgClosureMapper, SysOrgClosure> implements ISysOrgClosureService {
+public class SysOrgClosureServiceImpl extends ServiceImpl<SysOrgClosureExtMapper, SysOrgClosure> implements ISysOrgClosureService {
 
+    @Autowired
+    private SysOrgClosureExtMapper sysOrgClosureExtMapper;
+
+    @Override
+    public List<Long> selectDescendantIds(Long orgId) {
+        return sysOrgClosureExtMapper.selectDescendantIds(orgId);
+    }
 }

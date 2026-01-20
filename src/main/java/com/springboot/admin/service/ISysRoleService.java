@@ -22,6 +22,7 @@ public interface ISysRoleService extends IService<SysRole> {
      * @param userId 用户ID
      * @return 角色列表
      */
-    List<SysRoleVO> listRolesByUserId(Long userId);
+    List<SysRoleVO> selectRolesByUserId(Long userId);
+
 }
 

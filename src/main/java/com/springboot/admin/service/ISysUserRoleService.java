@@ -9,7 +9,9 @@ import java.util.List;
  * <p>
  * 用户-角色关联表 服务类
  * </p>
- *
+ * 说明：
+ * - 提供用户与角色关联查询
+ * - 支持数据权限计算时获取用户角色ID列表
  * @author system
  * @since 2026-01-18
  */
@@ -21,6 +23,6 @@ public interface ISysUserRoleService extends IService<SysUserRole> {
      * @param userId 用户ID
      * @return 角色ID列表
      */
-    List<Long> listRoleIdsByUserId(Long userId);
+    List<Long> selectRoleIdsByUserId(Long userId);
 }
 

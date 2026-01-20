@@ -1,10 +1,12 @@
 package com.springboot.admin.service.impl;
 
-import com.springboot.admin.model.entity.sys.SysRoleCustomOrg;
-import com.springboot.admin.mapper.auto.SysRoleCustomOrgMapper;
-import com.springboot.admin.service.ISysRoleCustomOrgService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.springboot.admin.mapper.ext.SysRoleCustomOrgExtMapper;
+import com.springboot.admin.model.entity.sys.SysRoleCustomOrg;
+import com.springboot.admin.service.ISysRoleCustomOrgService;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * <p>
@@ -15,6 +17,11 @@ import org.springframework.stereotype.Service;
  * @since 2026-01-18
  */
 @Service
-public class SysRoleCustomOrgServiceImpl extends ServiceImpl<SysRoleCustomOrgMapper, SysRoleCustomOrg> implements ISysRoleCustomOrgService {
+public class SysRoleCustomOrgServiceImpl extends ServiceImpl<SysRoleCustomOrgExtMapper, SysRoleCustomOrg> implements ISysRoleCustomOrgService {
 
+    private SysRoleCustomOrgExtMapper sysRoleCustomOrgExtMapper;
+    @Override
+    public List<Long> selectOrgIdsByUserId(Long userId) {
+        return sysRoleCustomOrgExtMapper.selectOrgIdsByUserId(userId);
+    }
 }

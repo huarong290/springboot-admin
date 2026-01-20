@@ -17,4 +17,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class SysDataScopeServiceImpl extends ServiceImpl<SysDataScopeMapper, SysDataScope> implements ISysDataScopeService {
 
+
+
 }

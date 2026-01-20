@@ -148,7 +148,15 @@ public class JwtUtil {
         Claims claims = parseToken(token);
         return claims == null ? null : claims.getSubject();
     }
+    public String getClaimAsString(String token, String key) {
+        Claims claims = parseToken(token);
+        return claims == null ? null : claims.get(key, String.class);
+    }
 
+    public Map<String, Object> getAllClaims(String token) {
+        Claims claims = parseToken(token);
+        return claims;
+    }
     /**
      * 获取 Token 类型
      */

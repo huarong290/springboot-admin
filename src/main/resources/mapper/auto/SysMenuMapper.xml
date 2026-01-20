@@ -5,7 +5,7 @@
     <!-- 通用查询映射结果 -->
     <resultMap id="BaseResultMap" type="com.springboot.admin.model.entity.sys.SysMenu">
         <id column="id" property="id" />
-        <result column="parent_id" property="parentId" />
+        <result column="menu_parent_id" property="menuParentId" />
         <result column="menu_name" property="menuName" />
         <result column="menu_path" property="menuPath" />
         <result column="menu_component" property="menuComponent" />
@@ -24,7 +24,7 @@
 
     <!-- 通用查询结果列 -->
     <sql id="Base_Column_List">
-        id, parent_id, menu_name, menu_path, menu_component, menu_icon, menu_type, menu_sort, visible, menu_status, delete_flag, version, create_by, create_time, update_by, update_time
+        id, menu_parent_id, menu_name, menu_path, menu_component, menu_icon, menu_type, menu_sort, visible, menu_status, delete_flag, version, create_by, create_time, update_by, update_time
     </sql>
 
 </mapper>

@@ -32,7 +32,6 @@ public interface UserInfoConvert {
      * @return VO 对象
      */
     @Mapping(source = "roles", target = "roles", qualifiedByName = "mapRoles")
-    @Mapping(source = "permissions", target = "permissions", qualifiedByName = "mapPermissions")
     @Mapping(source = "menus", target = "menus", qualifiedByName = "mapMenus")
     SysUserInfoVO dtoToVO(UserInfoDTO dto);
 

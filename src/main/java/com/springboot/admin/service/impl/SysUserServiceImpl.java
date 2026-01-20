@@ -73,5 +73,17 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserExtMapper, SysUser> i
         // 2️⃣ Entity → DTO（统一交给 Convert）
         return sysUserConvert.entityToDTO(sysUser);
     }
+
+    @Override
+    public Long getUserOrgId(Long userId) {
+        SysUser user = this.getById(userId);
+        return user != null ? user.getOrgId() : null;
+    }
+
+    @Override
+    public Long getUserDeptId(Long userId) {
+        SysUser user = this.getById(userId);
+        return user != null ? user.getDeptId() : null;
+    }
 }
 

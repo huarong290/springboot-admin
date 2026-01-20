@@ -25,8 +25,28 @@
     <select id="selectPermissionsByUserId" resultType="com.springboot.admin.model.entity.sys.SysPermission">
         SELECT DISTINCT p.*
         FROM sys_permission p
-        INNER JOIN sys_role_permission rp ON p.id = rp.permission_id
-        INNER JOIN sys_user_role ur ON rp.role_id = ur.role_id
+        INNER JOIN sys_role_permission rp
+        ON rp.permission_id = p.id
+        AND rp.delete_flag = 0
+        INNER JOIN sys_user_role ur
+        ON ur.role_id = rp.role_id
+        AND ur.delete_flag = 0
         WHERE ur.user_id = #{userId}
+        AND p.permission_status = 1
+        AND p.delete_flag = 0
+    </select>
+
+    <!-- 根据角色ID集合查询权限点code列表 -->
+    <select id="selectPermissionCodesByRoleIds" resultType="java.lang.String">
+        SELECT DISTINCT p.permission_code
+        FROM sys_permission p
+        INNER JOIN sys_role_permission rp
+        ON rp.permission_id = p.id AND rp.delete_flag = 0
+        WHERE rp.role_id IN
+        <foreach collection="roleIds" item="roleId" open="(" separator="," close=")">
+            #{roleId}
+        </foreach>
+        AND p.permission_status = 1
+        AND p.delete_flag = 0
     </select>
 </mapper>

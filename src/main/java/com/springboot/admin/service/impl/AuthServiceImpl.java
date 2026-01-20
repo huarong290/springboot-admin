@@ -1,5 +1,6 @@
 package com.springboot.admin.service.impl;
 
+import com.springboot.admin.assemble.UserInfoAssembler;
 import com.springboot.admin.constants.security.JwtConstants;
 import com.springboot.admin.exception.BusinessException;
 import com.springboot.admin.model.dto.TokenRefreshReqDTO;
@@ -15,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -23,13 +26,20 @@ public class AuthServiceImpl implements IAuthService {
 
     @Autowired
     private ISysUserService sysUserService;
-    @Autowired private ISysRoleService sysRoleService;
-    @Autowired private ISysPermissionService sysPermissionService;
-    @Autowired private ISysMenuService sysMenuService;
-    @Autowired private IRedisService redisService;
-    @Autowired private JwtUtil jwtUtil;
-    @Autowired private PasswordEncoder passwordEncoder;
-
+    @Autowired
+    private ISysRoleService sysRoleService;
+    @Autowired
+    private ISysPermissionService sysPermissionService;
+    @Autowired
+    private ISysMenuService sysMenuService;
+    @Autowired
+    private IRedisService redisService;
+    @Autowired
+    private JwtUtil jwtUtil;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private UserInfoAssembler userInfoAssembler;
 
     @Override
     public TokenResDTO login(UserLoginReqDTO dto) {
@@ -49,6 +59,10 @@ public class AuthServiceImpl implements IAuthService {
         }
 
         // 4. 生成 JWT
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put("loginIp", dto.getLoginIp());
+        extraClaims.put("clientType", dto.getClientType());
+        extraClaims.put("deviceId", dto.getDeviceId());
         String accessToken = jwtUtil.generateAccessToken(user.getUsername(), null);
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
@@ -68,6 +82,7 @@ public class AuthServiceImpl implements IAuthService {
         tokenRes.setAccessToken(accessToken);
         tokenRes.setRefreshToken(refreshToken);
         tokenRes.setTokenType("Bearer");
+        tokenRes.setIp(dto.getLoginIp());
         tokenRes.setDeviceId(dto.getDeviceId());
         tokenRes.setClientType(dto.getClientType());
         tokenRes.setExpiresIn(jwtUtil.getRemainingTime(accessToken));
@@ -168,28 +183,44 @@ public class AuthServiceImpl implements IAuthService {
     }
 
 
+    /**
+     * 根据 JWT Token 获取当前用户完整信息
+     *
+     * @param token JWT AccessToken
+     * @return UserInfoDTO
+     */
     @Override
     public UserInfoDTO getUserInfoByToken(String token) {
-        if (StringUtils.isBlank(token)) return null;
+        // 1️⃣ 校验 token
+        if (StringUtils.isBlank(token)) {
+            return null;
+        }
 
+        // 2️⃣ 从 token 中解析用户名
         String username = jwtUtil.getUsername(token);
+        if (StringUtils.isBlank(username)) {
+            return null;
+        }
+
+        // 3️⃣ 根据用户名查询用户基础信息（SysUserDTO）
         SysUserDTO user = sysUserService.getUserByUsername(username);
-        if (user == null) return null;
+        if (user == null) {
+            return null;
+        }
 
-        UserInfoDTO dto = new UserInfoDTO();
-        dto.setUserId(user.getId());
-        dto.setUsername(user.getUsername());
-        dto.setNickname(user.getNickname());
-        dto.setAvatar(user.getAvatar());
-        dto.setEmail(user.getEmail());
-        dto.setPhone(user.getPhone());
-        dto.setStatus(user.getUserStatus().byteValue());
-        dto.setTenantId(user.getTenantId());
-
-        dto.setRoles(sysRoleService.listRolesByUserId(user.getId()));
-        dto.setPermissions(sysPermissionService.listPermissionsByUserId(user.getId()));
-        dto.setMenus(sysMenuService.listMenusByUserId(user.getId()));
-        return dto;
+        // 4️⃣ 调用装配器生成完整 DTO
+        // 装配器内部会处理：
+        // - 用户基础信息
+        // - 角色列表
+        // - 权限码列表
+        // - 菜单树
+        // - 数据权限
+        return userInfoAssembler.assemble(
+                user.getId(),
+                jwtUtil.getClaimAsString(token, "loginIp"),     // 可从 token 或请求上下文获取
+                jwtUtil.getClaimAsString(token, "clientType"),  // token 内存储或默认 WEB
+                jwtUtil.getClaimAsString(token, "deviceId")     // token 内存储或客户端传递
+        );
     }
 
 }

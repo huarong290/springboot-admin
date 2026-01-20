@@ -23,7 +23,7 @@ public class SysUserRoleServiceImpl extends ServiceImpl<SysUserRoleExtMapper, Sy
     private SysUserRoleExtMapper sysUserRoleExtMapper;
 
     @Override
-    public List<Long> listRoleIdsByUserId(Long userId) {
+    public List<Long> selectRoleIdsByUserId(Long userId) {
         // 查询用户关联的角色ID
         return sysUserRoleExtMapper.selectRoleIdsByUserId(userId);
     }

@@ -1,10 +1,13 @@
 package com.springboot.admin.service.impl;
 
-import com.springboot.admin.model.entity.sys.SysRoleCustomDept;
-import com.springboot.admin.mapper.auto.SysRoleCustomDeptMapper;
-import com.springboot.admin.service.ISysRoleCustomDeptService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.springboot.admin.mapper.ext.SysRoleCustomDeptExtMapper;
+import com.springboot.admin.model.entity.sys.SysRoleCustomDept;
+import com.springboot.admin.service.ISysRoleCustomDeptService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * <p>
@@ -15,6 +18,12 @@ import org.springframework.stereotype.Service;
  * @since 2026-01-18
  */
 @Service
-public class SysRoleCustomDeptServiceImpl extends ServiceImpl<SysRoleCustomDeptMapper, SysRoleCustomDept> implements ISysRoleCustomDeptService {
+public class SysRoleCustomDeptServiceImpl extends ServiceImpl<SysRoleCustomDeptExtMapper, SysRoleCustomDept> implements ISysRoleCustomDeptService {
 
+    @Autowired
+    private SysRoleCustomDeptExtMapper sysRoleCustomDeptExtMapper;
+    @Override
+    public List<Long> selectDeptIdsByUserId(Long userId) {
+        return sysRoleCustomDeptExtMapper.selectDeptIdsByUserId(userId);
+    }
 }

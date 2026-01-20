@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.springboot.admin.convert.SysPermissionConvert;
 import com.springboot.admin.mapper.ext.SysPermissionExtMapper;
 import com.springboot.admin.model.entity.sys.SysPermission;
-import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
 import com.springboot.admin.model.vo.permission.SysPermissionVO;
 import com.springboot.admin.service.ISysPermissionService;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +34,12 @@ public class SysPermissionServiceImpl extends ServiceImpl<SysPermissionExtMapper
     public List<SysPermissionVO> listPermissionsByUserId(Long userId) {
         List<SysPermission> permissions = sysPermissionExtMapper.selectPermissionsByUserId(userId);
         return permissionConvert.toVoList(permissions);
+    }
+
+    @Override
+    public List<String> selectPermissionCodesByRoleIds(List<Long> roleIds) {
+
+        return sysPermissionExtMapper.selectPermissionCodesByRoleIds(roleIds);
     }
 
 
