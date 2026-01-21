@@ -1,30 +1,159 @@
-<mapper namespace="com.springboot.admin.mapper.ext.SysPermissionExtMapper">
+package com.springboot.admin.utils;
 
-    <!-- 根据用户ID查询权限点列表 -->
-    <select id="selectPermissionsByUserId" resultType="com.springboot.admin.model.entity.sys.SysPermission">
-        SELECT DISTINCT p.*
-        FROM sys_permission p
-        INNER JOIN sys_role_permission rp
-            ON rp.permission_id = p.id AND rp.delete_flag = 0
-        INNER JOIN sys_user_role ur
-            ON ur.role_id = rp.role_id AND ur.delete_flag = 0
-        WHERE ur.user_id = #{userId}
-          AND p.permission_status = 1
-          AND p.delete_flag = 0
-    </select>
+import com.springboot.admin.config.JwtProperties;
+import com.springboot.admin.constants.security.JwtConstants;
+import com.springboot.admin.exception.JwtAuthenticationException;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
-    <!-- 根据角色ID集合查询权限点code列表 -->
-    <select id="selectPermissionCodesByRoleIds" resultType="java.lang.String">
-        SELECT DISTINCT p.permission_code
-        FROM sys_permission p
-        INNER JOIN sys_role_permission rp
-            ON rp.permission_id = p.id AND rp.delete_flag = 0
-        WHERE rp.role_id IN
-        <foreach collection="roleIds" item="roleId" open="(" separator="," close=")">
-            #{roleId}
-        </foreach>
-          AND p.permission_status = 1
-          AND p.delete_flag = 0
-    </select>
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+import java.util.Map;
+import java.util.UUID;
 
-</mapper>
+/**
+ * JWT 工具类
+ *
+ * 功能：
+ * 1. 生成 AccessToken / RefreshToken
+ * 2. 解析 JWT 获取 Claims
+ * 3. 校验 Token 是否有效
+ * 4. 获取 Token 剩余有效时间
+ * 5. 从 Authorization Header 提取 Bearer Token
+ */
+@Slf4j
+@Component
+public class JwtUtil {
+
+    private final JwtProperties jwtProperties;
+
+    private SecretKey secretKey;
+
+    public JwtUtil(JwtProperties jwtProperties) {
+        this.jwtProperties = jwtProperties;
+    }
+
+    @PostConstruct
+    public void init() {
+        byte[] keyBytes = jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalArgumentException("JWT Secret 长度不足，HS256 至少需要 32 字节");
+        }
+        this.secretKey = Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    // ===================== Token 生成 =====================
+
+    public String generateAccessToken(String username, Map<String, Object> extraClaims) {
+        return generateToken(username, JwtConstants.TOKEN_TYPE_ACCESS,
+                jwtProperties.getAccessTokenExpiration(), extraClaims);
+    }
+
+    public String generateRefreshToken(String username) {
+        return generateToken(username, JwtConstants.TOKEN_TYPE_REFRESH,
+                jwtProperties.getRefreshTokenExpiration(), null);
+    }
+
+    private String generateToken(String username,
+                                 String tokenType,
+                                 long expirationMillis,
+                                 Map<String, Object> extraClaims) {
+
+        Date now = new Date();
+        Date expiration = new Date(now.getTime() + expirationMillis);
+        String jti = UUID.randomUUID().toString();
+
+        var claimsBuilder = Jwts.builder()
+                .claims()
+                .subject(username)
+                .issuedAt(now)
+                .expiration(expiration)
+                .add(JwtConstants.CLAIM_TOKEN_TYPE, tokenType)
+                .id(jti);
+
+        if (extraClaims != null && !extraClaims.isEmpty()) {
+            claimsBuilder.add(extraClaims);
+        }
+
+        return claimsBuilder.and().signWith(secretKey).compact();
+    }
+
+    // ===================== Token 解析 =====================
+
+    public Claims parseToken(String token) {
+        try {
+            return Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (ExpiredJwtException e) {
+            log.warn("JWT 已过期: {}", e.getMessage());
+            throw new JwtAuthenticationException("Token 已过期");
+        } catch (SignatureException e) {
+            log.warn("JWT 签名无效: {}", e.getMessage());
+            throw new JwtAuthenticationException("Token 签名无效");
+        } catch (MalformedJwtException | UnsupportedJwtException e) {
+            log.warn("JWT 格式错误: {}", e.getMessage());
+            throw new JwtAuthenticationException("Token 格式错误");
+        } catch (Exception e) {
+            log.error("JWT 解析失败: {}", e.getMessage(), e);
+            throw new JwtAuthenticationException("JWT解析失败");
+        }
+    }
+
+    // ===================== Claims 提取 =====================
+
+    public String getUsername(String token) {
+        return parseToken(token).getSubject();
+    }
+
+    public String getClaimAsString(String token, String key) {
+        return parseToken(token).get(key, String.class);
+    }
+
+    public Map<String, Object> getAllClaims(String token) {
+        return parseToken(token);
+    }
+
+    public String getTokenType(String token) {
+        return parseToken(token).get(JwtConstants.CLAIM_TOKEN_TYPE, String.class);
+    }
+
+    public String getJti(String token) {
+        return parseToken(token).getId();
+    }
+
+    // ===================== Token 校验 =====================
+
+    public boolean isAccessTokenValid(String token) {
+        return isTokenValid(token, JwtConstants.TOKEN_TYPE_ACCESS);
+    }
+
+    public boolean isRefreshTokenValid(String token) {
+        return isTokenValid(token, JwtConstants.TOKEN_TYPE_REFRESH);
+    }
+
+    private boolean isTokenValid(String token, String expectedType) {
+        Claims claims = parseToken(token);
+        return claims.getExpiration().after(new Date()) &&
+                expectedType.equals(claims.get(JwtConstants.CLAIM_TOKEN_TYPE, String.class));
+    }
+
+    public long getRemainingTime(String token) {
+        return parseToken(token).getExpiration().getTime() - System.currentTimeMillis();
+    }
+
+    // ===================== Header 解析 =====================
+
+    public static String extractBearerToken(String authHeader) {
+        if (authHeader != null && authHeader.startsWith(JwtConstants.JWT_BEARER_PREFIX)) {
+            return authHeader.substring(JwtConstants.JWT_BEARER_PREFIX.length());
+        }
+        return "";
+    }
+}

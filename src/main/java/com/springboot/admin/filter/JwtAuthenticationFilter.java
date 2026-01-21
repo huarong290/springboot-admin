@@ -1,7 +1,7 @@
 package com.springboot.admin.filter;
 
 import com.springboot.admin.constants.security.JwtConstants;
-import com.springboot.admin.exception.BusinessException;
+import com.springboot.admin.exception.JwtAuthenticationException;
 import com.springboot.admin.service.IRedisService;
 import com.springboot.admin.utils.JwtUtil;
 import io.jsonwebtoken.Claims;
@@ -38,22 +38,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = JwtUtil.extractBearerToken(request.getHeader(JwtConstants.JWT_HEADER));
 
         if (StringUtils.isNotBlank(token)) {
+            // JwtUtil 内部已经会抛 JwtAuthenticationException
             Claims claims = jwtUtil.parseToken(token);
 
             // 1️⃣ 校验 token 类型
-            if (!JwtConstants.TOKEN_TYPE_ACCESS.equals(claims.get("type", String.class))) {
-                throw new BusinessException("非法 Token 类型");
+            if (!JwtConstants.TOKEN_TYPE_ACCESS.equals(claims.get(JwtConstants.CLAIM_TOKEN_TYPE, String.class))) {
+                throw new JwtAuthenticationException("非法 Token 类型");
             }
 
             // 2️⃣ 校验是否过期
             if (claims.getExpiration().before(new Date())) {
-                throw new BusinessException("Token 已过期");
+                throw new JwtAuthenticationException("Token 已过期");
             }
 
             // 3️⃣ 校验 jti 是否拉黑
             String jti = claims.get("jti", String.class);
             if (redisService.hasKey(JwtConstants.JTI_BLACKLIST_PREFIX + jti)) {
-                throw new BusinessException("Token 已失效");
+                throw new JwtAuthenticationException("Token 已失效");
             }
 
             // 4️⃣ 设置 SecurityContext

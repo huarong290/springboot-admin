@@ -3,8 +3,8 @@ package com.springboot.admin.utils;
 import com.springboot.admin.config.JwtProperties;
 import com.springboot.admin.constants.security.JwtConstants;
 import com.springboot.admin.exception.BusinessException;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
+import com.springboot.admin.exception.JwtAuthenticationException;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -48,11 +48,12 @@ public class JwtUtil {
      * 初始化 SecretKey
      * 使用 HS256 算法
      */
-    @PostConstruct
-    public void init() {
-        this.secretKey = Keys.hmacShaKeyFor(
-                jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8)
-        );
+    @PostConstruct public void init() {
+        byte[] keyBytes = jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalArgumentException("JWT Secret 长度不足，HS256 至少需要 32 字节");
+        }
+        this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
     // ===================== Token 生成 =====================
@@ -135,9 +136,18 @@ public class JwtUtil {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
+        } catch (ExpiredJwtException e) {
+            log.warn("JWT 已过期: {}", e.getMessage());
+            throw new JwtAuthenticationException("Token 已过期");
+        } catch (io.jsonwebtoken.security.SignatureException e) {
+            log.warn("JWT 签名无效: {}", e.getMessage());
+            throw new JwtAuthenticationException("Token 签名无效");
+        } catch (MalformedJwtException | UnsupportedJwtException e) {
+            log.warn("JWT 格式错误: {}", e.getMessage());
+            throw new JwtAuthenticationException("Token 格式错误");
         } catch (Exception e) {
-            log.warn("JWT 解析失败: {}", e.getMessage());
-            throw new BusinessException("JWT解析失败或已过期");
+            log.error("JWT 解析失败: {}", e.getMessage(), e);
+            throw new JwtAuthenticationException("JWT解析失败");
         }
     }
 
