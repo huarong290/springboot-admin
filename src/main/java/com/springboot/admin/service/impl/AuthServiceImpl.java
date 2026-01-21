@@ -136,7 +136,8 @@ public class AuthServiceImpl implements IAuthService {
         tokenRes.setRefreshToken(dto.getRefreshToken());
         tokenRes.setTokenType("Bearer");
         tokenRes.setExpiresIn(jwtUtil.getRemainingTime(accessToken));
-
+        tokenRes.setDeviceId(dto.getDeviceId());
+        tokenRes.setClientType(dto.getClientType());
         log.info("刷新令牌成功: userId={}, deviceId={}", userId, dto.getDeviceId());
         return tokenRes;
     }
