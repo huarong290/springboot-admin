@@ -16,4 +16,9 @@ public final class TraceConstants {
      * TraceId 请求头
      */
     public static final String TRACE_HEADER = "X-Trace-Id";
+
+    /** 默认最大日志打印长度 */
+    public static final int DEFAULT_MAX_LOG_LENGTH = 2048;
+
+
 }

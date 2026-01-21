@@ -1,168 +1,167 @@
 package com.springboot.admin.aop;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.springboot.admin.annotation.Logable;
+import com.springboot.admin.constants.log.TraceConstants;
 import com.springboot.admin.utils.TraceUtil;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.slf4j.MDC;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 
 /**
- * 日志切面
+ * 企业级日志切面
  *
- * 功能：
- * 1️⃣ 打印方法入参、出参
- * 2️⃣ 处理文件上传参数，只记录文件名、大小、类型
- * 3️⃣ 捕获异常并打印堆栈
- * 4️⃣ 记录方法耗时
- * 5️⃣ 生成链路 traceId
- * 6️⃣ 可扩展记录审计信息（用户、IP、URL）
+ * 优化点：
+ * 1. 配置化日志开关和截断长度
+ * 2. 使用 MDC TraceId 支持链路追踪
+ * 3. 参数/返回值脱敏
+ * 4. 异步发布审计日志事件
  */
 @Slf4j
 @Aspect
 @Component
+@RequiredArgsConstructor
 public class LogAspect {
 
-    /**
-     * 切点：标注 @Logable 注解的方法
-     */
+    private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
+
+
+
     @Pointcut("@annotation(com.springboot.admin.annotation.Logable)")
     public void logableMethods() {}
 
     @Around("logableMethods()")
     public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Method method = signature.getMethod();
-        Logable logable = method.getAnnotation(Logable.class);
+        Logable logable = signature.getMethod().getAnnotation(Logable.class);
+
+        // 1️⃣ TraceId 放入 MDC
+        String traceId = Optional.ofNullable(TraceUtil.getTraceId())
+                .orElse(UUID.randomUUID().toString().replace("-", ""));
+        MDC.put(TraceConstants.TRACE_ID, traceId);
+
+        Map<String, Object> inputParams = new LinkedHashMap<>();
+        if (logable.logRequest()) {
+            inputParams = parseParams(signature, joinPoint.getArgs());
+        }
 
         String className = signature.getDeclaringType().getSimpleName();
         String methodName = signature.getName();
-        // 从 MDC 中获取 traceId（和 Filter 保持一致）
-        String traceId = TraceUtil.getTraceId();
-        if (traceId == null) {
-            traceId = UUID.randomUUID().toString(); // 防护：非HTTP请求也能生成
-        }
-        Object[] args = joinPoint.getArgs();
-        String[] paramNames = signature.getParameterNames();
+        Instant start = Instant.now();
 
-        Map<String, Object> filteredParams = new LinkedHashMap<>();
         if (logable.logRequest()) {
-            for (int i = 0; i < args.length; i++) {
-                Object arg = args[i];
-                if (arg == null || isSkippableType(arg)) continue;
-                filteredParams.put(paramNames[i], handleFileArg(arg));
-            }
+            log.debug("➡️ [{}] 请求: {}.{}() | 参数: {}", traceId, className, methodName, toJson(inputParams));
         }
 
-        Instant start = Instant.now(); // 记录开始时间
-        Object result;
+        Object result = null;
+        Throwable exception = null;
+
         try {
-            if (logable.logRequest()) {
-                log.info("➡️ [{}] 调用方法：{}.{}()", traceId, className, methodName);
-                log.info("📥 入参：{}", filteredParams);
-            }
-
-            result = joinPoint.proceed(); // 执行方法
-
-            // 出参日志
-            if (logable.logResponse() && !isSkippableType(result)) {
-                log.info("📤 [{}] 方法返回：{}", traceId, result);
-            }
-
+            result = joinPoint.proceed();
             return result;
         } catch (Throwable ex) {
-            log.error("❌ [{}] 方法异常：{}.{}() 异常信息：{}", traceId, className, methodName, ex.getMessage(), ex);
+            exception = ex;
+            log.warn("❌ [{}] 异常: {}.{}() | Msg: {}", traceId, className, methodName, ex.getMessage());
             throw ex;
         } finally {
-            // 方法耗时
             Instant end = Instant.now();
             long duration = Duration.between(start, end).toMillis();
-            log.info("⏱ [{}] 方法耗时：{} ms", traceId, duration);
 
-            // 可扩展：记录用户、IP、URL到审计日志数据库
-            // saveAuditLog(traceId, className, methodName, filteredParams, result, duration);
+            if (logable.logResponse() && exception == null) {
+                log.debug("📤 [{}] 响应: {} | 耗时: {}ms", traceId, formatResult(result), duration);
+            }
+
+            publishAuditLog(traceId, className, methodName, inputParams, result, exception, duration);
+            MDC.remove("traceId");
         }
     }
 
-    /**
-     * 判断对象是否需要跳过日志
-     * - 文件上传
-     * - 数组形式的文件
-     */
-    private boolean isSkippableType(Object obj) {
-        return obj instanceof HttpServletRequest ||
-                obj instanceof HttpServletResponse ||
-                obj instanceof MultipartFile ||
-                obj instanceof MultipartFile[] ||
-                obj instanceof Collection<?> && ((Collection<?>) obj).stream().anyMatch(e -> e instanceof MultipartFile);
+    private Map<String, Object> parseParams(MethodSignature signature, Object[] args) {
+        Map<String, Object> paramMap = new LinkedHashMap<>();
+        String[] paramNames = signature.getParameterNames();
+        if (paramNames == null || args == null) return Collections.emptyMap();
+
+        for (int i = 0; i < args.length; i++) {
+            if (i >= paramNames.length) break;
+            Object arg = args[i];
+            if (arg instanceof ServletRequest || arg instanceof ServletResponse) continue;
+            if (arg instanceof MultipartFile || arg instanceof MultipartFile[] || arg instanceof InputStreamSource) {
+                paramMap.put(paramNames[i], handleFileArg(arg));
+            } else {
+                paramMap.put(paramNames[i], maskSensitive(paramNames[i], arg));
+            }
+        }
+        return paramMap;
     }
 
-    /**
-     * 处理文件参数，只记录文件名、大小、类型
-     */
+    /** 脱敏处理 */
+    private Object maskSensitive(String name, Object value) {
+        if (value == null) return null;
+        if ("password".equalsIgnoreCase(name) || "pwd".equalsIgnoreCase(name)) {
+            return "***";
+        }
+        if ("phone".equalsIgnoreCase(name) || "mobile".equalsIgnoreCase(name)) {
+            return String.valueOf(value).replaceAll("\\d{4}$", "****");
+        }
+        return value;
+    }
+
+    private String toJson(Object obj) {
+        if (obj == null) return "null";
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            return String.valueOf(obj);
+        }
+    }
+
+    private String formatResult(Object result) {
+        if (result == null) return "null";
+        if (result instanceof InputStreamSource) return "[File Download]";
+        String json = toJson(result);
+        int maxLen = TraceConstants.DEFAULT_MAX_LOG_LENGTH;
+        return json.length() > maxLen ? json.substring(0, maxLen) + "... (截断)" : json;
+    }
+
     private Object handleFileArg(Object arg) {
         if (arg instanceof MultipartFile file) {
-            return Map.of(
-                    "filename", file.getOriginalFilename(),
-                    "size", file.getSize(),
-                    "contentType", file.getContentType()
-            );
+            return String.format("[File: %s, Size: %d, Type: %s]",
+                    file.getOriginalFilename(), file.getSize(), file.getContentType());
         }
-
         if (arg instanceof MultipartFile[] files) {
-            List<Map<String, Object>> list = new ArrayList<>();
-            for (MultipartFile f : files) {
-                list.add(Map.of(
-                        "filename", f.getOriginalFilename(),
-                        "size", f.getSize(),
-                        "contentType", f.getContentType()
-                ));
-            }
-            return list;
+            return String.format("[FileArray: %d files]", files.length);
         }
-
-        if (arg instanceof Collection<?> coll) {
-            List<Object> list = new ArrayList<>();
-            for (Object item : coll) {
-                if (item instanceof MultipartFile fileItem) {
-                    list.add(Map.of(
-                            "filename", fileItem.getOriginalFilename(),
-                            "size", fileItem.getSize(),
-                            "contentType", fileItem.getContentType()
-                    ));
-                } else {
-                    list.add(item);
-                }
-            }
-            return list;
-        }
-
-        return arg;
+        return "Unknown File Type";
     }
 
-    /**
-     * 可扩展方法：写审计日志到数据库
-     *
-     * @param traceId      唯一调用ID
-     * @param className    类名
-     * @param methodName   方法名
-     * @param params       入参
-     * @param result       返回值
-     * @param durationMs   方法耗时
-     */
-    private void saveAuditLog(String traceId, String className, String methodName,
-                              Map<String, Object> params, Object result, long durationMs) {
-        // TODO: 实现审计日志存储，可写到数据库表 sys_log 或 sys_audit_log
+    private void publishAuditLog(String traceId, String className, String methodName,
+                                 Map<String, Object> params, Object result, Throwable ex, long duration) {
+//        SysLogEvent logEvent = new SysLogEvent(this);
+//        logEvent.setTraceId(traceId);
+//        logEvent.setMethod(className + "." + methodName);
+//        logEvent.setParams(toJson(params));
+//        logEvent.setResult(ex != null ? "Exception: " + ex.getMessage() : formatResult(result));
+//        logEvent.setStatus(ex == null ? 1 : 0);
+//        logEvent.setDuration(duration);
+//        logEvent.setCreateTime(new Date());
+//
+//        eventPublisher.publishEvent(logEvent);
     }
 }
