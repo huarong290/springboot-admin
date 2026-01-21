@@ -8,10 +8,11 @@ import com.springboot.admin.model.entity.sys.SysUser;
 import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
 import com.springboot.admin.model.vo.role.SysRoleVO;
 import com.springboot.admin.service.*;
-import com.springboot.admin.utils.MenuTreeBuilderUtil;
+import com.springboot.admin.utils.TreeBuilderUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -79,8 +80,20 @@ public class UserInfoAssemblerImpl implements UserInfoAssembler {
         // =======================
         List<SysMenu> menus =
                 iSysMenuService.selectMenusByRoleIds(roleIds);
+        // Entity -> VO
         List<SysMenuTreeVO> menuVOs = sysMenuConvert.toVoList(menus);
-        dto.setMenus(MenuTreeBuilderUtil.build(menuVOs));
+        // 使用泛型 TreeBuilder 构建树，支持 menuSort 排序
+        List<SysMenuTreeVO> menuTree = TreeBuilderUtil.buildTree(
+                menuVOs,
+                SysMenuTreeVO::getId,
+                SysMenuTreeVO::getMenuParentId,
+                SysMenuTreeVO::getChildren,
+                SysMenuTreeVO::setChildren,
+                0L, // 根节点 parentId
+                Comparator.comparing(SysMenuTreeVO::getMenuSort)
+        );
+
+        dto.setMenus(menuTree);
 
         // =======================
         // 5️⃣ 数据权限范围

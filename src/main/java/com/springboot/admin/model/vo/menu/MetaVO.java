@@ -9,6 +9,7 @@ import lombok.Data;
  * 前端路由扩展信息，用于控制菜单展示效果。
  */
 @Data
+@Schema(description = "前端路由 Meta 信息")
 public class MetaVO {
 
     /**

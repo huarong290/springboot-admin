@@ -22,5 +22,9 @@ public final class CommonConstants {
      * Redis Key 分隔符
      */
     public static final String REDIS_KEY_SEPARATOR = ":";
+    /**
+     *  根节点常量
+     */
+    public static final Long ROOT_PARENT_ID = 0L;
 }
 
