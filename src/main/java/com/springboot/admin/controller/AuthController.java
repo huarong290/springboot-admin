@@ -28,7 +28,6 @@ public class AuthController {
     private final IAuthService authService;
     private final ICaptchaService captchaService;
 
-    private final IpUtil ipUtil; // 注入工具类
 
     @Operation(summary = "获取验证码", description = "返回 Base64 图片及验证码标识")
     @Logable(logRequest = false, logResponse = false) // 图片数据过大，不建议打入日志
@@ -44,7 +43,7 @@ public class AuthController {
     public ApiResult<TokenResDTO> login(@RequestBody UserLoginReqDTO dto, HttpServletRequest request) {
         // 逻辑完全下沉至 Service，保持接口层清爽
         // 获取客户端 IP
-        String clientIp = ipUtil.getClientIp(request);
+        String clientIp = IpUtil.getClientIp(request);
         dto.setLoginIp(clientIp);
         return ApiResult.successResult(authService.login(dto));
     }
@@ -52,8 +51,11 @@ public class AuthController {
     @PostMapping("/refresh")
     @Operation(summary = "刷新令牌", description = "通过旧的 RefreshToken 获取新的 AccessToken")
     @Logable(logRequest = true, logResponse = true)
-    public ApiResult<TokenResDTO> refresh(@RequestBody TokenRefreshReqDTO dto) {
-
+    public ApiResult<TokenResDTO> refresh(@RequestBody TokenRefreshReqDTO dto,HttpServletRequest request) {
+        // 逻辑完全下沉至 Service，保持接口层清爽
+        // 获取客户端 IP
+        String clientIp = IpUtil.getClientIp(request);
+        dto.setLoginIp(clientIp);
         return ApiResult.successResult(authService.refreshToken(dto));
 
     }

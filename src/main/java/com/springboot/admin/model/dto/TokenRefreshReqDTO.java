@@ -48,5 +48,10 @@ public class TokenRefreshReqDTO {
      */
     @Schema(description = "浏览器信息", example = "Chrome 121")
     private String browser;
+
+    /**
+     * 登录IP
+     */
+    private String loginIp;
 }
 

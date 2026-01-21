@@ -109,4 +109,9 @@ public interface IRedisService {
      * @return 自增后的值，失败返回 null
      */
     Long increment(String key, long timeout, TimeUnit unit);
+
+    /**
+     * 原子获取并删除 key（用于一次性 RefreshToken）
+     */
+    String getAndDelete(String key);
 }
