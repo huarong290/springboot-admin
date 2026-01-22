@@ -59,7 +59,7 @@ public class AuthServiceImpl implements IAuthService {
         // 1. 基础校验 (验证码校验逻辑通常由 Filter 或 AOP 处理，此处略)
 
         // 2. 查询用户
-        SysUserDTO user = sysUserService.getUserByUsername(dto.getUsername());
+        SysUserDTO user = sysUserService.getUserDTOByUsername(dto.getUsername());
         if (user == null) {
             // 模糊提示，防止枚举账号攻击
             throw new BusinessException("用户名或密码错误");
@@ -122,7 +122,7 @@ public class AuthServiceImpl implements IAuthService {
                 log.error("🚨 [严重安全警报] 令牌复用检测触发! User: {}, Device: {}, JTI: {}", username, deviceId, oldJti);
 
                 // 🛡️ 响应措施：宁杀错不放过，强制该用户所有设备下线，迫使重新修改密码
-                SysUserDTO user = sysUserService.getUserByUsername(username);
+                SysUserDTO user = sysUserService.getUserDTOByUsername(username);
                 if (user != null) {
                     invalidateAllUserTokens(user.getId());
                 }
@@ -197,7 +197,7 @@ public class AuthServiceImpl implements IAuthService {
 
         // 3. 清理设备绑定关系
         if (StringUtils.isNotBlank(username) && StringUtils.isNotBlank(deviceId)) {
-            SysUserDTO user = sysUserService.getUserByUsername(username);
+            SysUserDTO user = sysUserService.getUserDTOByUsername(username);
             if (user != null) {
                 redisService.deleteKey(DEVICE_KEY_PREFIX + user.getId() + ":" + deviceId);
             }
@@ -211,7 +211,7 @@ public class AuthServiceImpl implements IAuthService {
         if (StringUtils.isBlank(username)) return null;
 
         // 建议：此处 sysUserService 内部应增加缓存，避免高频查库
-        SysUserDTO user = sysUserService.getUserByUsername(username);
+        SysUserDTO user = sysUserService.getUserDTOByUsername(username);
         if (user == null) return null;
 
         return userInfoAssembler.assemble(

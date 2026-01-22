@@ -15,7 +15,30 @@ import java.util.List;
  * @since 2026-01-18
  */
 public interface ISysMenuService extends IService<SysMenu> {
+    /**
+     * 新增菜单
+     *
+     * @param menu 菜单实体
+     * @return Long 新增菜单ID
+     */
+    Long addMenu(SysMenu menu);
 
+    /**
+     * 更新菜单信息
+     *
+     * @param menu 菜单实体
+     * @return boolean 是否更新成功
+     */
+    boolean updateMenu(SysMenu menu);
+
+    /**
+     * 删除菜单（逻辑/物理删除）
+     *
+     * @param menuId 菜单ID
+     * @param logicalDelete 是否逻辑删除
+     * @return boolean 删除是否成功
+     */
+    boolean deleteMenu(Long menuId, boolean logicalDelete);
     /**
      * 根据用户ID查询菜单树
      *

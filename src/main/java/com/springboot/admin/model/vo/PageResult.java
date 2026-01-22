@@ -25,11 +25,11 @@ public class PageResult<T> {
     /**
      * 当前页码
      */
-    private int page;
+    private long page;
     /**
      * 每页大小
      */
-    private int size;
+    private long size;
 }
 
 
