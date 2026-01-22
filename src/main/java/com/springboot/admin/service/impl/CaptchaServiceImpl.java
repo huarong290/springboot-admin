@@ -55,10 +55,10 @@ public class CaptchaServiceImpl implements ICaptchaService {
         // 3. 获取验证码文本和图片
         String captchaCode = lineCaptcha.getCode();
         String imageBase64 = lineCaptcha.getImageBase64();
-
+        String key = buildRedisKey(captchaId);
         // 4. 存储到 Redis
         boolean success = redisService.setValue(
-                CaptchaConstants.CAPTCHA_PREFIX + captchaId,
+                key,
                 captchaCode.toLowerCase(),
                 CaptchaConstants.CAPTCHA_EXPIRE_MINUTES,
                 TimeUnit.MINUTES
@@ -76,7 +76,7 @@ public class CaptchaServiceImpl implements ICaptchaService {
         dto.setExpireTime(System.currentTimeMillis() + CaptchaConstants.CAPTCHA_EXPIRE_MINUTES * 60 * 1000);
         dto.setCaptchaEnabled(true);
 
-        log.info("生成验证码成功: captchaId={}", captchaId);
+        log.info("生成验证码成功: captchaId={},captchaCode={}", captchaId, captchaCode);
         return dto;
     }
 
@@ -94,10 +94,10 @@ public class CaptchaServiceImpl implements ICaptchaService {
             return false;
         }
 
-        String key = CaptchaConstants.CAPTCHA_PREFIX + captchaId;
+        String key = buildRedisKey(captchaId);
 
         // 2. 从 Redis 获取验证码
-        String storedCode = redisService.getValue(key);
+        String storedCode = redisService.getAndDelete(key);
         if (StringUtils.isBlank(storedCode)) {
             log.warn("验证码不存在或已过期: id={}", captchaId);
             return false;
@@ -134,12 +134,19 @@ public class CaptchaServiceImpl implements ICaptchaService {
             return false;
         }
 
-        String key = CaptchaConstants.CAPTCHA_PREFIX + captchaId;
+        String key = buildRedisKey(captchaId);
 
         boolean success = redisService.deleteKey(key);
 
         log.info("删除验证码: id={}, success={}", captchaId, success);
         return success;
+    }
+
+    // ================================
+    // 私有方法：统一 Redis key 构建
+    // ================================
+    private String buildRedisKey(String captchaId) {
+        return CaptchaConstants.CAPTCHA_PREFIX + captchaId;
     }
 
 }

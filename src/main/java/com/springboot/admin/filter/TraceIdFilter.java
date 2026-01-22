@@ -44,7 +44,7 @@ public class TraceIdFilter implements Filter {
             }
             TraceUtil.setTraceId(traceId);
             // 可选：打印请求开始信息
-            log.info("[{}] 请求开始: {} {}", traceId, httpRequest.getMethod(), httpRequest.getRequestURI());
+            log.info("请求开始: {} {}", httpRequest.getMethod(), httpRequest.getRequestURI());
 
             chain.doFilter(request, response);
         } finally {

@@ -14,6 +14,12 @@ spring:
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5             # 启动时预创建 5 个空闲连接
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      initialization-fail-timeout: 0  # 启动时初始化连接池，不等待第一次请求
 
   # ------------------------
   # Redis Sentinel 配置（Spring Boot 3.x 正确写法）

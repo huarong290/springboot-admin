@@ -92,7 +92,7 @@ public class LogAspect {
             requestJson = toJson(paramMap, loggable.safeSerialize());
         }
 
-        logByLevel(loggable.level(), "➡️ [{}] 请求: {}.{}() | 参数: {}", traceId, className, methodName, requestJson);
+        logByLevel(loggable.level(), "请求: [{}].[{}]() | 参数: [{}]", className, methodName, requestJson);
 
         Object result = null;
         Throwable exception = null;
