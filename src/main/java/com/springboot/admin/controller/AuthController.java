@@ -1,6 +1,6 @@
 package com.springboot.admin.controller;
 
-import com.springboot.admin.annotation.Logable;
+import com.springboot.admin.annotation.Loggable;
 import com.springboot.admin.common.ApiResult;
 import com.springboot.admin.model.dto.CaptchaDTO;
 import com.springboot.admin.model.dto.TokenRefreshReqDTO;
@@ -30,7 +30,7 @@ public class AuthController {
 
 
     @Operation(summary = "获取验证码", description = "返回 Base64 图片及验证码标识")
-    @Logable(logRequest = false, logResponse = false) // 图片数据过大，不建议打入日志
+    @Loggable(logRequest = false, logResponse = false) // 图片数据过大，不建议打入日志
     @GetMapping("/getCaptcha")
     public ApiResult<CaptchaDTO> getCaptcha() {
 
@@ -39,7 +39,7 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "用户登录", description = "包含验证码校验、账号密码验证及 Token 发放")
-    @Logable(logRequest = true, logResponse = true)
+    @Loggable(logRequest = true, logResponse = true)
     public ApiResult<TokenResDTO> login(@RequestBody UserLoginReqDTO dto, HttpServletRequest request) {
         // 逻辑完全下沉至 Service，保持接口层清爽
         // 获取客户端 IP
@@ -50,7 +50,7 @@ public class AuthController {
 
     @PostMapping("/refresh")
     @Operation(summary = "刷新令牌", description = "通过旧的 RefreshToken 获取新的 AccessToken")
-    @Logable(logRequest = true, logResponse = true)
+    @Loggable(logRequest = true, logResponse = true)
     public ApiResult<TokenResDTO> refresh(@RequestBody TokenRefreshReqDTO dto,HttpServletRequest request) {
         // 逻辑完全下沉至 Service，保持接口层清爽
         // 获取客户端 IP
@@ -62,7 +62,7 @@ public class AuthController {
 
     @PostMapping("/logout")
     @Operation(summary = "用户登出", description = "作废当前 accessToken 和 refreshToken，需要 deviceId")
-    @Logable(logRequest = true, logResponse = true)
+    @Loggable(logRequest = true, logResponse = true)
     public ApiResult<Void> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,
                                   @RequestBody TokenRefreshReqDTO dto) {
         String accessToken = JwtUtil.extractBearerToken(authHeader);
@@ -73,7 +73,7 @@ public class AuthController {
 
     @GetMapping("/userInfo")
     @Operation(summary = "获取用户信息", description = "拉取当前登录用户的角色、权限标识及菜单树")
-    @Logable(logRequest = false, logResponse = true)
+    @Loggable(logRequest = false, logResponse = true)
     public ApiResult<UserInfoDTO> getUserInfo(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
         // 仅负责解析 Token 标识，业务由 Service 处理

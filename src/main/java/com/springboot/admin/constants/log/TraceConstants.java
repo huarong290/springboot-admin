@@ -10,7 +10,7 @@ public final class TraceConstants {
     /**
      * TraceId 在 MDC 中的 key
      */
-    public static final String TRACE_ID = "traceId";
+    public static final String TRACE_ID = "trace_id";
 
     /**
      * TraceId 请求头

@@ -2,7 +2,7 @@ package com.springboot.admin.aop;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.springboot.admin.annotation.Logable;
+import com.springboot.admin.annotation.Loggable;
 import com.springboot.admin.model.event.SysLogEvent;
 import com.springboot.admin.utils.TraceUtil;
 import jakarta.servlet.ServletRequest;
@@ -45,13 +45,13 @@ public class LogAspect {
     /** 默认最大日志打印长度 */
     private static final int DEFAULT_MAX_LOG_LENGTH = 2048;
 
-    @Pointcut("@annotation(com.springboot.admin.annotation.Logable)")
+    @Pointcut("@annotation(com.springboot.admin.annotation.Loggable)")
     public void logableMethods() {}
 
     @Around("logableMethods()")
     public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Logable logable = signature.getMethod().getAnnotation(Logable.class);
+        Logable loggable = signature.getMethod().getAnnotation(Logable.class);
 
         // 1️⃣ TraceId 放入 MDC
         String traceId = Optional.ofNullable(TraceUtil.getTraceId())
@@ -59,7 +59,7 @@ public class LogAspect {
         MDC.put("traceId", traceId);
 
         Map<String, Object> inputParams = new LinkedHashMap<>();
-        if (logable.logRequest()) {
+        if (loggable.logRequest()) {
             inputParams = parseParams(signature, joinPoint.getArgs());
         }
 
@@ -67,7 +67,7 @@ public class LogAspect {
         String methodName = signature.getName();
         Instant start = Instant.now();
 
-        if (logable.logRequest()) {
+        if (loggable.logRequest()) {
             log.debug("➡️ [{}] 请求: {}.{}() | 参数: {}", traceId, className, methodName, toJson(inputParams));
         }
 
@@ -85,7 +85,7 @@ public class LogAspect {
             Instant end = Instant.now();
             long duration = Duration.between(start, end).toMillis();
 
-            if (logable.logResponse() && exception == null) {
+            if (loggable.logResponse() && exception == null) {
                 log.debug("📤 [{}] 响应: {} | 耗时: {}ms", traceId, formatResult(result), duration);
             }
 
