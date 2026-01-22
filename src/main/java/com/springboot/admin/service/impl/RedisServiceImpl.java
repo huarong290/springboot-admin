@@ -4,70 +4,52 @@ import com.springboot.admin.service.IRedisService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Redis 服务实现类 (企业级优化版)
+ * Redis 全能服务实现类
  *
  * <p>
- * <h3>核心设计：</h3>
- * <ul>
- * <li><b>基于 StringRedisTemplate：</b> 仅操作 String 格式，避免 JDK 序列化导致的跨语言/版本兼容性问题。</li>
- * <li><b>Lua 脚本原子性：</b> 关键业务（如计数器初始化、令牌销毁）使用 Lua 保证原子性。</li>
- * <li><b>Fail-Secure 策略：</b> 捕获底层 Redis 异常，防止因缓存服务抖动导致主业务崩溃（返回 null/false 让业务层决定降级）。</li>
- * </ul>
- * </p>
- *
- * <p>
- * <h3>⭐ 优化记录：</h3>
+ * <h3>核心特性：</h3>
  * <ol>
- * <li><b>脚本预加载：</b> 使用 {@code @PostConstruct} 初始化 Lua 脚本对象，利用 Redis EVALSHA 特性大幅减少网络传输开销。</li>
- * <li><b>毫秒级精度：</b> 计数器过期时间由 {@code EXPIRE} (秒) 升级为 {@code PEXPIRE} (毫秒)，防止短时间限流（如 500ms）失效。</li>
- * <li><b>规范注入：</b> 采用 {@code @RequiredArgsConstructor} 构造器注入，确保依赖不可变。</li>
+ * <li><b>Fail-Secure:</b> 所有 Redis 操作均包裹在 try-catch 中，Redis 宕机不会导致业务崩溃。</li>
+ * <li><b>Log Optimization:</b> 智能日志降噪，Debug 模式打印堆栈，生产环境只打印错误信息，防止磁盘爆满。</li>
+ * <li><b>Atomic Scripts:</b> 预加载 Lua 脚本，保证复杂操作的原子性。</li>
+ * <li><b>Pipeline Support:</b> 实现了 MultiGet 等批量操作，提升高并发性能。</li>
  * </ol>
  * </p>
- *
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class RedisServiceImpl implements IRedisService {
-
+    // 自动注入 Spring Boot 默认配置好的 StringRedisTemplate
     private final StringRedisTemplate stringRedisTemplate;
-
-    // ==========================================
-    // Lua 脚本对象 (预加载以提升性能)
-    // ==========================================
+    // 注入我们自己在 RedisConfig 配置的 RedisTemplate (用于对象操作)
+    private final RedisTemplate<String, Object> redisTemplate;
+    // Lua 脚本：原子自增并设置过期
     private DefaultRedisScript<Long> incrWithExpireScript;
+    // Lua 脚本：原子获取并删除
     private DefaultRedisScript<String> getAndDeleteScript;
 
     /**
-     * 初始化 Lua 脚本
-     * <p>
-     *  优化点：
-     * 避免在方法内部重复 new DefaultRedisScript。
-     * Spring Data Redis 会自动计算脚本 SHA1 摘要并缓存，后续请求只发送摘要不发送脚本全文。
-     * </p>
+     * 初始化 Lua 脚本 (利用 Script Load 缓存 SHA1)
      */
     @PostConstruct
     public void init() {
-        // 脚本 1: 原子自增并首次设置过期时间
         incrWithExpireScript = new DefaultRedisScript<>();
         incrWithExpireScript.setResultType(Long.class);
         incrWithExpireScript.setScriptText(
                 "local current = redis.call('INCR', KEYS[1]) " +
-                        "if current == 1 then " +
-                        "   redis.call('PEXPIRE', KEYS[1], ARGV[1]) " + // ⭐ 改为 PEXPIRE 支持毫秒
-                        "end " +
+                        "if current == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end " +
                         "return current"
         );
 
-        // 脚本 2: 原子获取并删除 (Get and Delete)
         getAndDeleteScript = new DefaultRedisScript<>();
         getAndDeleteScript.setResultType(String.class);
         getAndDeleteScript.setScriptText(
@@ -77,163 +59,543 @@ public class RedisServiceImpl implements IRedisService {
                         "return v"
         );
     }
+    // =================================================
+    // 1. 通用操作实现
+    // =================================================
 
-    // ==========================================
-    // 接口实现
-    // ==========================================
+    @Override
+    public boolean expire(String key, long timeout, TimeUnit unit) {
+        try {
+            return Boolean.TRUE.equals(stringRedisTemplate.expire(key, timeout, unit));
+        } catch (Exception e) {
+            handleException("expire", key, e);
+            return false;
+        }
+    }
 
-    /**
-     * 设置 Key-Value 对（带过期时间）
-     *
-     * @param key     Redis Key
-     * @param value   存储的值
-     * @param timeout 过期时间
-     * @param unit    时间单位
-     * @return true=设置成功, false=发生异常
-     */
+    @Override
+    public long getExpire(String key, TimeUnit unit) {
+        try {
+            Long expire = stringRedisTemplate.getExpire(key, unit);
+            return expire != null ? expire : -2;
+        } catch (Exception e) {
+            handleException("getExpire", key, e);
+            return -2;
+        }
+    }
+
+    @Override
+    public boolean hasKey(String key) {
+        try {
+            return Boolean.TRUE.equals(stringRedisTemplate.hasKey(key));
+        } catch (Exception e) {
+            handleException("hasKey", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean deleteKey(String key) {
+        try {
+            return Boolean.TRUE.equals(stringRedisTemplate.delete(key));
+        } catch (Exception e) {
+            handleException("deleteKey", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean deleteKeys(Collection<String> keys) {
+        if (keys == null || keys.isEmpty()) return false;
+        try {
+            Long count = stringRedisTemplate.delete(keys);
+            return count != null && count > 0;
+        } catch (Exception e) {
+            handleException("deleteKeys", "size:" + keys.size(), e);
+            return false;
+        }
+    }
+
+    // =================================================
+    // 2. String 操作实现
+    // =================================================
+
+    @Override
+    public boolean setValue(String key, String value) {
+        try {
+            stringRedisTemplate.opsForValue().set(key, value);
+            return true;
+        } catch (Exception e) {
+            handleException("setValue", key, e);
+            return false;
+        }
+    }
+
     @Override
     public boolean setValue(String key, String value, long timeout, TimeUnit unit) {
         try {
             stringRedisTemplate.opsForValue().set(key, value, timeout, unit);
             return true;
         } catch (Exception e) {
-            log.error("Redis setValue 异常: key={}, value={}", key, value, e);
+            handleException("setValueWithExpire", key, e);
             return false;
         }
     }
 
-    /**
-     * 获取字符串值
-     *
-     * @param key Redis Key
-     * @return 值，如果 Key 不存在或发生异常返回 null
-     */
     @Override
     public String getValue(String key) {
         try {
             return stringRedisTemplate.opsForValue().get(key);
         } catch (Exception e) {
-            log.error("Redis getValue 异常: key={}", key, e);
+            handleException("getValue", key, e);
             return null;
         }
     }
 
-    /**
-     * 删除 Key
-     *
-     * @param key Redis Key
-     * @return true=删除成功(或Key原就不存在), false=发生异常
-     */
     @Override
-    public boolean deleteKey(String key) {
+    public List<String> multiGet(Collection<String> keys) {
+        if (keys == null || keys.isEmpty()) return Collections.emptyList();
         try {
-            return stringRedisTemplate.delete(key);
+            return stringRedisTemplate.opsForValue().multiGet(keys);
         } catch (Exception e) {
-            log.error("Redis deleteKey 异常: key={}", key, e);
-            return false;
+            handleException("multiGet", "size:" + keys.size(), e);
+            return Collections.emptyList();
         }
     }
 
-    /**
-     * 检查 Key 是否存在
-     *
-     * @param key Redis Key
-     * @return true=存在, false=不存在或异常
-     */
-    @Override
-    public boolean hasKey(String key) {
-        try {
-            return stringRedisTemplate.hasKey(key);
-        } catch (Exception e) {
-            log.error("Redis hasKey 异常: key={}", key, e);
-            return false;
-        }
-    }
-
-    /**
-     * 设置过期时间
-     *
-     * @param key     Redis Key
-     * @param timeout 过期时间
-     * @param unit    时间单位
-     * @return true=设置成功, false=Key不存在或异常
-     */
-    @Override
-    public boolean expire(String key, long timeout, TimeUnit unit) {
-        try {
-            return stringRedisTemplate.expire(key, timeout, unit);
-        } catch (Exception e) {
-            log.error("Redis expire 异常: key={}", key, e);
-            return false;
-        }
-    }
-
-    /**
-     * 简单自增
-     *
-     * @param key Redis Key
-     * @return 自增后的值
-     */
     @Override
     public Long increment(String key) {
         try {
             return stringRedisTemplate.opsForValue().increment(key);
         } catch (Exception e) {
-            log.error("Redis increment 异常: key={}", key, e);
+            handleException("increment", key, e);
             return null;
         }
     }
 
-    /**
-     * 原子自增并设置过期时间（首次创建时设置）
-     * <p>
-     * 场景：限流计数器（如：限制 1 分钟内访问 10 次）
-     * </p>
-     *
-     * @param key     Redis Key
-     * @param timeout 过期时间
-     * @param unit    时间单位
-     * @return 自增后的值
-     */
     @Override
     public Long increment(String key, long timeout, TimeUnit unit) {
         try {
-            // ⭐ 优化点：统一转换为毫秒，配合 Lua 中的 PEXPIRE
-            // 避免 unit.toSeconds(500ms) 结果为 0 导致 Key 立即被删
-            long expireMillis = unit.toMillis(timeout);
-
-            return stringRedisTemplate.execute(
-                    incrWithExpireScript,
-                    Collections.singletonList(key),
-                    String.valueOf(expireMillis)
-            );
+            // Lua 参数需转为 String 传递
+            return stringRedisTemplate.execute(incrWithExpireScript, Collections.singletonList(key), String.valueOf(unit.toMillis(timeout)));
         } catch (Exception e) {
-            log.error("Redis increment(with expire) 异常: key={}", key, e);
+            handleException("incrementWithExpire", key, e);
             return null;
         }
     }
 
-    /**
-     * 原子获取并删除 Key
-     * <p>
-     * 场景：Refresh Token 一次性使用、验证码一次性校验
-     * </p>
-     *
-     * @param key Redis Key
-     * @return Key 对应的值，如果 Key 不存在返回 null
-     */
     @Override
     public String getAndDelete(String key) {
         try {
-            // ⭐ 提示：Redis 6.2+ 原生支持 GETDEL 命令，但在 Spring Boot 旧版本中兼容性不一
-            // 使用 Lua 脚本可兼容 Redis 2.6+ 所有版本
-            return stringRedisTemplate.execute(
-                    getAndDeleteScript,
-                    Collections.singletonList(key)
-            );
+            return stringRedisTemplate.execute(getAndDeleteScript, Collections.singletonList(key));
         } catch (Exception e) {
-            log.error("Redis getAndDelete 异常: key={}", key, e);
+            handleException("getAndDelete", key, e);
             return null;
+        }
+    }
+    // ===================== 2.1 对象缓存 =====================
+    public boolean setObject(String key, Object value, long timeout, TimeUnit unit) {
+        try {
+            redisTemplate.opsForValue().set(key, value, timeout, unit);
+            return true;
+        } catch (Exception e) {
+            handleException("setObject", key, e);
+            return false;
+        }
+    }
+
+    public <T> T getObject(String key, Class<T> clazz) {
+        try {
+            Object obj = redisTemplate.opsForValue().get(key);
+            if (obj == null) return null;
+            return clazz.cast(obj);
+        } catch (Exception e) {
+            handleException("getObject", key, e);
+            return null;
+        }
+    }
+    // =================================================
+    // 3. Hash 操作实现
+    // =================================================
+
+    @Override
+    public boolean hSet(String key, String hashKey, String value) {
+        try {
+            stringRedisTemplate.opsForHash().put(key, hashKey, value);
+            return true;
+        } catch (Exception e) {
+            handleException("hSet", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean hSet(String key, String hashKey, String value, long timeout, TimeUnit unit) {
+        try {
+            stringRedisTemplate.opsForHash().put(key, hashKey, value);
+            return expire(key, timeout, unit);
+        } catch (Exception e) {
+            handleException("hSetWithExpire", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean hMSet(String key, Map<String, String> map) {
+        try {
+            stringRedisTemplate.opsForHash().putAll(key, map);
+            return true;
+        } catch (Exception e) {
+            handleException("hMSet", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean hMSet(String key, Map<String, String> map, long timeout, TimeUnit unit) {
+        try {
+            stringRedisTemplate.opsForHash().putAll(key, map);
+            return expire(key, timeout, unit);
+        } catch (Exception e) {
+            handleException("hMSetWithExpire", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public String hGet(String key, String hashKey) {
+        try {
+            Object val = stringRedisTemplate.opsForHash().get(key, hashKey);
+            return val != null ? val.toString() : null;
+        } catch (Exception e) {
+            handleException("hGet", key, e);
+            return null;
+        }
+    }
+
+    @Override
+    public Map<Object, Object> hGetAll(String key) {
+        try {
+            return stringRedisTemplate.opsForHash().entries(key);
+        } catch (Exception e) {
+            handleException("hGetAll", key, e);
+            return Collections.emptyMap();
+        }
+    }
+
+    @Override
+    public boolean hDel(String key, Object... hashKeys) {
+        try {
+            stringRedisTemplate.opsForHash().delete(key, hashKeys);
+            return true;
+        } catch (Exception e) {
+            handleException("hDel", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean hHasKey(String key, String hashKey) {
+        try {
+            return stringRedisTemplate.opsForHash().hasKey(key, hashKey);
+        } catch (Exception e) {
+            handleException("hHasKey", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public Long hIncr(String key, String hashKey, long delta) {
+        try {
+            return stringRedisTemplate.opsForHash().increment(key, hashKey, delta);
+        } catch (Exception e) {
+            handleException("hIncr", key, e);
+            return null;
+        }
+    }
+
+    // =================================================
+    // 4. List 操作实现
+    // =================================================
+
+    @Override
+    public boolean lPush(String key, String value) {
+        try {
+            stringRedisTemplate.opsForList().leftPush(key, value);
+            return true;
+        } catch (Exception e) {
+            handleException("lPush", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean lPushAll(String key, List<String> values) {
+        try {
+            stringRedisTemplate.opsForList().leftPushAll(key, values);
+            return true;
+        } catch (Exception e) {
+            handleException("lPushAll", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean rPush(String key, String value) {
+        try {
+            stringRedisTemplate.opsForList().rightPush(key, value);
+            return true;
+        } catch (Exception e) {
+            handleException("rPush", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean rPushAll(String key, List<String> values) {
+        try {
+            stringRedisTemplate.opsForList().rightPushAll(key, values);
+            return true;
+        } catch (Exception e) {
+            handleException("rPushAll", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public String lPop(String key) {
+        try {
+            return stringRedisTemplate.opsForList().leftPop(key);
+        } catch (Exception e) {
+            handleException("lPop", key, e);
+            return null;
+        }
+    }
+
+    @Override
+    public String rPop(String key) {
+        try {
+            return stringRedisTemplate.opsForList().rightPop(key);
+        } catch (Exception e) {
+            handleException("rPop", key, e);
+            return null;
+        }
+    }
+
+    @Override
+    public List<String> lRange(String key, long start, long end) {
+        try {
+            return stringRedisTemplate.opsForList().range(key, start, end);
+        } catch (Exception e) {
+            handleException("lRange", key, e);
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
+    public long lLen(String key) {
+        try {
+            Long size = stringRedisTemplate.opsForList().size(key);
+            return size != null ? size : 0;
+        } catch (Exception e) {
+            handleException("lLen", key, e);
+            return 0;
+        }
+    }
+
+    // =================================================
+    // 5. Set 操作实现
+    // =================================================
+
+    @Override
+    public boolean sAdd(String key, String... values) {
+        try {
+            Long count = stringRedisTemplate.opsForSet().add(key, values);
+            return count != null && count > 0;
+        } catch (Exception e) {
+            handleException("sAdd", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean sAddWithExpire(String key, long timeout, TimeUnit unit, String... values) {
+        try {
+            Long count = stringRedisTemplate.opsForSet().add(key, values);
+            expire(key, timeout, unit);
+            return count != null && count > 0;
+        } catch (Exception e) {
+            handleException("sAddWithExpire", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean sIsMember(String key, String value) {
+        try {
+            return Boolean.TRUE.equals(stringRedisTemplate.opsForSet().isMember(key, value));
+        } catch (Exception e) {
+            handleException("sIsMember", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public long sSize(String key) {
+        try {
+            Long size = stringRedisTemplate.opsForSet().size(key);
+            return size != null ? size : 0;
+        } catch (Exception e) {
+            handleException("sSize", key, e);
+            return 0;
+        }
+    }
+
+    @Override
+    public long sRemove(String key, Object... values) {
+        try {
+            Long count = stringRedisTemplate.opsForSet().remove(key, values);
+            return count != null ? count : 0;
+        } catch (Exception e) {
+            handleException("sRemove", key, e);
+            return 0;
+        }
+    }
+
+    @Override
+    public Set<String> sMembers(String key) {
+        try {
+            return stringRedisTemplate.opsForSet().members(key);
+        } catch (Exception e) {
+            handleException("sMembers", key, e);
+            return Collections.emptySet();
+        }
+    }
+
+    // =================================================
+    // 6. ZSet 操作实现
+    // =================================================
+
+    @Override
+    public boolean zAdd(String key, String value, double score) {
+        try {
+            return Boolean.TRUE.equals(stringRedisTemplate.opsForZSet().add(key, value, score));
+        } catch (Exception e) {
+            handleException("zAdd", key, e);
+            return false;
+        }
+    }
+
+    @Override
+    public Double zIncrScore(String key, String value, double delta) {
+        try {
+            return stringRedisTemplate.opsForZSet().incrementScore(key, value, delta);
+        } catch (Exception e) {
+            handleException("zIncrScore", key, e);
+            return null;
+        }
+    }
+
+    @Override
+    public Long zRank(String key, String value) {
+        try {
+            return stringRedisTemplate.opsForZSet().rank(key, value);
+        } catch (Exception e) {
+            handleException("zRank", key, e);
+            return null;
+        }
+    }
+
+    @Override
+    public Long zReverseRank(String key, String value) {
+        try {
+            return stringRedisTemplate.opsForZSet().reverseRank(key, value);
+        } catch (Exception e) {
+            handleException("zReverseRank", key, e);
+            return null;
+        }
+    }
+
+    @Override
+    public Set<String> zReverseRange(String key, long start, long end) {
+        try {
+            return stringRedisTemplate.opsForZSet().reverseRange(key, start, end);
+        } catch (Exception e) {
+            handleException("zReverseRange", key, e);
+            return Collections.emptySet();
+        }
+    }
+
+    @Override
+    public Set<ZSetOperations.TypedTuple<String>> zReverseRangeWithScores(String key, long start, long end) {
+        try {
+            return stringRedisTemplate.opsForZSet().reverseRangeWithScores(key, start, end);
+        } catch (Exception e) {
+            handleException("zReverseRangeWithScores", key, e);
+            return Collections.emptySet();
+        }
+    }
+
+    @Override
+    public Double zScore(String key, String value) {
+        try {
+            return stringRedisTemplate.opsForZSet().score(key, value);
+        } catch (Exception e) {
+            handleException("zScore", key, e);
+            return null;
+        }
+    }
+
+    @Override
+    public long zRemove(String key, Object... values) {
+        try {
+            Long count = stringRedisTemplate.opsForZSet().remove(key, values);
+            return count != null ? count : 0;
+        } catch (Exception e) {
+            handleException("zRemove", key, e);
+            return 0;
+        }
+    }
+
+    // =================================================
+    // 7. 高级与扫描操作实现
+    // =================================================
+
+    @Override
+    public Set<String> scan(String pattern) {
+        Set<String> keys = new HashSet<>();
+        try {
+            stringRedisTemplate.execute((org.springframework.data.redis.connection.RedisConnection connection) -> {
+
+                ScanOptions options = ScanOptions.scanOptions().match(pattern).count(1000).build();
+                try (Cursor<byte[]> cursor = connection.scan(options)) {
+                    while (cursor.hasNext()) {
+                        keys.add(new String(cursor.next()));
+                    }
+                }
+                return null;
+            });
+            return keys;
+        } catch (Exception e) {
+            handleException("scan", pattern, e);
+            return Collections.emptySet();
+        }
+    }
+
+    // =================================================
+    // 私有: 统一日志处理
+    // =================================================
+
+    /**
+     * 智能日志处理
+     * <p>策略：生产环境只打印简短错误消息，开发环境(Debug开启)打印完整堆栈。</p>
+     */
+    private void handleException(String op, String key, Exception e) {
+        if (log.isDebugEnabled()) {
+            log.error("Redis [{}] 失败. Key: {}", op, key, e);
+        } else {
+            // 避免生产环境磁盘被堆栈日志写满
+            log.error("Redis [{}] 失败. Key: {}. Error: {}", op, key, e.getMessage());
         }
     }
 }

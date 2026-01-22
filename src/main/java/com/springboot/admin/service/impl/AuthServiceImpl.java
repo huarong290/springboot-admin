@@ -13,22 +13,23 @@ import com.springboot.admin.utils.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 认证服务实现类 (优化版)
- *
+ * 认证服务核心实现类 (安全增强版)
  * <p>
- * 核心优化点：
- * 1. 修复刷新令牌时 AccessToken 扩展信息(IP, DeviceId)丢失的问题
- * 2. 增加用户账号状态校验（防止已禁用用户持续刷新）
- * 3. 采用构造器注入代替字段注入
- * 4. 完善设备管理逻辑
+ * 核心安全策略：
+ * 1. 令牌轮转 (Refresh Token Rotation): 每次刷新都更换新的 Refresh Token。
+ * 2. 令牌复用检测 (Reuse Detection): 检测到旧令牌被重复使用，视为盗号，强制下线所有端。
+ * 3. 故障阻断 (Fail-Secure): Redis 写入失败时抛出异常，不允许“幽灵登录”。
+ * 4. 设备绑定: Token 与 deviceId 绑定，防止异地窃取 Token 使用。
  * </p>
  */
 @Slf4j
@@ -36,52 +37,56 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements IAuthService {
 
-    // 声明为 final 以支持构造器注入，保证不可变性
+    // 依赖组件 (构造器注入)
     private final ISysUserService sysUserService;
     private final IRedisService redisService;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
-    private final UserInfoAssembler userInfoAssembler;
+    private final UserInfoAssembler userInfoAssembler; // 用于 DTO 转换
 
-    // 常量定义，避免魔法值
+    // 注入配置：Refresh Token 有效期 (默认 7 天)
+    @Value("${jwt.refresh-token.validity-seconds:604800}")
+    private long refreshTokenValiditySeconds;
+
+    // Redis Key 前缀：用户设备映射 (user:devices:uid:deviceId)
     private static final String DEVICE_KEY_PREFIX = "user:devices:";
 
     /**
-     * 用户登录
+     * 用户登录流程
      */
     @Override
     public TokenResDTO login(UserLoginReqDTO dto) {
-        // 1. 基础参数校验
-        if (StringUtils.isBlank(dto.getDeviceId())) {
-            throw new BusinessException("设备ID不能为空");
-        }
+        // 1. 基础校验 (验证码校验逻辑通常由 Filter 或 AOP 处理，此处略)
 
         // 2. 查询用户
         SysUserDTO user = sysUserService.getUserByUsername(dto.getUsername());
         if (user == null) {
-            throw new BusinessException("用户不存在");
+            // 模糊提示，防止枚举账号攻击
+            throw new BusinessException("用户名或密码错误");
         }
 
-        // 🛡️ 优化 2: 增加账号状态校验 (假设 SysUserDTO 有 status 字段, 1=正常)
+        // 3. 校验账号状态 (禁用/锁定)
         checkUserStatus(user);
 
-        // 3. 校验密码
+        // 4. 校验密码
         if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
             throw new BusinessException("用户名或密码错误");
         }
 
-        // 4. 构建 AccessToken 扩展信息
-        Map<String, Object> extraClaims = buildExtraClaims(dto.getLoginIp(), dto.getClientType(), dto.getDeviceId());
-
         // 5. 生成 Token
+        // 必须将 deviceId 等环境信息写入 Token，保证由 Token 可溯源
+        Map<String, Object> extraClaims = buildExtraClaims(dto.getLoginIp(), dto.getClientType(), dto.getDeviceId());
         String accessToken = jwtUtil.generateAccessToken(user.getUsername(), extraClaims);
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
-        // 6. 存储 RefreshToken (关联设备)
+        // 6. 存储 RefreshToken 到 Redis
+        // JTI (JWT ID) 是 Refresh Token 的唯一标识
         String refreshJti = jwtUtil.getJti(refreshToken);
-        saveRefreshToken(user.getId(), dto.getDeviceId(), refreshJti, refreshToken);
 
-        // 7. 记录设备登录 (多端管控)
+        // 🛑 核心安全点：Fail-Secure 写入。若 Redis 挂了，必须抛出异常，禁止登录。
+        saveRefreshTokenOrThrow(user.getId(), dto.getDeviceId(), refreshJti, refreshToken);
+
+        // 7. 维护用户设备映射 (用于踢人、设备管理)
         handleUserDeviceLogin(user.getId(), dto.getDeviceId(), refreshJti);
 
         // 8. 返回结果
@@ -89,73 +94,72 @@ public class AuthServiceImpl implements IAuthService {
     }
 
     /**
-     * RefreshToken 刷新 AccessToken
+     * 令牌刷新流程 (Refresh Token Rotation)
      */
     @Override
     public TokenResDTO refreshToken(TokenRefreshReqDTO dto) {
-        // ... 参数基础校验 ...
-        if (StringUtils.isAnyBlank(dto.getRefreshToken(), dto.getDeviceId())) {
-            throw new BusinessException("刷新参数不完整");
-        }
+        String oldRefreshToken = dto.getRefreshToken();
+        String deviceId = dto.getDeviceId();
 
-        // 1. 校验 Token 类型
-        String tokenType = jwtUtil.getTokenType(dto.getRefreshToken());
-        if (!JwtConstants.TOKEN_TYPE_REFRESH.equals(tokenType)) {
+        // 1. 令牌格式与类型校验
+        if (StringUtils.isBlank(oldRefreshToken) || !JwtConstants.TOKEN_TYPE_REFRESH.equals(jwtUtil.getTokenType(oldRefreshToken))) {
             throw new BusinessException("非法刷新令牌");
         }
 
-        // 2. 解析 JTI 并检查 Redis
-        String oldJti = jwtUtil.getJti(dto.getRefreshToken());
+        String oldJti = jwtUtil.getJti(oldRefreshToken);
         String redisKey = JwtConstants.REFRESH_TOKEN_PREFIX + oldJti;
 
-        // 🔥 核心逻辑: 原子性取出并删除旧 Token (防止并发刷新)
+        // 🔥 2. 原子性获取并删除 (Anti-Concurrency / One-Time Use)
+        // 使用 Lua 脚本保证 GET 和 DEL 是原子操作
         String redisValue = redisService.getAndDelete(redisKey);
 
+        // 🚨 3. 令牌复用检测 (Token Reuse Detection) - 极高危场景
         if (StringUtils.isBlank(redisValue)) {
-            // 🛡️ 风控点: 如果 Token 还在有效期内但 Redis 没了，说明被用过了 -> 令牌复用检测
-            if (jwtUtil.getRemainingTime(dto.getRefreshToken()) > 0) {
-                log.error("🚨 严重安全警报: RefreshToken 重复使用! User: {}, Device: {}, JTI: {}",
-                        jwtUtil.getUsername(dto.getRefreshToken()), dto.getDeviceId(), oldJti);
-                // 建议: 在此处加入踢用户下线的逻辑 (invalidateAllUserTokens)
+            // 如果 Token 签名有效且未过期，但 Redis 中已不存在 -> 说明该 Token 之前已经被用过了
+            // 这意味着：黑客偷了 Token 并在用户之前（或之后）尝试刷新。
+            if (jwtUtil.getRemainingTime(oldRefreshToken) > 0) {
+                String username = jwtUtil.getUsername(oldRefreshToken);
+                log.error("🚨 [严重安全警报] 令牌复用检测触发! User: {}, Device: {}, JTI: {}", username, deviceId, oldJti);
+
+                // 🛡️ 响应措施：宁杀错不放过，强制该用户所有设备下线，迫使重新修改密码
+                SysUserDTO user = sysUserService.getUserByUsername(username);
+                if (user != null) {
+                    invalidateAllUserTokens(user.getId());
+                }
             }
-            throw new BusinessException("刷新令牌无效或已过期");
+            throw new BusinessException("会话已失效或存在安全风险，请重新登录");
         }
 
-        // 3. 校验设备一致性 (防窃取)
-        String[] parts = redisValue.split(":"); // 格式: userId:deviceId
-        String userIdStr = parts[0];
+        // 4. 解析 Redis 数据 (userId:deviceId) 并校验设备指纹
+        // 防止黑客偷了 Token 在另一台设备上刷新
+        String[] parts = redisValue.split(":");
+        long userId = Long.parseLong(parts[0]);
         String storedDeviceId = parts[1];
 
-        if (!dto.getDeviceId().equals(storedDeviceId)) {
-            log.warn("刷新设备不匹配. 请求设备: {}, 原始设备: {}", dto.getDeviceId(), storedDeviceId);
-            throw new BusinessException("设备验证失败，请重新登录");
+        if (!deviceId.equals(storedDeviceId)) {
+            log.warn("设备指纹不匹配! ReqDevice: {}, StoredDevice: {}", deviceId, storedDeviceId);
+            throw new BusinessException("环境异常，请重新登录");
         }
 
-        // 4. 查询用户并校验状态
-        SysUserDTO user = sysUserService.getSysUserDtoByUserId(Long.parseLong(userIdStr));
-        if (user == null) {
-            throw new BusinessException("用户不存在");
-        }
-        checkUserStatus(user); // 🛡️ 再次校验状态，防止禁用期间刷新
+        // 5. 校验用户状态
+        SysUserDTO user = sysUserService.getSysUserDtoByUserId(userId);
+        if (user == null) throw new BusinessException("用户不存在");
+        checkUserStatus(user);
 
-        // 5. 生成新 Token
-        // 🔥 修复: 必须带上扩展信息，否则刷新后丢失 IP/DeviceId 等数据
-        // 注意：刷新时通常更新 IP 为当前请求 IP
-        Map<String, Object> extraClaims = buildExtraClaims(dto.getLoginIp(), dto.getClientType(), dto.getDeviceId());
-
+        // 6. 生成全新的一对 Token (Rotation)
+        Map<String, Object> extraClaims = buildExtraClaims(dto.getLoginIp(), dto.getClientType(), deviceId);
         String newAccessToken = jwtUtil.generateAccessToken(user.getUsername(), extraClaims);
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
-        // 6. 存储新 RefreshToken
         String newJti = jwtUtil.getJti(newRefreshToken);
-        saveRefreshToken(user.getId(), dto.getDeviceId(), newJti, newRefreshToken);
 
-        // 7. 更新设备映射 (旧 JTI -> 新 JTI)
-        handleUserDeviceLogin(user.getId(), dto.getDeviceId(), newJti);
+        // 7. 保存新 Token，更新设备映射
+        saveRefreshTokenOrThrow(userId, deviceId, newJti, newRefreshToken);
+        handleUserDeviceLogin(userId, deviceId, newJti);
 
-        log.info("令牌刷新成功. User: {}, Device: {}", user.getUsername(), dto.getDeviceId());
+        log.info("令牌刷新成功. User: {}, Device: {}", user.getUsername(), deviceId);
 
-        return buildTokenResponse(newAccessToken, newRefreshToken, dto.getDeviceId(), dto.getClientType(), dto.getLoginIp());
+        return buildTokenResponse(newAccessToken, newRefreshToken, deviceId, dto.getClientType(), dto.getLoginIp());
     }
 
     /**
@@ -163,24 +167,14 @@ public class AuthServiceImpl implements IAuthService {
      */
     @Override
     public void logout(String accessToken, String refreshToken, String deviceId) {
-        // 尝试获取 Username 用于清理设备映射（可选，视业务严格程度而定）
+        // 尝试从 Token 中解析用户名 (用于清理设备 Key)
         String username = null;
         try {
             if (StringUtils.isNotBlank(accessToken)) username = jwtUtil.getUsername(accessToken);
-            else if (StringUtils.isNotBlank(refreshToken)) username = jwtUtil.getUsername(refreshToken);
         } catch (Exception ignored) {}
 
-        // 1. 删除 RefreshToken
-        if (StringUtils.isNotBlank(refreshToken)) {
-            try {
-                String refreshJti = jwtUtil.getJti(refreshToken);
-                redisService.deleteKey(JwtConstants.REFRESH_TOKEN_PREFIX + refreshJti);
-            } catch (Exception e) {
-                log.warn("登出清理 RefreshToken 失败", e);
-            }
-        }
-
-        // 2. 拉黑 AccessToken (直至过期)
+        // 1. 将 AccessToken 加入黑名单 (直至过期)
+        // 因为 AccessToken 是无状态的，无法物理删除，只能通过黑名单拦截
         if (StringUtils.isNotBlank(accessToken)) {
             try {
                 String jti = jwtUtil.getJti(accessToken);
@@ -189,37 +183,34 @@ public class AuthServiceImpl implements IAuthService {
                     redisService.setValue(JwtConstants.JTI_BLACKLIST_PREFIX + jti, "1", ttl, TimeUnit.MILLISECONDS);
                 }
             } catch (Exception e) {
-                log.warn("登出拉黑 AccessToken 失败", e);
+                log.warn("登出失败: AccessToken 黑名单写入异常", e);
             }
         }
 
-        // 3. 清理设备映射
-        // ⭐ 优化: 尝试更精确地清理 user:devices:{uid}:{deviceId}
+        // 2. 物理删除 RefreshToken
+        if (StringUtils.isNotBlank(refreshToken)) {
+            try {
+                String refreshJti = jwtUtil.getJti(refreshToken);
+                redisService.deleteKey(JwtConstants.REFRESH_TOKEN_PREFIX + refreshJti);
+            } catch (Exception ignored) {}
+        }
+
+        // 3. 清理设备绑定关系
         if (StringUtils.isNotBlank(username) && StringUtils.isNotBlank(deviceId)) {
             SysUserDTO user = sysUserService.getUserByUsername(username);
             if (user != null) {
-                removeDeviceFromSet(user.getId(), deviceId);
+                redisService.deleteKey(DEVICE_KEY_PREFIX + user.getId() + ":" + deviceId);
             }
-        } else if (StringUtils.isNotBlank(deviceId)) {
-            // 如果无法获取用户信息，仅依靠 deviceId 无法清理特定用户的 key，
-            // 但如果 redis key 设计为 user:devices:deviceId (不带userId) 则可清理。
-            // 按照当前设计依赖 userId，所以这里做个容错。
-            log.debug("登出时缺少用户信息，跳过设备映射清理");
         }
-
-        log.info("用户登出完成 deviceId={}", deviceId);
     }
 
     @Override
     public UserInfoDTO getUserInfoByToken(String token) {
         if (StringUtils.isBlank(token)) return null;
-
         String username = jwtUtil.getUsername(token);
         if (StringUtils.isBlank(username)) return null;
 
-        // ⭐ 性能提示:
-        // 这是一个高频调用方法。建议 sysUserService 内部对 getUserByUsername 增加 Redis 缓存 (@Cacheable)。
-        // 或者直接信任 Token 中的 Claims (如果 Token 包含足够多的信息)，减少查库。
+        // 建议：此处 sysUserService 内部应增加缓存，避免高频查库
         SysUserDTO user = sysUserService.getUserByUsername(username);
         if (user == null) return null;
 
@@ -231,13 +222,77 @@ public class AuthServiceImpl implements IAuthService {
         );
     }
 
-    // ===================== 私有辅助方法 (提升代码复用) =====================
+    // ==========================================
+    // 私有辅助方法
+    // ==========================================
+
+    /**
+     * 强校验保存 Refresh Token (Fail-Secure)
+     * 如果 Redis 写入失败，必须阻断流程，否则会导致“幽灵Token”
+     */
+    private void saveRefreshTokenOrThrow(Long userId, String deviceId, String jti, String token) {
+        String redisKey = JwtConstants.REFRESH_TOKEN_PREFIX + jti;
+        // Redis Value 格式: "userId:deviceId"
+        String redisValue = userId + ":" + deviceId;
+
+        // 保持 Redis 过期时间与 Token 声明的过期时间一致
+        boolean success = redisService.setValue(redisKey, redisValue, jwtUtil.getRemainingTime(token), TimeUnit.MILLISECONDS);
+
+        if (!success) {
+            log.error("Redis 写入失败，阻断登录。Key: {}", redisKey);
+            throw new BusinessException("系统繁忙，会话创建失败");
+        }
+    }
+
+    /**
+     * 维护设备登录状态
+     * <p>
+     * 记录 user:devices:{uid}:{deviceId} -> {current_refresh_jti}
+     * 用于确保同一设备同一时间只有一个有效的 Refresh Token，也便于实现“踢人下线”。
+     * </p>
+     */
+    private void handleUserDeviceLogin(Long userId, String deviceId, String jti) {
+        String key = DEVICE_KEY_PREFIX + userId + ":" + deviceId;
+        // 此 Key 有效期应 >= Refresh Token 有效期
+        redisService.setValue(key, jti, refreshTokenValiditySeconds, TimeUnit.SECONDS);
+    }
+
+    /**
+     * 🚨 强制下线用户所有设备
+     * <p>
+     * 场景：检测到令牌复用攻击、用户修改密码、管理员封号。
+     * </p>
+     */
+    private void invalidateAllUserTokens(Long userId) {
+        try {
+            // 注意：生产环境如果 Key 数量巨大，使用 keys() 可能会阻塞 Redis。
+            // 建议 IRedisService 实现 scan() 方法，或使用 Set 集合维护用户的设备列表 (user:device_list:uid -> [dev1, dev2])
+            String pattern = DEVICE_KEY_PREFIX + userId + ":*";
+            Set<String> deviceKeys = redisService.scan(pattern);
+
+            if (deviceKeys != null && !deviceKeys.isEmpty()) {
+                for (String deviceKey : deviceKeys) {
+                    // 1. 获取该设备当前指向的 Refresh Token JTI
+                    String currentJti = redisService.getValue(deviceKey);
+
+                    // 2. 删除 Refresh Token
+                    if (StringUtils.isNotBlank(currentJti)) {
+                        redisService.deleteKey(JwtConstants.REFRESH_TOKEN_PREFIX + currentJti);
+                    }
+
+                    // 3. 删除设备绑定 Key
+                    redisService.deleteKey(deviceKey);
+                }
+            }
+            log.warn("已强制踢下线用户: {}", userId);
+        } catch (Exception e) {
+            log.error("踢人逻辑执行失败", e);
+        }
+    }
 
     private void checkUserStatus(SysUserDTO user) {
-        // 假设 SysUserDTO 有 isEnabled() 或者 getStatus() 方法
-        // if (!user.isEnabled()) {
-        //    throw new BusinessException("账号已被禁用，请联系管理员");
-        // }
+        // 预留方法：检查 status == 0 或 isLocked
+        // if (!user.isEnabled()) throw new BusinessException("账号已停用");
     }
 
     private Map<String, Object> buildExtraClaims(String ip, String clientType, String deviceId) {
@@ -246,13 +301,6 @@ public class AuthServiceImpl implements IAuthService {
         claims.put("clientType", clientType);
         claims.put("deviceId", deviceId);
         return claims;
-    }
-
-    private void saveRefreshToken(Long userId, String deviceId, String jti, String token) {
-        String redisKey = JwtConstants.REFRESH_TOKEN_PREFIX + jti;
-        String redisValue = userId + ":" + deviceId;
-        // 保存 Token 及其剩余有效期
-        redisService.setValue(redisKey, redisValue, jwtUtil.getRemainingTime(token), TimeUnit.MILLISECONDS);
     }
 
     private TokenResDTO buildTokenResponse(String access, String refresh, String deviceId, String clientType, String ip) {
@@ -266,22 +314,5 @@ public class AuthServiceImpl implements IAuthService {
         res.setExpiresIn(jwtUtil.getRemainingTime(access));
         res.setRefreshExpiresIn(jwtUtil.getRemainingTime(refresh));
         return res;
-    }
-
-    /**
-     * 多端登录策略：维护 用户->设备列表
-     */
-    private void handleUserDeviceLogin(Long userId, String deviceId, String jti) {
-        String key = DEVICE_KEY_PREFIX + userId + ":" + deviceId;
-        // 记录该设备当前有效的 Refresh Token JTI，设置较长的过期时间 (如 7 天)
-        redisService.setValue(key, jti, 7, TimeUnit.DAYS);
-
-        // ⭐ 扩展点: 如果需要限制最大设备数 (如最多5个)，可以在此处查询 DEVICE_KEY_PREFIX + userId + "*"
-        // 如果数量超标，根据策略删除最早的 Key 并同时删除对应的 RefreshToken
-    }
-
-    private void removeDeviceFromSet(Long userId, String deviceId) {
-        String key = DEVICE_KEY_PREFIX + userId + ":" + deviceId;
-        redisService.deleteKey(key);
     }
 }

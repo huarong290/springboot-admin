@@ -1,168 +1,113 @@
-package com.springboot.admin.aop;
+package com.springboot.admin.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.springboot.admin.annotation.Loggable;
-import com.springboot.admin.model.event.SysLogEvent;
-import com.springboot.admin.utils.TraceUtil;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
+import com.springboot.admin.common.ApiResult;
+import com.springboot.admin.model.dto.CaptchaDTO;
+import com.springboot.admin.model.dto.TokenRefreshReqDTO;
+import com.springboot.admin.model.dto.TokenResDTO;
+import com.springboot.admin.model.dto.UserLoginReqDTO;
+import com.springboot.admin.model.dto.user.UserInfoDTO;
+import com.springboot.admin.service.IAuthService;
+import com.springboot.admin.service.ICaptchaService;
+import com.springboot.admin.utils.IpUtil;
+import com.springboot.admin.utils.JwtUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.Around;
-import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Pointcut;
-import org.aspectj.lang.reflect.MethodSignature;
-import org.slf4j.MDC;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.core.io.InputStreamSource;
-import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 /**
- * 企业级日志切面
- *
- * 优化点：
- * 1. 配置化日志开关和截断长度
- * 2. 使用 MDC TraceId 支持链路追踪
- * 3. 参数/返回值脱敏
- * 4. 异步发布审计日志事件
+ * 认证授权控制器
+ * <p>
+ * 提供登录、刷新令牌、登出及用户信息获取接口。
+ * 遵循 Restful 规范，统一返回 ApiResult 结构。
+ * </p>
  */
-@Slf4j
-@Aspect
-@Component
-@RequiredArgsConstructor
-public class LogAspect {
+@RestController
+@RequestMapping("/api/auth")
+@Tag(name = "认证管理", description = "用户登录、Token管理及用户信息查询")
+@RequiredArgsConstructor // 使用 Lombok 生成构造器注入，替代 @Autowired
+public class AuthController {
 
-    private final ObjectMapper objectMapper;
-    private final ApplicationEventPublisher eventPublisher;
+    private final IAuthService authService;
+    private final ICaptchaService captchaService;
 
-    /** 默认最大日志打印长度 */
-    private static final int DEFAULT_MAX_LOG_LENGTH = 2048;
-
-    @Pointcut("@annotation(com.springboot.admin.annotation.Loggable)")
-    public void logableMethods() {}
-
-    @Around("logableMethods()")
-    public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
-        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Logable loggable = signature.getMethod().getAnnotation(Logable.class);
-
-        // 1️⃣ TraceId 放入 MDC
-        String traceId = Optional.ofNullable(TraceUtil.getTraceId())
-                .orElse(UUID.randomUUID().toString().replace("-", ""));
-        MDC.put("traceId", traceId);
-
-        Map<String, Object> inputParams = new LinkedHashMap<>();
-        if (loggable.logRequest()) {
-            inputParams = parseParams(signature, joinPoint.getArgs());
-        }
-
-        String className = signature.getDeclaringType().getSimpleName();
-        String methodName = signature.getName();
-        Instant start = Instant.now();
-
-        if (loggable.logRequest()) {
-            log.debug("➡️ [{}] 请求: {}.{}() | 参数: {}", traceId, className, methodName, toJson(inputParams));
-        }
-
-        Object result = null;
-        Throwable exception = null;
-
-        try {
-            result = joinPoint.proceed();
-            return result;
-        } catch (Throwable ex) {
-            exception = ex;
-            log.warn("❌ [{}] 异常: {}.{}() | Msg: {}", traceId, className, methodName, ex.getMessage());
-            throw ex;
-        } finally {
-            Instant end = Instant.now();
-            long duration = Duration.between(start, end).toMillis();
-
-            if (loggable.logResponse() && exception == null) {
-                log.debug("📤 [{}] 响应: {} | 耗时: {}ms", traceId, formatResult(result), duration);
-            }
-
-            publishAuditLog(traceId, className, methodName, inputParams, result, exception, duration);
-            MDC.remove("traceId");
-        }
+    /**
+     * 获取图形验证码
+     * <p>
+     * 不记录请求日志，防止 Base64 图片数据撑爆日志文件
+     * </p>
+     */
+    @Operation(summary = "获取验证码", description = "返回 Base64 图片及验证码标识")
+    @Loggable(logRequest = false, logResponse = false)
+    @GetMapping("/getCaptcha")
+    public ApiResult<CaptchaDTO> getCaptcha() {
+        return ApiResult.successResult(captchaService.generateCaptcha());
     }
 
-    private Map<String, Object> parseParams(MethodSignature signature, Object[] args) {
-        Map<String, Object> paramMap = new LinkedHashMap<>();
-        String[] paramNames = signature.getParameterNames();
-        if (paramNames == null || args == null) return Collections.emptyMap();
+    /**
+     * 用户登录
+     * <p>
+     * 1. 使用 @Validated 开启 DTO 参数校验 (如 @NotBlank)
+     * 2. 客户端 IP 必须由服务端获取，不可信赖前端传参
+     * </p>
+     */
+    @PostMapping("/login")
+    @Operation(summary = "用户登录", description = "包含验证码校验、账号密码验证及 Token 发放")
+    @Loggable(logRequest = true, logResponse = true)
+    public ApiResult<TokenResDTO> login(@RequestBody @Validated UserLoginReqDTO dto,
+                                        HttpServletRequest request) {
+        // 安全填充 IP 地址
+        String clientIp = IpUtil.getClientIp(request);
+        dto.setLoginIp(clientIp);
 
-        for (int i = 0; i < args.length; i++) {
-            if (i >= paramNames.length) break;
-            Object arg = args[i];
-            if (arg instanceof ServletRequest || arg instanceof ServletResponse) continue;
-            if (arg instanceof MultipartFile || arg instanceof MultipartFile[] || arg instanceof InputStreamSource) {
-                paramMap.put(paramNames[i], handleFileArg(arg));
-            } else {
-                paramMap.put(paramNames[i], maskSensitive(paramNames[i], arg));
-            }
-        }
-        return paramMap;
+        return ApiResult.successResult(authService.login(dto));
     }
 
-    /** 脱敏处理 */
-    private Object maskSensitive(String name, Object value) {
-        if (value == null) return null;
-        if ("password".equalsIgnoreCase(name) || "pwd".equalsIgnoreCase(name)) {
-            return "***";
-        }
-        if ("phone".equalsIgnoreCase(name) || "mobile".equalsIgnoreCase(name)) {
-            return String.valueOf(value).replaceAll("\\d{4}$", "****");
-        }
-        return value;
+    /**
+     * 刷新令牌 (Refresh Token Rotation)
+     * <p>
+     * 采用“一次性使用”策略，旧 RefreshToken 使用后立即作废，防止重放攻击。
+     * </p>
+     */
+    @PostMapping("/refresh")
+    @Operation(summary = "刷新令牌", description = "通过旧的 RefreshToken 获取新的 AccessToken")
+    @Loggable(logRequest = true, logResponse = true)
+    public ApiResult<TokenResDTO> refresh(@RequestBody @Validated TokenRefreshReqDTO dto,
+                                          HttpServletRequest request) {
+        String clientIp = IpUtil.getClientIp(request);
+        dto.setLoginIp(clientIp);
+
+        return ApiResult.successResult(authService.refreshToken(dto));
     }
 
-    private String toJson(Object obj) {
-        if (obj == null) return "null";
-        try {
-            return objectMapper.writeValueAsString(obj);
-        } catch (JsonProcessingException e) {
-            return String.valueOf(obj);
-        }
+    /**
+     * 用户登出
+     * <p>
+     * 同时作废 AccessToken (黑名单) 和 RefreshToken (物理删除)
+     * </p>
+     */
+    @PostMapping("/logout")
+    @Operation(summary = "用户登出", description = "作废当前会话，需要 deviceId")
+    @Loggable(logRequest = true, logResponse = true)
+    public ApiResult<Void> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,
+                                  @RequestBody TokenRefreshReqDTO dto) {
+        String accessToken = JwtUtil.extractBearerToken(authHeader);
+        authService.logout(accessToken, dto.getRefreshToken(), dto.getDeviceId());
+        return ApiResult.successResult();
     }
 
-    private String formatResult(Object result) {
-        if (result == null) return "null";
-        if (result instanceof InputStreamSource) return "[File Download]";
-        String json = toJson(result);
-        int maxLen = DEFAULT_MAX_LOG_LENGTH;
-        return json.length() > maxLen ? json.substring(0, maxLen) + "... (截断)" : json;
-    }
-
-    private Object handleFileArg(Object arg) {
-        if (arg instanceof MultipartFile file) {
-            return String.format("[File: %s, Size: %d, Type: %s]",
-                    file.getOriginalFilename(), file.getSize(), file.getContentType());
-        }
-        if (arg instanceof MultipartFile[] files) {
-            return String.format("[FileArray: %d files]", files.length);
-        }
-        return "Unknown File Type";
-    }
-
-    private void publishAuditLog(String traceId, String className, String methodName,
-                                 Map<String, Object> params, Object result, Throwable ex, long duration) {
-        SysLogEvent logEvent = new SysLogEvent(this);
-        logEvent.setTraceId(traceId);
-        logEvent.setMethod(className + "." + methodName);
-        logEvent.setParams(toJson(params));
-        logEvent.setResult(ex != null ? "Exception: " + ex.getMessage() : formatResult(result));
-        logEvent.setStatus(ex == null ? 1 : 0);
-        logEvent.setDuration(duration);
-        logEvent.setCreateTime(new Date());
-
-        eventPublisher.publishEvent(logEvent);
+    /**
+     * 获取当前用户信息
+     */
+    @GetMapping("/userInfo")
+    @Operation(summary = "获取用户信息", description = "拉取当前登录用户的角色、权限标识及菜单树")
+    @Loggable(logRequest = false, logResponse = true)
+    public ApiResult<UserInfoDTO> getUserInfo(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+        String token = JwtUtil.extractBearerToken(authHeader);
+        return ApiResult.successResult(authService.getUserInfoByToken(token));
     }
 }
