@@ -1,572 +1,700 @@
 package com.springboot.admin.service.impl;
 
 import com.springboot.admin.service.IRedisService;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Redis 全能服务实现类
+ * RedisServiceImpl - 企业级 Redis 全能服务实现
  *
- * <p>
- * <h3>核心特性：</h3>
- * <ol>
- * <li><b>Fail-Secure:</b> 所有 Redis 操作均包裹在 try-catch 中，Redis 宕机不会导致业务崩溃。</li>
- * <li><b>Log Optimization:</b> 智能日志降噪，Debug 模式打印堆栈，生产环境只打印错误信息，防止磁盘爆满。</li>
- * <li><b>Atomic Scripts:</b> 预加载 Lua 脚本，保证复杂操作的原子性。</li>
- * <li><b>Pipeline Support:</b> 实现了 MultiGet 等批量操作，提升高并发性能。</li>
- * </ol>
- * </p>
+ * <p>核心特性：
+ * 1. 支持 Redis 五大数据结构操作：String、Object、Hash、List、Set、ZSet
+ * 2. 支持 Scan 非阻塞扫描
+ * 3. Fail-Secure 异常处理：Redis 异常不会影响业务逻辑
+ * 4. Lua 脚本集中管理，实现原子操作：自增+过期、getAndDelete
+ * 5. 泛型对象存取，保持序列化规则一致
+ *
+ * <p>设计原则：
+ * - 高内聚：Lua 脚本和异常处理封装在 Service 内部
+ * - DRY：对象操作统一通过 RedisTemplate，序列化规则全局一致
+ * - 安全可靠：生产环境日志降噪，异常可控
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class RedisServiceImpl implements IRedisService {
-    // 自动注入 Spring Boot 默认配置好的 StringRedisTemplate
-    private final StringRedisTemplate stringRedisTemplate;
-    // 注入我们自己在 RedisConfig 配置的 RedisTemplate (用于对象操作)
-    private final RedisTemplate<String, Object> redisTemplate;
-    // Lua 脚本：原子自增并设置过期
-    private DefaultRedisScript<Long> incrWithExpireScript;
-    // Lua 脚本：原子获取并删除
-    private DefaultRedisScript<String> getAndDeleteScript;
 
-    /**
-     * 初始化 Lua 脚本 (利用 Script Load 缓存 SHA1)
-     */
-    @PostConstruct
-    public void init() {
-        incrWithExpireScript = new DefaultRedisScript<>();
-        incrWithExpireScript.setResultType(Long.class);
-        incrWithExpireScript.setScriptText(
+    // ==========================
+    // 注入 Redis 模板
+    // ==========================
+    private final StringRedisTemplate stringRedisTemplate; // 用于字符串操作
+    private final RedisTemplate<String, Object> redisTemplate; // 用于对象操作 (JSON 序列化)
+
+    // ==========================
+    // Lua 脚本集中管理
+    // ==========================
+    private static final DefaultRedisScript<Long> INCR_WITH_EXPIRE_SCRIPT;
+    private static final DefaultRedisScript<String> GET_AND_DELETE_SCRIPT;
+
+    static {
+        // Lua 脚本：原子自增并设置过期时间
+        INCR_WITH_EXPIRE_SCRIPT = new DefaultRedisScript<>(
                 "local current = redis.call('INCR', KEYS[1]) " +
                         "if current == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end " +
-                        "return current"
+                        "return current", Long.class
         );
 
-        getAndDeleteScript = new DefaultRedisScript<>();
-        getAndDeleteScript.setResultType(String.class);
-        getAndDeleteScript.setScriptText(
+        // Lua 脚本：原子获取并删除
+        GET_AND_DELETE_SCRIPT = new DefaultRedisScript<>(
                 "local v = redis.call('GET', KEYS[1]) " +
                         "if not v then return nil end " +
                         "redis.call('DEL', KEYS[1]) " +
-                        "return v"
+                        "return v", String.class
         );
     }
-    // =================================================
-    // 1. 通用操作实现
-    // =================================================
 
+    // ==========================
+    // 1. 通用 Key 操作
+    // ==========================
+
+    /**
+     * 设置 Key 的过期时间
+     *
+     * @param key Redis 键
+     * @param timeout 过期时间
+     * @param unit 时间单位
+     * @return true 设置成功，false 失败
+     */
     @Override
     public boolean expire(String key, long timeout, TimeUnit unit) {
-        try {
-            return Boolean.TRUE.equals(stringRedisTemplate.expire(key, timeout, unit));
-        } catch (Exception e) {
-            handleException("expire", key, e);
-            return false;
-        }
+        return executeSafe(() -> stringRedisTemplate.expire(key, timeout, unit), key);
     }
 
+    /**
+     * 获取 Key 的剩余过期时间
+     *
+     * @param key Redis 键
+     * @param unit 时间单位
+     * @return 剩余过期时间，单位由 unit 指定，-2 表示 key 不存在
+     */
     @Override
     public long getExpire(String key, TimeUnit unit) {
-        try {
+        return executeSafe(() -> {
             Long expire = stringRedisTemplate.getExpire(key, unit);
             return expire != null ? expire : -2;
-        } catch (Exception e) {
-            handleException("getExpire", key, e);
-            return -2;
-        }
+        }, key, -2L);
     }
 
+    /**
+     * 检查 Key 是否存在
+     *
+     * @param key Redis 键
+     * @return true 存在，false 不存在
+     */
     @Override
     public boolean hasKey(String key) {
-        try {
-            return Boolean.TRUE.equals(stringRedisTemplate.hasKey(key));
-        } catch (Exception e) {
-            handleException("hasKey", key, e);
-            return false;
-        }
+        return executeSafe(() -> stringRedisTemplate.hasKey(key), key);
     }
 
+    /**
+     * 删除单个 Key
+     *
+     * @param key Redis 键
+     * @return true 删除成功，false 失败或 key 不存在
+     */
     @Override
     public boolean deleteKey(String key) {
-        try {
-            return Boolean.TRUE.equals(stringRedisTemplate.delete(key));
-        } catch (Exception e) {
-            handleException("deleteKey", key, e);
-            return false;
-        }
+        return executeSafe(() -> stringRedisTemplate.delete(key), key);
     }
 
+    /**
+     * 删除多个 Key
+     *
+     * @param keys Redis 键集合
+     * @return true 删除成功，false 失败
+     */
     @Override
     public boolean deleteKeys(Collection<String> keys) {
         if (keys == null || keys.isEmpty()) return false;
-        try {
+        return executeSafe(() -> {
             Long count = stringRedisTemplate.delete(keys);
             return count != null && count > 0;
-        } catch (Exception e) {
-            handleException("deleteKeys", "size:" + keys.size(), e);
-            return false;
-        }
+        }, "size:" + keys.size());
     }
 
-    // =================================================
-    // 2. String 操作实现
-    // =================================================
+    // ==========================
+    // 2. String 操作
+    // ==========================
 
+    /**
+     * 设置 String 值
+     *
+     * @param key Redis 键
+     * @param value 字符串值
+     * @return true 成功，false 失败
+     */
     @Override
     public boolean setValue(String key, String value) {
-        try {
-            stringRedisTemplate.opsForValue().set(key, value);
-            return true;
-        } catch (Exception e) {
-            handleException("setValue", key, e);
-            return false;
-        }
+        return executeSafe(() -> { stringRedisTemplate.opsForValue().set(key, value); return true; }, key);
     }
 
+    /**
+     * 设置 String 值，并指定过期时间
+     *
+     * @param key Redis 键
+     * @param value 字符串值
+     * @param timeout 过期时间
+     * @param unit 时间单位
+     * @return true 成功，false 失败
+     */
     @Override
     public boolean setValue(String key, String value, long timeout, TimeUnit unit) {
-        try {
-            stringRedisTemplate.opsForValue().set(key, value, timeout, unit);
-            return true;
-        } catch (Exception e) {
-            handleException("setValueWithExpire", key, e);
-            return false;
-        }
+        return executeSafe(() -> { stringRedisTemplate.opsForValue().set(key, value, timeout, unit); return true; }, key);
     }
 
+    /**
+     * 获取 String 值
+     *
+     * @param key Redis 键
+     * @return String 值，key 不存在返回 null
+     */
     @Override
     public String getValue(String key) {
-        try {
-            return stringRedisTemplate.opsForValue().get(key);
-        } catch (Exception e) {
-            handleException("getValue", key, e);
-            return null;
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForValue().get(key), key, null);
     }
 
+    /**
+     * 批量获取 String 值
+     *
+     * @param keys Redis 键集合
+     * @return 值列表，不存在的 key 返回 null
+     */
     @Override
     public List<String> multiGet(Collection<String> keys) {
         if (keys == null || keys.isEmpty()) return Collections.emptyList();
-        try {
-            return stringRedisTemplate.opsForValue().multiGet(keys);
-        } catch (Exception e) {
-            handleException("multiGet", "size:" + keys.size(), e);
-            return Collections.emptyList();
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForValue().multiGet(keys), "size:" + keys.size(), Collections.emptyList());
     }
 
+    /**
+     * 自增 Key 的数值
+     *
+     * @param key Redis 键
+     * @return 增量后的值，失败返回 null
+     */
     @Override
     public Long increment(String key) {
-        try {
-            return stringRedisTemplate.opsForValue().increment(key);
-        } catch (Exception e) {
-            handleException("increment", key, e);
-            return null;
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForValue().increment(key), key, null);
     }
 
+    /**
+     * 自增 Key 的数值，并设置过期时间
+     *
+     * @param key Redis 键
+     * @param timeout 过期时间
+     * @param unit 时间单位
+     * @return 增量后的值，失败返回 null
+     */
     @Override
     public Long increment(String key, long timeout, TimeUnit unit) {
-        try {
-            // Lua 参数需转为 String 传递
-            return stringRedisTemplate.execute(incrWithExpireScript, Collections.singletonList(key), String.valueOf(unit.toMillis(timeout)));
-        } catch (Exception e) {
-            handleException("incrementWithExpire", key, e);
-            return null;
-        }
+        return executeSafe(() ->
+                        stringRedisTemplate.execute(INCR_WITH_EXPIRE_SCRIPT, Collections.singletonList(key), String.valueOf(unit.toMillis(timeout))),
+                key, null
+        );
     }
 
+    /**
+     * 原子获取并删除 Key
+     *
+     * @param key Redis 键
+     * @return 删除前的值，不存在返回 null
+     */
     @Override
     public String getAndDelete(String key) {
-        try {
-            return stringRedisTemplate.execute(getAndDeleteScript, Collections.singletonList(key));
-        } catch (Exception e) {
-            handleException("getAndDelete", key, e);
-            return null;
-        }
+        return executeSafe(() -> stringRedisTemplate.execute(GET_AND_DELETE_SCRIPT, Collections.singletonList(key)), key, null);
     }
-    // ===================== 2.1 对象缓存 =====================
+
+    // ==========================
+    // 3. Object / 泛型操作
+    // ==========================
+
+    /**
+     * 设置对象到 Redis，并指定过期时间
+     *
+     * @param key Redis 键
+     * @param value 对象值
+     * @param timeout 过期时间
+     * @param unit 时间单位
+     * @return true 成功，false 失败
+     */
+    @Override
     public boolean setObject(String key, Object value, long timeout, TimeUnit unit) {
-        try {
-            redisTemplate.opsForValue().set(key, value, timeout, unit);
-            return true;
-        } catch (Exception e) {
-            handleException("setObject", key, e);
-            return false;
-        }
+        return executeSafe(() -> { redisTemplate.opsForValue().set(key, value, timeout, unit); return true; }, key);
     }
 
+    /**
+     * 获取对象
+     *
+     * @param key Redis 键
+     * @param clazz 对象类型
+     * @param <T> 泛型类型
+     * @return 对象实例，key 不存在返回 null
+     */
+    @Override
     public <T> T getObject(String key, Class<T> clazz) {
-        try {
+        return executeSafe(() -> {
             Object obj = redisTemplate.opsForValue().get(key);
-            if (obj == null) return null;
-            return clazz.cast(obj);
-        } catch (Exception e) {
-            handleException("getObject", key, e);
-            return null;
-        }
+            return obj != null ? clazz.cast(obj) : null;
+        }, key, null);
     }
-    // =================================================
-    // 3. Hash 操作实现
-    // =================================================
 
+    // ==========================
+    // 4. Hash 操作
+    // ==========================
+
+    /**
+     * Hash 单个字段设置
+     *
+     * @param key Redis 键
+     * @param hashKey Hash 字段
+     * @param value 值
+     * @return true 成功，false 失败
+     */
     @Override
     public boolean hSet(String key, String hashKey, String value) {
-        try {
-            stringRedisTemplate.opsForHash().put(key, hashKey, value);
-            return true;
-        } catch (Exception e) {
-            handleException("hSet", key, e);
-            return false;
-        }
+        return executeSafe(() -> { stringRedisTemplate.opsForHash().put(key, hashKey, value); return true; }, key);
     }
 
+    /**
+     * Hash 单个字段设置，并指定过期时间
+     *
+     * @param key Redis 键
+     * @param hashKey Hash 字段
+     * @param value 值
+     * @param timeout 过期时间
+     * @param unit 时间单位
+     * @return true 成功，false 失败
+     */
     @Override
     public boolean hSet(String key, String hashKey, String value, long timeout, TimeUnit unit) {
-        try {
+        return executeSafe(() -> {
             stringRedisTemplate.opsForHash().put(key, hashKey, value);
             return expire(key, timeout, unit);
-        } catch (Exception e) {
-            handleException("hSetWithExpire", key, e);
-            return false;
-        }
+        }, key);
     }
 
+    /**
+     * Hash 多字段设置
+     *
+     * @param key Redis 键
+     * @param map 字段和值集合
+     * @return true 成功，false 失败
+     */
     @Override
     public boolean hMSet(String key, Map<String, String> map) {
-        try {
-            stringRedisTemplate.opsForHash().putAll(key, map);
-            return true;
-        } catch (Exception e) {
-            handleException("hMSet", key, e);
-            return false;
-        }
+        return executeSafe(() -> { stringRedisTemplate.opsForHash().putAll(key, map); return true; }, key);
     }
 
+    /**
+     * Hash 多字段设置，并指定过期时间
+     *
+     * @param key Redis 键
+     * @param map 字段和值集合
+     * @param timeout 过期时间
+     * @param unit 时间单位
+     * @return true 成功，false 失败
+     */
     @Override
     public boolean hMSet(String key, Map<String, String> map, long timeout, TimeUnit unit) {
-        try {
+        return executeSafe(() -> {
             stringRedisTemplate.opsForHash().putAll(key, map);
             return expire(key, timeout, unit);
-        } catch (Exception e) {
-            handleException("hMSetWithExpire", key, e);
-            return false;
-        }
+        }, key);
     }
 
+    /**
+     * Hash 获取单字段
+     *
+     * @param key Redis 键
+     * @param hashKey Hash 字段
+     * @return 字段值，不存在返回 null
+     */
     @Override
     public String hGet(String key, String hashKey) {
-        try {
+        return executeSafe(() -> {
             Object val = stringRedisTemplate.opsForHash().get(key, hashKey);
             return val != null ? val.toString() : null;
-        } catch (Exception e) {
-            handleException("hGet", key, e);
-            return null;
-        }
+        }, key, null);
     }
 
+    /**
+     * Hash 获取所有字段和值
+     *
+     * @param key Redis 键
+     * @return Map，key 不存在返回空 Map
+     */
     @Override
     public Map<Object, Object> hGetAll(String key) {
-        try {
-            return stringRedisTemplate.opsForHash().entries(key);
-        } catch (Exception e) {
-            handleException("hGetAll", key, e);
-            return Collections.emptyMap();
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForHash().entries(key), key, Collections.emptyMap());
     }
 
+    /**
+     * 删除 Hash 字段
+     *
+     * @param key Redis 键
+     * @param hashKeys Hash 字段
+     * @return true 成功，false 失败
+     */
     @Override
     public boolean hDel(String key, Object... hashKeys) {
-        try {
-            stringRedisTemplate.opsForHash().delete(key, hashKeys);
-            return true;
-        } catch (Exception e) {
-            handleException("hDel", key, e);
-            return false;
-        }
+        return executeSafe(() -> { stringRedisTemplate.opsForHash().delete(key, hashKeys); return true; }, key);
     }
 
+    /**
+     * 判断 Hash 字段是否存在
+     *
+     * @param key Redis 键
+     * @param hashKey Hash 字段
+     * @return true 存在，false 不存在
+     */
     @Override
     public boolean hHasKey(String key, String hashKey) {
-        try {
-            return stringRedisTemplate.opsForHash().hasKey(key, hashKey);
-        } catch (Exception e) {
-            handleException("hHasKey", key, e);
-            return false;
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForHash().hasKey(key, hashKey), key);
     }
 
+    /**
+     * Hash 数值自增
+     *
+     * @param key Redis 键
+     * @param hashKey Hash 字段
+     * @param delta 增量
+     * @return 增量后的值，失败返回 null
+     */
     @Override
     public Long hIncr(String key, String hashKey, long delta) {
-        try {
-            return stringRedisTemplate.opsForHash().increment(key, hashKey, delta);
-        } catch (Exception e) {
-            handleException("hIncr", key, e);
-            return null;
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForHash().increment(key, hashKey, delta), key, null);
     }
 
-    // =================================================
-    // 4. List 操作实现
-    // =================================================
+    // ==========================
+    // 5. List 操作
+    // ==========================
 
+    /**
+     * List 左插入
+     *
+     * @param key Redis 键
+     * @param value 值
+     * @return true 成功，false 失败
+     */
     @Override
     public boolean lPush(String key, String value) {
-        try {
-            stringRedisTemplate.opsForList().leftPush(key, value);
-            return true;
-        } catch (Exception e) {
-            handleException("lPush", key, e);
-            return false;
-        }
+        return executeSafe(() -> { stringRedisTemplate.opsForList().leftPush(key, value); return true; }, key);
     }
 
+    /**
+     * List 左插入多值
+     *
+     * @param key Redis 键
+     * @param values 值集合
+     * @return true 成功，false 失败
+     */
     @Override
     public boolean lPushAll(String key, List<String> values) {
-        try {
-            stringRedisTemplate.opsForList().leftPushAll(key, values);
-            return true;
-        } catch (Exception e) {
-            handleException("lPushAll", key, e);
-            return false;
-        }
+        return executeSafe(() -> { stringRedisTemplate.opsForList().leftPushAll(key, values); return true; }, key);
     }
 
+    /**
+     * List 右插入
+     *
+     * @param key Redis 键
+     * @param value 值
+     * @return true 成功，false 失败
+     */
     @Override
     public boolean rPush(String key, String value) {
-        try {
-            stringRedisTemplate.opsForList().rightPush(key, value);
-            return true;
-        } catch (Exception e) {
-            handleException("rPush", key, e);
-            return false;
-        }
+        return executeSafe(() -> { stringRedisTemplate.opsForList().rightPush(key, value); return true; }, key);
     }
 
+    /**
+     * List 右插入多值
+     *
+     * @param key Redis 键
+     * @param values 值集合
+     * @return true 成功，false 失败
+     */
     @Override
     public boolean rPushAll(String key, List<String> values) {
-        try {
-            stringRedisTemplate.opsForList().rightPushAll(key, values);
-            return true;
-        } catch (Exception e) {
-            handleException("rPushAll", key, e);
-            return false;
-        }
+        return executeSafe(() -> { stringRedisTemplate.opsForList().rightPushAll(key, values); return true; }, key);
     }
 
+    /**
+     * List 左弹出
+     *
+     * @param key Redis 键
+     * @return 弹出的值，key 不存在返回 null
+     */
     @Override
     public String lPop(String key) {
-        try {
-            return stringRedisTemplate.opsForList().leftPop(key);
-        } catch (Exception e) {
-            handleException("lPop", key, e);
-            return null;
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForList().leftPop(key), key, null);
     }
 
+    /**
+     * List 右弹出
+     *
+     * @param key Redis 键
+     * @return 弹出的值，key 不存在返回 null
+     */
     @Override
     public String rPop(String key) {
-        try {
-            return stringRedisTemplate.opsForList().rightPop(key);
-        } catch (Exception e) {
-            handleException("rPop", key, e);
-            return null;
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForList().rightPop(key), key, null);
     }
 
+    /**
+     * 获取 List 指定范围
+     *
+     * @param key Redis 键
+     * @param start 起始索引
+     * @param end 结束索引
+     * @return List 范围值列表
+     */
     @Override
     public List<String> lRange(String key, long start, long end) {
-        try {
-            return stringRedisTemplate.opsForList().range(key, start, end);
-        } catch (Exception e) {
-            handleException("lRange", key, e);
-            return Collections.emptyList();
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForList().range(key, start, end), key, Collections.emptyList());
     }
 
+    /**
+     * 获取 List 长度
+     *
+     * @param key Redis 键
+     * @return 长度，key 不存在返回 0
+     */
     @Override
     public long lLen(String key) {
-        try {
+        return executeSafe(() -> {
             Long size = stringRedisTemplate.opsForList().size(key);
             return size != null ? size : 0;
-        } catch (Exception e) {
-            handleException("lLen", key, e);
-            return 0;
-        }
+        }, key, 0L);
     }
 
-    // =================================================
-    // 5. Set 操作实现
-    // =================================================
+    // ==========================
+    // 6. Set 操作
+    // ==========================
 
+    /**
+     * 添加 Set 成员
+     *
+     * @param key Redis 键
+     * @param values 值集合
+     * @return true 成功，false 失败
+     */
     @Override
     public boolean sAdd(String key, String... values) {
-        try {
+        return executeSafe(() -> {
             Long count = stringRedisTemplate.opsForSet().add(key, values);
             return count != null && count > 0;
-        } catch (Exception e) {
-            handleException("sAdd", key, e);
-            return false;
-        }
+        }, key);
     }
 
+    /**
+     * 添加 Set 成员并设置过期时间
+     *
+     * @param key Redis 键
+     * @param timeout 过期时间
+     * @param unit 时间单位
+     * @param values 值集合
+     * @return true 成功，false 失败
+     */
     @Override
     public boolean sAddWithExpire(String key, long timeout, TimeUnit unit, String... values) {
-        try {
+        return executeSafe(() -> {
             Long count = stringRedisTemplate.opsForSet().add(key, values);
             expire(key, timeout, unit);
             return count != null && count > 0;
-        } catch (Exception e) {
-            handleException("sAddWithExpire", key, e);
-            return false;
-        }
+        }, key);
     }
 
+    /**
+     * 判断 Set 成员是否存在
+     *
+     * @param key Redis 键
+     * @param value 值
+     * @return true 存在，false 不存在
+     */
     @Override
     public boolean sIsMember(String key, String value) {
-        try {
-            return Boolean.TRUE.equals(stringRedisTemplate.opsForSet().isMember(key, value));
-        } catch (Exception e) {
-            handleException("sIsMember", key, e);
-            return false;
-        }
+        return executeSafe(() -> Boolean.TRUE.equals(stringRedisTemplate.opsForSet().isMember(key, value)), key);
     }
 
+    /**
+     * 获取 Set 成员数量
+     *
+     * @param key Redis 键
+     * @return 成员数量，key 不存在返回 0
+     */
     @Override
     public long sSize(String key) {
-        try {
+        return executeSafe(() -> {
             Long size = stringRedisTemplate.opsForSet().size(key);
             return size != null ? size : 0;
-        } catch (Exception e) {
-            handleException("sSize", key, e);
-            return 0;
-        }
+        }, key, 0L);
     }
 
+    /**
+     * 删除 Set 成员
+     *
+     * @param key Redis 键
+     * @param values 成员集合
+     * @return 删除数量
+     */
     @Override
     public long sRemove(String key, Object... values) {
-        try {
+        return executeSafe(() -> {
             Long count = stringRedisTemplate.opsForSet().remove(key, values);
             return count != null ? count : 0;
-        } catch (Exception e) {
-            handleException("sRemove", key, e);
-            return 0;
-        }
+        }, key, 0L);
     }
 
+    /**
+     * 获取 Set 所有成员
+     *
+     * @param key Redis 键
+     * @return Set 成员集合
+     */
     @Override
     public Set<String> sMembers(String key) {
-        try {
-            return stringRedisTemplate.opsForSet().members(key);
-        } catch (Exception e) {
-            handleException("sMembers", key, e);
-            return Collections.emptySet();
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForSet().members(key), key, Collections.emptySet());
     }
 
-    // =================================================
-    // 6. ZSet 操作实现
-    // =================================================
+    // ==========================
+    // 7. ZSet 操作
+    // ==========================
 
+    /**
+     * 添加 ZSet 成员
+     *
+     * @param key Redis 键
+     * @param value 值
+     * @param score 分数
+     * @return true 成功，false 失败
+     */
     @Override
     public boolean zAdd(String key, String value, double score) {
-        try {
-            return Boolean.TRUE.equals(stringRedisTemplate.opsForZSet().add(key, value, score));
-        } catch (Exception e) {
-            handleException("zAdd", key, e);
-            return false;
-        }
+        return executeSafe(() -> Boolean.TRUE.equals(stringRedisTemplate.opsForZSet().add(key, value, score)), key);
     }
 
+    /**
+     * ZSet 成员分数自增
+     *
+     * @param key Redis 键
+     * @param value 值
+     * @param delta 增量
+     * @return 增量后的分数
+     */
     @Override
     public Double zIncrScore(String key, String value, double delta) {
-        try {
-            return stringRedisTemplate.opsForZSet().incrementScore(key, value, delta);
-        } catch (Exception e) {
-            handleException("zIncrScore", key, e);
-            return null;
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForZSet().incrementScore(key, value, delta), key, null);
     }
 
+    /**
+     * 获取 ZSet 排名 (从小到大)
+     *
+     * @param key Redis 键
+     * @param value 值
+     * @return 排名 (0-based)，不存在返回 null
+     */
     @Override
     public Long zRank(String key, String value) {
-        try {
-            return stringRedisTemplate.opsForZSet().rank(key, value);
-        } catch (Exception e) {
-            handleException("zRank", key, e);
-            return null;
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForZSet().rank(key, value), key, null);
     }
 
+    /**
+     * 获取 ZSet 排名 (从大到小)
+     *
+     * @param key Redis 键
+     * @param value 值
+     * @return 排名 (0-based)，不存在返回 null
+     */
     @Override
     public Long zReverseRank(String key, String value) {
-        try {
-            return stringRedisTemplate.opsForZSet().reverseRank(key, value);
-        } catch (Exception e) {
-            handleException("zReverseRank", key, e);
-            return null;
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForZSet().reverseRank(key, value), key, null);
     }
 
+    /**
+     * 获取 ZSet 指定范围成员 (从大到小)
+     *
+     * @param key Redis 键
+     * @param start 起始索引
+     * @param end 结束索引
+     * @return 值集合
+     */
     @Override
     public Set<String> zReverseRange(String key, long start, long end) {
-        try {
-            return stringRedisTemplate.opsForZSet().reverseRange(key, start, end);
-        } catch (Exception e) {
-            handleException("zReverseRange", key, e);
-            return Collections.emptySet();
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForZSet().reverseRange(key, start, end), key, Collections.emptySet());
     }
 
+    /**
+     * 获取 ZSet 指定范围成员及分数 (从大到小)
+     *
+     * @param key Redis 键
+     * @param start 起始索引
+     * @param end 结束索引
+     * @return 值及分数集合
+     */
     @Override
     public Set<ZSetOperations.TypedTuple<String>> zReverseRangeWithScores(String key, long start, long end) {
-        try {
-            return stringRedisTemplate.opsForZSet().reverseRangeWithScores(key, start, end);
-        } catch (Exception e) {
-            handleException("zReverseRangeWithScores", key, e);
-            return Collections.emptySet();
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForZSet().reverseRangeWithScores(key, start, end), key, Collections.emptySet());
     }
 
+    /**
+     * 获取 ZSet 成员分数
+     *
+     * @param key Redis 键
+     * @param value 值
+     * @return 分数，不存在返回 null
+     */
     @Override
     public Double zScore(String key, String value) {
-        try {
-            return stringRedisTemplate.opsForZSet().score(key, value);
-        } catch (Exception e) {
-            handleException("zScore", key, e);
-            return null;
-        }
+        return executeSafe(() -> stringRedisTemplate.opsForZSet().score(key, value), key, null);
     }
 
+    /**
+     * 删除 ZSet 成员
+     *
+     * @param key Redis 键
+     * @param values 值集合
+     * @return 删除数量
+     */
     @Override
     public long zRemove(String key, Object... values) {
-        try {
+        return executeSafe(() -> {
             Long count = stringRedisTemplate.opsForZSet().remove(key, values);
             return count != null ? count : 0;
-        } catch (Exception e) {
-            handleException("zRemove", key, e);
-            return 0;
-        }
+        }, key, 0L);
     }
 
-    // =================================================
-    // 7. 高级与扫描操作实现
-    // =================================================
+    // ==========================
+    // 8. Scan 高级操作
+    // ==========================
 
+    /**
+     * Scan 扫描匹配 Key
+     *
+     * @param pattern 匹配模式，例如 user:*
+     * @return 匹配的 Key 集合
+     */
     @Override
     public Set<String> scan(String pattern) {
         Set<String> keys = new HashSet<>();
-        try {
-            stringRedisTemplate.execute((org.springframework.data.redis.connection.RedisConnection connection) -> {
-
+        return executeSafe(() -> {
+            stringRedisTemplate.execute((RedisConnection connection) -> {
                 ScanOptions options = ScanOptions.scanOptions().match(pattern).count(1000).build();
                 try (Cursor<byte[]> cursor = connection.scan(options)) {
                     while (cursor.hasNext()) {
@@ -576,26 +704,41 @@ public class RedisServiceImpl implements IRedisService {
                 return null;
             });
             return keys;
+        }, pattern, Collections.emptySet());
+    }
+
+    // ==========================
+    // Fail-Secure 异常封装
+    // ==========================
+
+    /**
+     * 安全执行 Redis 操作，异常返回默认值
+     *
+     * @param supplier 执行方法
+     * @param key 日志上下文 Key
+     * @param defaultValue 异常时返回的默认值
+     * @param <T> 返回类型
+     * @return 返回执行结果或默认值
+     */
+    private <T> T executeSafe(SupplierWithException<T> supplier, String key, T defaultValue) {
+        try {
+            return supplier.get();
         } catch (Exception e) {
-            handleException("scan", pattern, e);
-            return Collections.emptySet();
+            if (log.isDebugEnabled()) {
+                log.error("Redis 操作失败. Key: {}", key, e);
+            } else {
+                log.error("Redis 操作失败. Key: {}. Error: {}", key, e.getMessage());
+            }
+            return defaultValue;
         }
     }
 
-    // =================================================
-    // 私有: 统一日志处理
-    // =================================================
+    private <T> T executeSafe(SupplierWithException<T> supplier, String key) {
+        return executeSafe(supplier, key, null);
+    }
 
-    /**
-     * 智能日志处理
-     * <p>策略：生产环境只打印简短错误消息，开发环境(Debug开启)打印完整堆栈。</p>
-     */
-    private void handleException(String op, String key, Exception e) {
-        if (log.isDebugEnabled()) {
-            log.error("Redis [{}] 失败. Key: {}", op, key, e);
-        } else {
-            // 避免生产环境磁盘被堆栈日志写满
-            log.error("Redis [{}] 失败. Key: {}. Error: {}", op, key, e.getMessage());
-        }
+    @FunctionalInterface
+    private interface SupplierWithException<T> {
+        T get() throws Exception;
     }
 }

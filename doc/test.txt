@@ -1,113 +1,468 @@
-package com.springboot.admin.controller;
+package com.springboot.admin.service.impl;
 
-import com.springboot.admin.annotation.Loggable;
-import com.springboot.admin.common.ApiResult;
-import com.springboot.admin.model.dto.CaptchaDTO;
-import com.springboot.admin.model.dto.TokenRefreshReqDTO;
-import com.springboot.admin.model.dto.TokenResDTO;
-import com.springboot.admin.model.dto.UserLoginReqDTO;
-import com.springboot.admin.model.dto.user.UserInfoDTO;
-import com.springboot.admin.service.IAuthService;
-import com.springboot.admin.service.ICaptchaService;
-import com.springboot.admin.utils.IpUtil;
-import com.springboot.admin.utils.JwtUtil;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
+import com.springboot.admin.service.IRedisService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.*;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.stereotype.Service;
+
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
- * 认证授权控制器
+ * Redis 全能服务实现类 (Enterprise Edition)
+ *
  * <p>
- * 提供登录、刷新令牌、登出及用户信息获取接口。
- * 遵循 Restful 规范，统一返回 ApiResult 结构。
+ * <h3>核心设计理念：</h3>
+ * <ul>
+ * <li><b>Fail-Secure (故障阻断):</b> 统一封装 try-catch，Redis 宕机时自动降级返回默认值 (null/false)，保护主业务不受影响。</li>
+ * <li><b>Atomic (原子性):</b> 关键业务（如限流、一次性 Token）内置 Lua 脚本，保证操作原子性。</li>
+ * <li><b>Non-Blocking (非阻塞):</b> 使用 SCAN 替代 KEYS 命令，安全处理海量数据查询。</li>
+ * <li><b>DRY (拒绝重复):</b> 采用函数式编程 (executeSafe) 消除冗余的异常处理代码。</li>
+ * </ul>
  * </p>
+ *
+ * @author YourTeam
  */
-@RestController
-@RequestMapping("/api/auth")
-@Tag(name = "认证管理", description = "用户登录、Token管理及用户信息查询")
-@RequiredArgsConstructor // 使用 Lombok 生成构造器注入，替代 @Autowired
-public class AuthController {
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class RedisServiceImpl implements IRedisService {
 
-    private final IAuthService authService;
-    private final ICaptchaService captchaService;
+    // 1. 注入 StringRedisTemplate (用于常规 K-V 操作，性能最高)
+    private final StringRedisTemplate stringRedisTemplate;
 
-    /**
-     * 获取图形验证码
-     * <p>
-     * 不记录请求日志，防止 Base64 图片数据撑爆日志文件
-     * </p>
-     */
-    @Operation(summary = "获取验证码", description = "返回 Base64 图片及验证码标识")
-    @Loggable(logRequest = false, logResponse = false)
-    @GetMapping("/getCaptcha")
-    public ApiResult<CaptchaDTO> getCaptcha() {
-        return ApiResult.successResult(captchaService.generateCaptcha());
+    // 2. 注入 RedisTemplate (用于复杂对象存储，序列化规则见 RedisConfig)
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    // ==========================================================
+    // Lua 脚本集中管理 (Static Final, 避免重复编译)
+    // ==========================================================
+
+    /** 脚本：原子自增并设置过期时间 (用于限流、防刷) */
+    private static final DefaultRedisScript<Long> INCR_WITH_EXPIRE_SCRIPT;
+
+    /** 脚本：原子获取并删除 (用于一次性 Token、验证码) */
+    private static final DefaultRedisScript<String> GET_AND_DELETE_SCRIPT;
+
+    static {
+        // 初始化 Lua 脚本
+        INCR_WITH_EXPIRE_SCRIPT = new DefaultRedisScript<>(
+                "local current = redis.call('INCR', KEYS[1]) " +
+                "if current == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end " +
+                "return current", Long.class
+        );
+
+        GET_AND_DELETE_SCRIPT = new DefaultRedisScript<>(
+                "local v = redis.call('GET', KEYS[1]) " +
+                "if not v then return nil end " +
+                "redis.call('DEL', KEYS[1]) " +
+                "return v", String.class
+        );
+    }
+
+    // ==========================================================
+    // 1. 通用 Key 操作
+    // ==========================================================
+
+    @Override
+    public boolean expire(String key, long timeout, TimeUnit unit) {
+        return executeSafe(() -> Boolean.TRUE.equals(stringRedisTemplate.expire(key, timeout, unit)), key, false);
+    }
+
+    @Override
+    public long getExpire(String key, TimeUnit unit) {
+        return executeSafe(() -> {
+            Long expire = stringRedisTemplate.getExpire(key, unit);
+            return expire != null ? expire : -2;
+        }, key, -2L);
+    }
+
+    @Override
+    public boolean hasKey(String key) {
+        return executeSafe(() -> Boolean.TRUE.equals(stringRedisTemplate.hasKey(key)), key, false);
+    }
+
+    @Override
+    public boolean deleteKey(String key) {
+        return executeSafe(() -> Boolean.TRUE.equals(stringRedisTemplate.delete(key)), key, false);
+    }
+
+    @Override
+    public boolean deleteKeys(Collection<String> keys) {
+        if (keys == null || keys.isEmpty()) return false;
+        return executeSafe(() -> {
+            Long count = stringRedisTemplate.delete(keys);
+            return count != null && count > 0;
+        }, "batch-delete-size:" + keys.size(), false);
+    }
+
+    // ==========================================================
+    // 2. String (字符串) 操作
+    // ==========================================================
+
+    @Override
+    public boolean setValue(String key, String value) {
+        return executeSafe(() -> {
+            stringRedisTemplate.opsForValue().set(key, value);
+            return true;
+        }, key, false);
+    }
+
+    @Override
+    public boolean setValue(String key, String value, long timeout, TimeUnit unit) {
+        return executeSafe(() -> {
+            stringRedisTemplate.opsForValue().set(key, value, timeout, unit);
+            return true;
+        }, key, false);
+    }
+
+    @Override
+    public String getValue(String key) {
+        return executeSafe(() -> stringRedisTemplate.opsForValue().get(key), key, null);
+    }
+
+    @Override
+    public List<String> multiGet(Collection<String> keys) {
+        if (keys == null || keys.isEmpty()) return Collections.emptyList();
+        return executeSafe(
+            () -> stringRedisTemplate.opsForValue().multiGet(keys),
+            "multiGet-size:" + keys.size(),
+            Collections.emptyList()
+        );
+    }
+
+    @Override
+    public Long increment(String key) {
+        return executeSafe(() -> stringRedisTemplate.opsForValue().increment(key), key, null);
     }
 
     /**
-     * 用户登录
-     * <p>
-     * 1. 使用 @Validated 开启 DTO 参数校验 (如 @NotBlank)
-     * 2. 客户端 IP 必须由服务端获取，不可信赖前端传参
-     * </p>
+     * 原子递增并设置过期
+     * <p>注意：unit.toMillis(timeout) 确保传给 Lua 的是毫秒</p>
      */
-    @PostMapping("/login")
-    @Operation(summary = "用户登录", description = "包含验证码校验、账号密码验证及 Token 发放")
-    @Loggable(logRequest = true, logResponse = true)
-    public ApiResult<TokenResDTO> login(@RequestBody @Validated UserLoginReqDTO dto,
-                                        HttpServletRequest request) {
-        // 安全填充 IP 地址
-        String clientIp = IpUtil.getClientIp(request);
-        dto.setLoginIp(clientIp);
+    @Override
+    public Long increment(String key, long timeout, TimeUnit unit) {
+        return executeSafe(() -> stringRedisTemplate.execute(
+                INCR_WITH_EXPIRE_SCRIPT,
+                Collections.singletonList(key),
+                String.valueOf(unit.toMillis(timeout))
+        ), key, null);
+    }
 
-        return ApiResult.successResult(authService.login(dto));
+    @Override
+    public String getAndDelete(String key) {
+        return executeSafe(() -> stringRedisTemplate.execute(
+                GET_AND_DELETE_SCRIPT,
+                Collections.singletonList(key)
+        ), key, null);
+    }
+
+    // ==========================================================
+    // 2.1 Object (对象) 操作 - 使用 JSON 序列化
+    // ==========================================================
+
+    @Override
+    public boolean setObject(String key, Object value, long timeout, TimeUnit unit) {
+        return executeSafe(() -> {
+            redisTemplate.opsForValue().set(key, value, timeout, unit);
+            return true;
+        }, key, false);
+    }
+
+    @Override
+    public <T> T getObject(String key, Class<T> clazz) {
+        return executeSafe(() -> {
+            Object obj = redisTemplate.opsForValue().get(key);
+            return obj != null ? clazz.cast(obj) : null;
+        }, key, null);
+    }
+
+    // ==========================================================
+    // 3. Hash (哈希表) 操作
+    // ==========================================================
+
+    @Override
+    public boolean hSet(String key, String hashKey, String value) {
+        return executeSafe(() -> {
+            stringRedisTemplate.opsForHash().put(key, hashKey, value);
+            return true;
+        }, key, false);
+    }
+
+    @Override
+    public boolean hSet(String key, String hashKey, String value, long timeout, TimeUnit unit) {
+        return executeSafe(() -> {
+            stringRedisTemplate.opsForHash().put(key, hashKey, value);
+            return expire(key, timeout, unit);
+        }, key, false);
+    }
+
+    @Override
+    public boolean hMSet(String key, Map<String, String> map) {
+        return executeSafe(() -> {
+            stringRedisTemplate.opsForHash().putAll(key, map);
+            return true;
+        }, key, false);
+    }
+
+    @Override
+    public boolean hMSet(String key, Map<String, String> map, long timeout, TimeUnit unit) {
+        return executeSafe(() -> {
+            stringRedisTemplate.opsForHash().putAll(key, map);
+            return expire(key, timeout, unit);
+        }, key, false);
+    }
+
+    @Override
+    public String hGet(String key, String hashKey) {
+        return executeSafe(() -> {
+            Object val = stringRedisTemplate.opsForHash().get(key, hashKey);
+            return val != null ? val.toString() : null;
+        }, key, null);
+    }
+
+    @Override
+    public Map<Object, Object> hGetAll(String key) {
+        return executeSafe(() -> stringRedisTemplate.opsForHash().entries(key), key, Collections.emptyMap());
+    }
+
+    @Override
+    public boolean hDel(String key, Object... hashKeys) {
+        return executeSafe(() -> {
+            stringRedisTemplate.opsForHash().delete(key, hashKeys);
+            return true;
+        }, key, false);
+    }
+
+    @Override
+    public boolean hHasKey(String key, String hashKey) {
+        return executeSafe(() -> stringRedisTemplate.opsForHash().hasKey(key, hashKey), key, false);
+    }
+
+    @Override
+    public Long hIncr(String key, String hashKey, long delta) {
+        return executeSafe(() -> stringRedisTemplate.opsForHash().increment(key, hashKey, delta), key, null);
+    }
+
+    // ==========================================================
+    // 4. List (列表) 操作
+    // ==========================================================
+
+    @Override
+    public boolean lPush(String key, String value) {
+        return executeSafe(() -> {
+            stringRedisTemplate.opsForList().leftPush(key, value);
+            return true;
+        }, key, false);
+    }
+
+    @Override
+    public boolean lPushAll(String key, List<String> values) {
+        return executeSafe(() -> {
+            stringRedisTemplate.opsForList().leftPushAll(key, values);
+            return true;
+        }, key, false);
+    }
+
+    @Override
+    public boolean rPush(String key, String value) {
+        return executeSafe(() -> {
+            stringRedisTemplate.opsForList().rightPush(key, value);
+            return true;
+        }, key, false);
+    }
+
+    @Override
+    public boolean rPushAll(String key, List<String> values) {
+        return executeSafe(() -> {
+            stringRedisTemplate.opsForList().rightPushAll(key, values);
+            return true;
+        }, key, false);
+    }
+
+    @Override
+    public String lPop(String key) {
+        return executeSafe(() -> stringRedisTemplate.opsForList().leftPop(key), key, null);
+    }
+
+    @Override
+    public String rPop(String key) {
+        return executeSafe(() -> stringRedisTemplate.opsForList().rightPop(key), key, null);
+    }
+
+    @Override
+    public List<String> lRange(String key, long start, long end) {
+        return executeSafe(() -> stringRedisTemplate.opsForList().range(key, start, end), key, Collections.emptyList());
+    }
+
+    @Override
+    public long lLen(String key) {
+        return executeSafe(() -> {
+            Long size = stringRedisTemplate.opsForList().size(key);
+            return size != null ? size : 0L;
+        }, key, 0L);
+    }
+
+    // ==========================================================
+    // 5. Set (集合) 操作
+    // ==========================================================
+
+    @Override
+    public boolean sAdd(String key, String... values) {
+        return executeSafe(() -> {
+            Long count = stringRedisTemplate.opsForSet().add(key, values);
+            return count != null && count > 0;
+        }, key, false);
+    }
+
+    @Override
+    public boolean sAddWithExpire(String key, long timeout, TimeUnit unit, String... values) {
+        return executeSafe(() -> {
+            Long count = stringRedisTemplate.opsForSet().add(key, values);
+            expire(key, timeout, unit);
+            return count != null && count > 0;
+        }, key, false);
+    }
+
+    @Override
+    public boolean sIsMember(String key, String value) {
+        return executeSafe(() -> Boolean.TRUE.equals(stringRedisTemplate.opsForSet().isMember(key, value)), key, false);
+    }
+
+    @Override
+    public long sSize(String key) {
+        return executeSafe(() -> {
+            Long size = stringRedisTemplate.opsForSet().size(key);
+            return size != null ? size : 0L;
+        }, key, 0L);
+    }
+
+    @Override
+    public long sRemove(String key, Object... values) {
+        return executeSafe(() -> {
+            Long count = stringRedisTemplate.opsForSet().remove(key, values);
+            return count != null ? count : 0L;
+        }, key, 0L);
+    }
+
+    @Override
+    public Set<String> sMembers(String key) {
+        return executeSafe(() -> stringRedisTemplate.opsForSet().members(key), key, Collections.emptySet());
+    }
+
+    // ==========================================================
+    // 6. ZSet (有序集合) 操作
+    // ==========================================================
+
+    @Override
+    public boolean zAdd(String key, String value, double score) {
+        return executeSafe(() -> Boolean.TRUE.equals(stringRedisTemplate.opsForZSet().add(key, value, score)), key, false);
+    }
+
+    @Override
+    public Double zIncrScore(String key, String value, double delta) {
+        return executeSafe(() -> stringRedisTemplate.opsForZSet().incrementScore(key, value, delta), key, null);
+    }
+
+    @Override
+    public Long zRank(String key, String value) {
+        return executeSafe(() -> stringRedisTemplate.opsForZSet().rank(key, value), key, null);
+    }
+
+    @Override
+    public Long zReverseRank(String key, String value) {
+        return executeSafe(() -> stringRedisTemplate.opsForZSet().reverseRank(key, value), key, null);
+    }
+
+    @Override
+    public Set<String> zReverseRange(String key, long start, long end) {
+        return executeSafe(() -> stringRedisTemplate.opsForZSet().reverseRange(key, start, end), key, Collections.emptySet());
+    }
+
+    @Override
+    public Set<ZSetOperations.TypedTuple<String>> zReverseRangeWithScores(String key, long start, long end) {
+        return executeSafe(() -> stringRedisTemplate.opsForZSet().reverseRangeWithScores(key, start, end), key, Collections.emptySet());
+    }
+
+    @Override
+    public Double zScore(String key, String value) {
+        return executeSafe(() -> stringRedisTemplate.opsForZSet().score(key, value), key, null);
+    }
+
+    @Override
+    public long zRemove(String key, Object... values) {
+        return executeSafe(() -> {
+            Long count = stringRedisTemplate.opsForZSet().remove(key, values);
+            return count != null ? count : 0L;
+        }, key, 0L);
+    }
+
+    // ==========================================================
+    // 7. 高级操作 (Scan 非阻塞扫描)
+    // ==========================================================
+
+    @Override
+    public Set<String> scan(String pattern) {
+        return executeSafe(() -> {
+            // 使用 execute 显式获取 RedisConnection，避免 Lambda 类型推断歧义
+            return stringRedisTemplate.execute((RedisConnection connection) -> {
+                Set<String> keys = new HashSet<>();
+                ScanOptions options = ScanOptions.scanOptions().match(pattern).count(1000).build();
+                try (Cursor<byte[]> cursor = connection.scan(options)) {
+                    while (cursor.hasNext()) {
+                        // 显式指定 UTF-8 编码，防止乱码
+                        keys.add(new String(cursor.next(), StandardCharsets.UTF_8));
+                    }
+                }
+                return keys;
+            });
+        }, pattern, Collections.emptySet());
+    }
+
+    // ==========================================================
+    // 8. 私有辅助方法 (Fail-Secure 统一异常熔断)
+    // ==========================================================
+
+    /**
+     * 安全执行器 (返回类型: T)
+     * @param supplier 业务逻辑
+     * @param key 相关的 Redis Key (用于日志记录)
+     * @param defaultValue 发生异常时的默认返回值
+     */
+    private <T> T executeSafe(SupplierWithException<T> supplier, String key, T defaultValue) {
+        try {
+            return supplier.get();
+        } catch (Exception e) {
+            handleException(key, e);
+            return defaultValue;
+        }
     }
 
     /**
-     * 刷新令牌 (Refresh Token Rotation)
+     * 智能日志降噪处理
      * <p>
-     * 采用“一次性使用”策略，旧 RefreshToken 使用后立即作废，防止重放攻击。
+     * 策略：
+     * 1. Debug 模式：打印完整堆栈，方便开发排查。
+     * 2. 生产环境 (Info/Error)：只打印 Key 和 错误信息，避免 Redis 宕机时堆栈刷屏导致磁盘 IO 飙升。
      * </p>
      */
-    @PostMapping("/refresh")
-    @Operation(summary = "刷新令牌", description = "通过旧的 RefreshToken 获取新的 AccessToken")
-    @Loggable(logRequest = true, logResponse = true)
-    public ApiResult<TokenResDTO> refresh(@RequestBody @Validated TokenRefreshReqDTO dto,
-                                          HttpServletRequest request) {
-        String clientIp = IpUtil.getClientIp(request);
-        dto.setLoginIp(clientIp);
-
-        return ApiResult.successResult(authService.refreshToken(dto));
+    private void handleException(String key, Exception e) {
+        if (log.isDebugEnabled()) {
+            log.error("Redis Op Failed. Key: {}", key, e);
+        } else {
+            log.error("Redis Op Failed. Key: {}. Error: {}", key, e.getMessage());
+        }
     }
 
     /**
-     * 用户登出
-     * <p>
-     * 同时作废 AccessToken (黑名单) 和 RefreshToken (物理删除)
-     * </p>
+     * 支持抛出异常的函数式接口
      */
-    @PostMapping("/logout")
-    @Operation(summary = "用户登出", description = "作废当前会话，需要 deviceId")
-    @Loggable(logRequest = true, logResponse = true)
-    public ApiResult<Void> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,
-                                  @RequestBody TokenRefreshReqDTO dto) {
-        String accessToken = JwtUtil.extractBearerToken(authHeader);
-        authService.logout(accessToken, dto.getRefreshToken(), dto.getDeviceId());
-        return ApiResult.successResult();
-    }
-
-    /**
-     * 获取当前用户信息
-     */
-    @GetMapping("/userInfo")
-    @Operation(summary = "获取用户信息", description = "拉取当前登录用户的角色、权限标识及菜单树")
-    @Loggable(logRequest = false, logResponse = true)
-    public ApiResult<UserInfoDTO> getUserInfo(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
-        String token = JwtUtil.extractBearerToken(authHeader);
-        return ApiResult.successResult(authService.getUserInfoByToken(token));
+    @FunctionalInterface
+    private interface SupplierWithException<T> {
+        T get() throws Exception;
     }
 }
