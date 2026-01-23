@@ -46,4 +46,10 @@ public class MetaVO {
      */
     @Schema(description = "是否固定标签页: true-固定 false-不固定")
     private Boolean affix;
+
+    /**
+     * 内链地址
+     */
+    @Schema(description = "内链地址")
+    private String link;
 }

@@ -1,8 +1,10 @@
 package com.springboot.admin.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.springboot.admin.model.dto.menu.SysMenuDTO;
 import com.springboot.admin.model.entity.sys.SysMenu;
 import com.springboot.admin.model.vo.menu.SysMenuTreeVO;
+import com.springboot.admin.model.vo.menu.SysMenuVO;
 
 import java.util.List;
 
@@ -18,34 +20,81 @@ public interface ISysMenuService extends IService<SysMenu> {
     /**
      * 新增菜单
      *
-     * @param menu 菜单实体
+     * @param menuDTO 菜单实体
      * @return Long 新增菜单ID
      */
-    Long addMenu(SysMenu menu);
+    Long addMenu(SysMenuDTO menuDTO);
 
     /**
      * 更新菜单信息
      *
-     * @param menu 菜单实体
-     * @return boolean 是否更新成功
+     * @param menuDTO 菜单实体
+     * @return 更新的记录数
      */
-    boolean updateMenu(SysMenu menu);
+    int updateMenu(SysMenuDTO menuDTO);
+
 
     /**
-     * 删除菜单（逻辑/物理删除）
      *
      * @param menuId 菜单ID
-     * @param logicalDelete 是否逻辑删除
-     * @return boolean 删除是否成功
+     * @return 删除的菜单数量
      */
-    boolean deleteMenu(Long menuId, boolean logicalDelete);
+    int deleteMenu(Long menuId,boolean logicalDelete);
+
+    /**
+     * 根据菜单ID查询菜单详情
+     *
+     * @param menuId 菜单ID
+     * @return 菜单 VO
+     */
+    SysMenuVO getMenuById(Long menuId);
+
+    /**
+     * 根据父菜单ID查询子菜单列表
+     *
+     * @param parentId 父菜单ID
+     * @return 子菜单列表
+     */
+    List<SysMenuVO> getMenusByParentId(Long parentId);
+
+    /**
+     * 查询所有菜单（平铺结构）
+     *
+     * @return 菜单列表
+     */
+    List<SysMenuVO> getMenuList();
+
+    /**
+     * 查询所有菜单（树形结构）
+     *
+     * @return 菜单树列表
+     */
+    List<SysMenuTreeVO> getMenuTree();
+
     /**
      * 根据用户ID查询菜单树
      *
      * @param userId 用户ID
-     * @return 菜单树VO集合
+     * @return 用户可访问的菜单树
      */
-    List<SysMenuTreeVO> listMenusByUserId(Long userId);
+    List<SysMenuTreeVO> getMenuTreeByUserId(Long userId);
+
+
+    /**
+     * 根据用户ID查询菜单列表（平铺）
+     *
+     * @param userId 用户ID
+     * @return 菜单列表
+     */
+    List<SysMenuVO> getMenuListByUserId(Long userId);
+
+    /**
+     * 根据角色ID查询菜单列表
+     *
+     * @param roleId 角色ID
+     * @return 菜单列表
+     */
+    List<SysMenuVO> listMenusByRoleId(Long roleId);
     /**
      * 根据角色ID集合查询菜单列表
      *

@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.springboot.admin.mapper.ext.SysMenuExtMapper">
-
-    <!-- 通用查询映射结果 -->
+    <!-- ======================== -->
+    <!-- 1️⃣ 通用查询映射结果 -->
+    <!-- ======================== -->
     <resultMap id="BaseResultMap" type="com.springboot.admin.model.entity.sys.SysMenu">
         <id column="id" property="id" />
         <result column="menu_parent_id" property="menuParentId" />
@@ -21,13 +22,17 @@
         <result column="update_by" property="updateBy" />
         <result column="update_time" property="updateTime" />
     </resultMap>
-
-    <!-- 通用查询结果列 -->
+    <!-- ======================== -->
+    <!-- 2️⃣ 通用查询结果列 -->
+    <!-- ======================== -->
     <sql id="Base_Column_List">
         id, menu_parent_id, menu_name, menu_path, menu_component, menu_icon, menu_type, menu_sort, menu_visible, menu_status, delete_flag, version, create_by, create_time, update_by, update_time
     </sql>
 
 
+    <!-- ======================== -->
+    <!-- 3️⃣ 根据用户ID查询菜单 -->
+    <!-- ======================== -->
     <select id="selectMenusByUserId" resultType="com.springboot.admin.model.entity.sys.SysMenu">
         SELECT DISTINCT m.*
         FROM sys_menu m
@@ -38,7 +43,9 @@
         WHERE ur.user_id = #{userId}
         ORDER BY m.menu_parent_id, m.menu_sort
     </select>
-
+    <!-- ======================== -->
+    <!-- 4️⃣ 根据角色ID集合查询菜单 -->
+    <!-- ======================== -->
     <select id="selectMenusByRoleIds" parameterType="java.util.List" resultType="com.springboot.admin.model.entity.sys.SysMenu">
         SELECT DISTINCT m.*
         FROM sys_menu m
@@ -59,5 +66,36 @@
         AND m.menu_type IN (0,1,2)
         ORDER BY m.menu_parent_id, m.menu_sort
     </select>
+    <!-- ======================== -->
+    <!-- 5️⃣ 查询菜单及其所有子菜单ID（递归） -->
+    <!-- ======================== -->
+    <!--
+        用途：
+        - 删除菜单时（逻辑 / 物理）
+        - 确保父菜单删除时，子菜单不会残留
 
+        说明：
+        - 使用 MySQL 8+ WITH RECURSIVE
+        - 自动过滤 delete_flag = 0
+    -->
+    <select id="selectMenuAndChildrenIds"
+            resultType="java.lang.Long">
+        WITH RECURSIVE menu_tree AS (
+        -- ① 起始节点（当前菜单）
+        SELECT id, menu_parent_id
+        FROM sys_menu
+        WHERE id = #{menuId}
+        AND delete_flag = 0
+
+        UNION ALL
+
+        -- ② 递归查找子菜单
+        SELECT m.id, m.menu_parent_id
+        FROM sys_menu m
+        INNER JOIN menu_tree mt
+        ON m.menu_parent_id = mt.id
+        WHERE m.delete_flag = 0
+        )
+        SELECT id FROM menu_tree
+    </select>
 </mapper>

@@ -28,4 +28,9 @@ public interface SysMenuExtMapper extends SysMenuMapper {
      * 根据角色ID集合查询菜单列表
      */
     List<SysMenu> selectMenusByRoleIds(@Param("roleIds") List<Long> roleIds);
+
+    /**
+     * 查询菜单及其所有子菜单ID（递归）
+     */
+    List<Long> selectMenuAndChildrenIds(@Param("menuId") Long menuId);
 }

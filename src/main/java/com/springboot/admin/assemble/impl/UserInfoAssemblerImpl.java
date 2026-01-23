@@ -81,7 +81,7 @@ public class UserInfoAssemblerImpl implements UserInfoAssembler {
         List<SysMenu> menus =
                 iSysMenuService.selectMenusByRoleIds(roleIds);
         // Entity -> VO
-        List<SysMenuTreeVO> menuVOs = sysMenuConvert.toVoList(menus);
+        List<SysMenuTreeVO> menuVOs = sysMenuConvert.toTreeVOList(menus);
         // 使用泛型 TreeBuilder 构建树，支持 menuSort 排序
         List<SysMenuTreeVO> menuTree = TreeBuilderUtil.buildTree(
                 menuVOs,
