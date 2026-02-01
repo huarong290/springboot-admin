@@ -75,7 +75,7 @@ public class AuthServiceImpl implements IAuthService {
 
         // 5. 生成 Token
         // 必须将 deviceId 等环境信息写入 Token，保证由 Token 可溯源
-        Map<String, Object> extraClaims = buildExtraClaims(dto.getLoginIp(), dto.getClientType(), dto.getDeviceId());
+        Map<String, Object> extraClaims = buildExtraClaims(dto.getLoginIp(), dto.getClientInfo().getClientType(), dto.getClientInfo().getDeviceId());
         String accessToken = jwtUtil.generateAccessToken(user.getUsername(), extraClaims);
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
@@ -84,13 +84,13 @@ public class AuthServiceImpl implements IAuthService {
         String refreshJti = jwtUtil.getJti(refreshToken);
 
         // 🛑 核心安全点：Fail-Secure 写入。若 Redis 挂了，必须抛出异常，禁止登录。
-        saveRefreshTokenOrThrow(user.getId(), dto.getDeviceId(), refreshJti, refreshToken);
+        saveRefreshTokenOrThrow(user.getId(), dto.getClientInfo().getDeviceId(), refreshJti, refreshToken);
 
         // 7. 维护用户设备映射 (用于踢人、设备管理)
-        handleUserDeviceLogin(user.getId(), dto.getDeviceId(), refreshJti);
+        handleUserDeviceLogin(user.getId(), dto.getClientInfo().getDeviceId(), refreshJti);
 
         // 8. 返回结果
-        return buildTokenResponse(accessToken, refreshToken, dto.getDeviceId(), dto.getClientType(), dto.getLoginIp());
+        return buildTokenResponse(accessToken, refreshToken, dto.getClientInfo().getDeviceId(), dto.getClientInfo().getClientType(), dto.getLoginIp());
     }
 
     /**

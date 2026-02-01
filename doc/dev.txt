@@ -4,7 +4,6 @@
 4️⃣ 给你 前端 Vue / React 对应数据结构
 5️⃣ 给你 微服务拆分建议（Auth / System / Business）
 
-
 ✅ JwtAuthenticationFilter 标准实现
 
 ✅ UserPrincipal 结构（permissions + dataScope）

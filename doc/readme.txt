@@ -1,3 +1,25 @@
+SELECT
+        hss.id,
+        hss.period_id,
+         he.employee_code,
+        hsp.employee_id,
+        he.name as employeeName,
+        hsp.settlement_month AS settlementMonth,
+        hss.currency,
+        hss.exchange_rate,
+        hss.salary_subtotal,
+        hss.salary_total,
+        hss.salary_converted,
+        hss.salary_rmb,
+        hss.salary_usdt,
+        hss.remark,
+        hss.create_time,
+        hss.update_time
+        FROM hr_salary_summary hss
+        INNER JOIN hr_salary_period hsp ON hss.period_id = hsp.id
+        INNER JOIN hr_employee he ON hsp.employee_id = he.id where hss.remark='2025年12月薪资结算';
+
+select * from hr_salary_summary hss where id in (24,60,96,132,168,204);
 用户 sys_user
    |
    |  (多对多)
