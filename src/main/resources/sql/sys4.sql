@@ -1,5 +1,6 @@
 -- =====================================================================
 -- 系统数据库表设计（高并发 / 大组织 / RBAC + 数据权限）
+-- 接口鉴权只认 Role → Permission Menu → Permission 仅用于前端按钮显隐
 -- 设计原则：
 -- 1. 主键统一 BIGINT 自增
 -- 2. 所有表统一包含逻辑删除、乐观锁、审计字段
@@ -14,7 +15,7 @@
 CREATE TABLE sys_org
 (
     id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID，自增唯一标识每个组织',
-    parent_id   BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '父组织ID，顶级为0',
+    parent_id   BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '父组织ID,0表示顶级组织（数据库默认）',
     org_name    VARCHAR(100)    NOT NULL DEFAULT '' COMMENT '组织名称',
     org_code    VARCHAR(64)     NOT NULL DEFAULT '' COMMENT '组织唯一编码',
     org_type    VARCHAR(50)     NOT NULL DEFAULT '' COMMENT '组织类型（集团/公司/事业部等）',
@@ -40,7 +41,7 @@ CREATE TABLE sys_org_closure
     id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     ancestor_id   BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '祖先组织ID',
     descendant_id BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '后代组织ID',
-    depth         INT             NOT NULL DEFAULT 0 COMMENT '层级深度：1自身 2子级 3孙级',
+    depth         INT             NOT NULL DEFAULT 0 COMMENT '层级深度：0-数据库默认占位 1-自身 2-子级 3-孙级',
     delete_flag   TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     version       BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
     create_by     VARCHAR(64)    NOT NULL DEFAULT 'system' COMMENT '创建人',
@@ -49,7 +50,8 @@ CREATE TABLE sys_org_closure
     update_time   TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_org_closure (ancestor_id, descendant_id, delete_flag) COMMENT '祖先-后代唯一，防止重复',
-    KEY idx_descendant_id (descendant_id) COMMENT '索引：快速查询指定组织的所有祖先'
+    KEY idx_descendant_id (descendant_id) COMMENT '索引：快速查询指定组织的后代组织',
+    KEY idx_ancestor_id (ancestor_id) COMMENT '索引：快速查询指定组织的所有祖先组织'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='组织层级闭包表';
 
 -- =========================
@@ -58,7 +60,7 @@ CREATE TABLE sys_org_closure
 CREATE TABLE sys_dept
 (
     id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    parent_id   BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '父部门ID，顶级为0',
+    parent_id   BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '父部门ID,0表示顶级部门',
     org_id      BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '所属组织ID',
     dept_name   VARCHAR(100)    NOT NULL DEFAULT '' COMMENT '部门名称',
     dept_code   VARCHAR(64)     NOT NULL DEFAULT '' COMMENT '部门唯一编码',
@@ -84,7 +86,8 @@ CREATE TABLE sys_dept_closure
     id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     ancestor_id   BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '祖先部门ID',
     descendant_id BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '后代部门ID',
-    depth         INT             NOT NULL DEFAULT 0 COMMENT '层级深度',
+    org_id        BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '所属组织ID',
+    depth         INT             NOT NULL DEFAULT 0 COMMENT '层级深度：0数据库默认占位 1自身 2子级 3孙级',
     delete_flag   TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     version       BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
     create_by     VARCHAR(64)    NOT NULL DEFAULT 'system' COMMENT '创建人',
@@ -93,7 +96,9 @@ CREATE TABLE sys_dept_closure
     update_time   TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_dept_closure (ancestor_id, descendant_id, delete_flag) COMMENT '祖先-后代唯一约束',
-    KEY idx_descendant_id (descendant_id) COMMENT '索引：快速查询部门祖先'
+    KEY idx_descendant_id (descendant_id) COMMENT '索引：通过后代部门查询祖先部门',
+    KEY idx_ancestor_id (ancestor_id) COMMENT '索引：通过祖先部门查询所有子部门',
+    KEY idx_org_ancestor (org_id, ancestor_id) COMMENT '索引：快速查询指定组织的所有祖先部门'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='部门层级闭包表';
 
 -- =========================
@@ -109,8 +114,8 @@ CREATE TABLE sys_user
     phone           VARCHAR(20)     NOT NULL DEFAULT '' COMMENT '手机号',
     email           VARCHAR(100)    NOT NULL DEFAULT '' COMMENT '邮箱',
     avatar          VARCHAR(255)    NOT NULL DEFAULT '' COMMENT '头像URL',
-    org_id          BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '所属组织ID',
-    dept_id         BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '所属部门ID',
+    org_id          BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '所属组织ID（数据权限判定基准）',
+    dept_id         BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '所属部门ID（默认业务归属）',
     user_status     TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态：1启用 0禁用',
     last_login_time DATETIME        NOT NULL DEFAULT '1970-01-01 00:00:00' COMMENT '最后登录时间',
     delete_flag     TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '逻辑删除',
@@ -120,9 +125,10 @@ CREATE TABLE sys_user
     update_by       VARCHAR(64)     NOT NULL DEFAULT 'system' COMMENT '更新人',
     update_time     TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
-    UNIQUE KEY uk_username (username, delete_flag) COMMENT '用户名唯一约束',
+    UNIQUE KEY uk_tenant_username (tenant_id, username, delete_flag) COMMENT '用户名唯一约束',
     KEY idx_org_del (org_id, delete_flag) COMMENT '索引：按组织查询用户',
-    KEY idx_dept_id (dept_id) COMMENT '索引：按部门查询用户'
+    KEY idx_dept_id (dept_id) COMMENT '索引：按部门查询用户',
+    KEY idx_tenant_org (tenant_id, org_id, delete_flag)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统用户表';
 
 -- =========================
@@ -152,7 +158,7 @@ CREATE TABLE sys_role
 CREATE TABLE sys_menu
 (
     id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID，自增唯一标识每个菜单',
-    menu_parent_id      BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '父菜单ID，顶级菜单为0',
+    menu_parent_id      BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '父菜单ID,0表示顶级菜单',
     menu_name      VARCHAR(50)     NOT NULL COMMENT '菜单名称，用于显示和识别菜单',
     menu_path      VARCHAR(100)    NOT NULL DEFAULT '' COMMENT '菜单路由路径，前端页面访问路径',
     menu_component VARCHAR(100)    NOT NULL DEFAULT '' COMMENT '菜单对应前端组件路径或组件名',
@@ -169,7 +175,6 @@ CREATE TABLE sys_menu
     update_time    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_parent_name (menu_parent_id, menu_name, delete_flag) COMMENT '父菜单+菜单名称唯一，防止同级重复',
-    UNIQUE KEY uk_menu_path (menu_path, delete_flag) COMMENT '菜单路径唯一，避免路由冲突',
     KEY idx_parent_id (menu_parent_id) COMMENT '索引：按父菜单ID查询，快速获取子菜单',
     KEY idx_type (menu_type) COMMENT '索引：按菜单类型查询，快速过滤目录/菜单/按钮',
     KEY idx_status (menu_status, delete_flag) COMMENT '联合索引：按菜单状态和删除标志查询，优化启用菜单筛选'
@@ -183,7 +188,7 @@ CREATE TABLE sys_menu_closure
     id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     ancestor_id   BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '祖先菜单ID',
     descendant_id BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '后代菜单ID',
-    depth         INT             NOT NULL DEFAULT 0 COMMENT '层级深度：1自身 2子级 3孙级',
+    depth         INT             NOT NULL DEFAULT 0 COMMENT '层级深度：0-数据库默认占位 1-自身 2-子级 3-孙级',
     delete_flag   TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '逻辑删除标志',
     version       BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
     create_by     VARCHAR(64)     NOT NULL DEFAULT 'system' COMMENT '创建人',
@@ -204,7 +209,7 @@ CREATE TABLE sys_permission
     id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     permission_code   VARCHAR(100) NOT NULL DEFAULT '' COMMENT '权限编码（唯一）',
     permission_name   VARCHAR(100) NOT NULL DEFAULT '' COMMENT '权限名称',
-    permission_type   TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '权限类型：1接口 2按钮 3数据',
+    permission_type   TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '权限类型：1-后端接口鉴权 2-前端按钮显隐 3-数据权限SQL片段（不参与RBAC）',
     permission_status TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态：1启用 0禁用',
     delete_flag       TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '逻辑删除标志',
     version           BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
@@ -384,145 +389,153 @@ CREATE TABLE sys_role_custom_dept
 -- =========================
 -- 18.1 组织初始化数据
 -- =========================
-INSERT INTO sys_org (id, org_name, org_code, org_type, org_status, org_sort, delete_flag, version, create_by, create_time, update_by, update_time)
+INSERT INTO sys_org (id, parent_id, org_name, org_code, org_type, org_status, org_sort, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(1, '集团总部', 'ORG_ROOT', '集团', 1, 1, 0, 0, 'system', NOW(), 'system', NOW()),
-(2, '华东分公司', 'ORG_EAST', '公司', 1, 1, 0, 0, 'system', NOW(), 'system', NOW()),
-(3, '华南分公司', 'ORG_SOUTH', '公司', 1, 2, 0, 0, 'system', NOW(), 'system', NOW());
+(1,0, '集团总部', 'ORG_ROOT', '集团', 1, 1, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP),
+(2,1, '华东分公司', 'ORG_EAST', '公司', 1, 1, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP),
+(3, 1,'华南分公司', 'ORG_SOUTH', '公司', 1, 2, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.2 组织闭包表初始化
 -- =========================
-INSERT INTO sys_org_closure (ancestor_id, descendant_id, depth, delete_flag, version, create_by, create_time, update_by, update_time)
+INSERT INTO sys_org_closure
+(ancestor_id, descendant_id, depth, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(1,1,0,0,0,'system',NOW(),'system',NOW()),
-(1,2,1,0,0,'system',NOW(),'system',NOW()),
-(1,3,1,0,0,'system',NOW(),'system',NOW()),
-(2,2,0,0,0,'system',NOW(),'system',NOW()),
-(3,3,0,0,0,'system',NOW(),'system',NOW());
+-- 自身（depth = 1）
+(1, 1, 1, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP),
+(2, 2, 1, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP),
+(3, 3, 1, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP),
 
+-- 子级（depth = 2）
+(1, 2, 2, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP),
+(1, 3, 2, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP);
 -- =========================
 -- 18.3 部门初始化数据
 -- =========================
 INSERT INTO sys_dept (id, org_id, dept_name, dept_code, dept_status, dept_sort, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(1, 1, '信息技术部', 'DEPT_IT', 1, 1, 0, 0, 'system', NOW(), 'system', NOW()),
-(2, 2, '研发部', 'DEPT_RD', 1, 1, 0, 0, 'system', NOW(), 'system', NOW()),
-(3, 3, '市场部', 'DEPT_MK', 1, 1, 0, 0, 'system', NOW(), 'system', NOW());
+(1, 1, '信息技术部', 'DEPT_IT', 1, 1, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP),
+(2, 2, '研发部', 'DEPT_RD', 1, 1, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP),
+(3, 3, '市场部', 'DEPT_MK', 1, 1, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.4 部门闭包表初始化
 -- =========================
-INSERT INTO sys_dept_closure (ancestor_id, descendant_id, depth, delete_flag, version, create_by, create_time, update_by, update_time)
+INSERT INTO sys_dept_closure
+(ancestor_id, descendant_id,  org_id,depth, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(1,1,0,0,0,'system',NOW(),'system',NOW()),
-(2,2,0,0,0,'system',NOW(),'system',NOW()),
-(3,3,0,0,0,'system',NOW(),'system',NOW());
+    (1, 1,1, 1, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP),
+    (2, 2,2, 1, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP),
+    (3, 3, 3,1, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.5 用户初始化数据（密码示例为明文，可替换为加密）
 -- =========================
 INSERT INTO sys_user (id, username, password, nickname, phone, email, avatar, user_status, dept_id, org_id, last_login_time, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(1, 'admin', 'admin123', '超级管理员', '13800000000', 'admin@test.com', '', 1, 1, 1, '1970-01-01 00:00:00', 0, 0, 'system', NOW(), 'system', NOW()),
-(2, 'zhangsan', '123456', '张三', '13800000001', 'zhangsan@test.com', '', 1, 2, 2, '1970-01-01 00:00:00', 0, 0, 'system', NOW(), 'system', NOW());
+(1, 'admin', '$2a$10$4FGmjRDysGbW1t0yPDGxg.99sA3Qf97aHM0yhB6R4vektOZ/d3GFu', '超级管理员', '13800000000', 'admin@test.com', '', 1, 1, 1, '1970-01-01 00:00:00', 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP),
+(2, 'zhangsan', '$2a$10$4FGmjRDysGbW1t0yPDGxg.99sA3Qf97aHM0yhB6R4vektOZ/d3GFu', '张三', '13800000001', 'zhangsan@test.com', '', 1, 2, 2, '1970-01-01 00:00:00', 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.6 角色初始化数据
 -- =========================
 INSERT INTO sys_role (id, role_name, role_code, role_description, role_status, is_builtin, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(1, '超级管理员', 'SUPER_ADMIN', '系统内置超级管理员', 1, 1, 0, 0, 'system', NOW(), 'system', NOW()),
-(2, '普通用户', 'NORMAL_USER', '普通业务用户', 1, 0, 0, 0, 'system', NOW(), 'system', NOW());
+(1, '超级管理员', 'SUPER_ADMIN', '系统内置超级管理员', 1, 1, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP),
+(2, '普通用户', 'NORMAL_USER', '普通业务用户', 1, 0, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.7 用户-角色关联初始化
 -- =========================
 INSERT INTO sys_user_role (user_id, role_id, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(1,1,0,0,'system',NOW(),'system',NOW()),
-(2,2,0,0,'system',NOW(),'system',NOW());
+(1,1,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP),
+(2,2,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.8 菜单初始化数据
 -- =========================
 INSERT INTO sys_menu (id, menu_parent_id, menu_name, menu_path, menu_component, menu_icon, menu_type, menu_sort, visible, menu_status, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(1,0,'系统管理','/system','','setting',1,1,1,1,0,0,'system',NOW(),'system',NOW()),
-(2,1,'用户管理','/system/user','system/user/index','user',2,1,1,1,0,0,'system',NOW(),'system',NOW());
+(1,0,'系统管理','/system','','setting',1,1,1,1,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP),
+(2,1,'用户管理','/system/user','system/user/index','user',2,1,1,1,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.9 菜单闭包表初始化
 -- =========================
-INSERT INTO sys_menu_closure (ancestor_id, descendant_id, depth, delete_flag, version, create_by, create_time, update_by, update_time)
+INSERT INTO sys_menu_closure
+(ancestor_id, descendant_id, depth, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(1,1,0,0,0,'system',NOW(),'system',NOW()),
-(1,2,1,0,0,'system',NOW(),'system',NOW()),
-(2,2,0,0,0,'system',NOW(),'system',NOW());
+-- 自身
+(1, 1, 1, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP),
+(2, 2, 1, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP),
+
+-- 子菜单
+(1, 2, 2, 0, 0, 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.10 权限初始化数据
 -- =========================
 INSERT INTO sys_permission (id, permission_code, permission_name, permission_type, permission_status, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(1,'USER_VIEW','查看用户',1,1,0,0,'system',NOW(),'system',NOW()),
-(2,'USER_EDIT','编辑用户',2,1,0,0,'system',NOW(),'system',NOW());
+(1,'USER_VIEW','查看用户',1,1,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP),
+(2,'USER_EDIT','编辑用户',2,1,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.11 角色-菜单关联
 -- =========================
 INSERT INTO sys_role_menu (role_id, menu_id, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(1,1,0,0,'system',NOW(),'system',NOW()),
-(1,2,0,0,'system',NOW(),'system',NOW());
+(1,1,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP),
+(1,2,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.12 角色-权限关联
 -- =========================
 INSERT INTO sys_role_permission (role_id, permission_id, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(1,1,0,0,'system',NOW(),'system',NOW()),
-(1,2,0,0,'system',NOW(),'system',NOW());
+(1,1,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP),
+(1,2,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.13 菜单-权限关联
 -- =========================
 INSERT INTO sys_menu_permission (menu_id, permission_id, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(2,1,0,0,'system',NOW(),'system',NOW()),
-(2,2,0,0,'system',NOW(),'system',NOW());
+(2,1,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP),
+(2,2,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.14 数据权限范围初始化
 -- =========================
 INSERT INTO sys_data_scope (id, scope_code, scope_name, scope_type, scope_description, scope_status, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(1,'ALL','全部数据',1,'可访问所有组织数据',1,0,0,'system',NOW(),'system',NOW()),
-(2,'ORG','本组织',2,'仅当前组织',1,0,0,'system',NOW(),'system',NOW()),
-(3,'ORG_AND_CHILD','本组织及下级',3,'当前组织及其子组织数据',1,0,0,'system',NOW(),'system',NOW()),
-(4,'DEPT','本部门',4,'仅当前部门数据',1,0,0,'system',NOW(),'system',NOW()),
-(5,'CUSTOM','自定义',5,'自定义范围',1,0,0,'system',NOW(),'system',NOW());
+(1,'ALL','全部数据',1,'可访问所有组织数据',1,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP),
+(2,'ORG','本组织',2,'仅当前组织',1,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP),
+(3,'ORG_AND_CHILD','本组织及下级',3,'当前组织及其子组织数据',1,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP),
+(4,'DEPT','本部门',4,'仅当前部门数据',1,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP),
+(5,'CUSTOM','自定义',5,'自定义范围',1,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.15 角色-数据权限关联初始化
 -- =========================
 INSERT INTO sys_role_data_scope (role_id, scope_id, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(1,1,0,0,'system',NOW(),'system',NOW()),
-(2,3,0,0,'system',NOW(),'system',NOW());
+(1,1,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP),
+(2,3,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.16 角色自定义组织初始化
 -- =========================
 INSERT INTO sys_role_custom_org (role_id, org_id, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(2,2,0,0,'system',NOW(),'system',NOW()),
-(2,3,0,0,'system',NOW(),'system',NOW());
+(2,2,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP),
+(2,3,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP);
 
 -- =========================
 -- 18.17 角色自定义部门初始化
 -- =========================
 INSERT INTO sys_role_custom_dept (role_id, dept_id, delete_flag, version, create_by, create_time, update_by, update_time)
 VALUES
-(2,2,0,0,'system',NOW(),'system',NOW()),
-(2,3,0,0,'system',NOW(),'system',NOW());
+(2,2,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP),
+(2,3,0,0,'system',CURRENT_TIMESTAMP,'system',CURRENT_TIMESTAMP);
