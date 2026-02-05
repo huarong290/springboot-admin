@@ -1,6 +1,7 @@
 package com.springboot.admin.mapper.auto;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.springboot.admin.model.entity.sys.SysOrg;
 
 /**
  * <p>
@@ -8,7 +9,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * </p>
  *
  * @author system
- * @since 2026-01-18
+ * @since 2026-02-06
  */
 public interface SysOrgMapper extends BaseMapper<SysOrg> {
 

@@ -91,7 +91,6 @@
             <groupId>org.freemarker</groupId>
             <artifactId>freemarker</artifactId>
             <version>${freemarker.version}</version>
-            <scope>test</scope>
         </dependency>
 
         <!-- MySQL 驱动 -->

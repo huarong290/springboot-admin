@@ -7,6 +7,7 @@
         <id column="id" property="id" />
         <result column="ancestor_id" property="ancestorId" />
         <result column="descendant_id" property="descendantId" />
+        <result column="org_id" property="orgId" />
         <result column="depth" property="depth" />
         <result column="delete_flag" property="deleteFlag" />
         <result column="version" property="version" />
@@ -18,7 +19,7 @@
 
     <!-- 通用查询结果列 -->
     <sql id="Base_Column_List">
-        id, ancestor_id, descendant_id, depth, delete_flag, version, create_by, create_time, update_by, update_time
+        id, ancestor_id, descendant_id, org_id, depth, delete_flag, version, create_by, create_time, update_by, update_time
     </sql>
 
 </mapper>

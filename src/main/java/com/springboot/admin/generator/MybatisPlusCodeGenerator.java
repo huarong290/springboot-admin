@@ -19,7 +19,7 @@ public class MybatisPlusCodeGenerator {
         );
 
         FastAutoGenerator.create(
-                        "jdbc:mysql://localhost:33061/sys_admin?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowMultiQueries=true&serverTimezone=Asia/Shanghai",
+                        "jdbc:mysql://localhost:3306/sys_admin?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowMultiQueries=true&serverTimezone=Asia/Shanghai",
                         "root",
                         "123456"
                 )

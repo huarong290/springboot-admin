@@ -1,0 +1,95 @@
+package com.springboot.admin.model.entity.sys;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.Accessors;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+/**
+ * 角色-权限关联表
+ *
+ * @author system
+ * @since 2026-02-06
+ */
+@Schema(name = "SysRolePermission", description = "角色-权限关联表")
+@Data
+@EqualsAndHashCode(callSuper = true)
+@Accessors(chain = true)
+@TableName("sys_role_permission")
+public class SysRolePermission extends Model<SysRolePermission> {
+
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 主键ID
+     */
+    @Schema(description = "主键ID")
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
+    /**
+     * 角色ID
+     */
+    @Schema(description = "角色ID")
+    @TableField("role_id")
+    private Long roleId;
+    /**
+     * 权限ID
+     */
+    @Schema(description = "权限ID")
+    @TableField("permission_id")
+    private Long permissionId;
+    /**
+     * 逻辑删除标志
+     */
+    @Schema(description = "逻辑删除标志")
+    @TableLogic
+    @TableField("delete_flag")
+    private Byte deleteFlag;
+    /**
+     * 乐观锁版本号
+     */
+    @Schema(description = "乐观锁版本号")
+    @Version
+    @TableField("version")
+    private Long version;
+    /**
+     * 创建人
+     */
+    @Schema(description = "创建人")
+    @TableField("create_by")
+    private String createBy;
+    /**
+     * 创建时间
+     */
+    @Schema(description = "创建时间")
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
+    /**
+     * 最后更新人
+     */
+    @Schema(description = "最后更新人")
+    @TableField("update_by")
+    private String updateBy;
+    /**
+     * 更新时间
+     */
+    @Schema(description = "更新时间")
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
+
+    @Override
+    public Serializable pkVal() {
+        return this.id;
+    }
+}
