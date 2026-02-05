@@ -1,8 +1,9 @@
 package com.springboot.admin.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.springboot.admin.mapper.ext.SysRoleCustomOrgExtMapper;
 import com.springboot.admin.model.entity.sys.SysRoleCustomOrg;
 import com.springboot.admin.service.ISysRoleCustomOrgService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 /**
@@ -14,6 +15,6 @@ import org.springframework.stereotype.Service;
  * @since 2026-02-06
  */
 @Service
-public class SysRoleCustomOrgServiceImpl extends ServiceImpl<SysRoleCustomOrgMapper, SysRoleCustomOrg> implements ISysRoleCustomOrgService {
+public class SysRoleCustomOrgServiceImpl extends ServiceImpl<SysRoleCustomOrgExtMapper, SysRoleCustomOrg> implements ISysRoleCustomOrgService {
 
 }

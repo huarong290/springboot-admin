@@ -1,8 +1,9 @@
 package com.springboot.admin.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.springboot.admin.mapper.ext.SysRoleExtMapper;
 import com.springboot.admin.model.entity.sys.SysRole;
 import com.springboot.admin.service.ISysRoleService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 /**
@@ -14,6 +15,6 @@ import org.springframework.stereotype.Service;
  * @since 2026-02-06
  */
 @Service
-public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> implements ISysRoleService {
+public class SysRoleServiceImpl extends ServiceImpl<SysRoleExtMapper, SysRole> implements ISysRoleService {
 
 }

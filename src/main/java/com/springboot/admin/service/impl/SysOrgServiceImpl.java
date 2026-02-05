@@ -1,8 +1,9 @@
 package com.springboot.admin.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.springboot.admin.mapper.ext.SysOrgExtMapper;
 import com.springboot.admin.model.entity.sys.SysOrg;
 import com.springboot.admin.service.ISysOrgService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 /**
@@ -14,6 +15,6 @@ import org.springframework.stereotype.Service;
  * @since 2026-02-06
  */
 @Service
-public class SysOrgServiceImpl extends ServiceImpl<SysOrgMapper, SysOrg> implements ISysOrgService {
+public class SysOrgServiceImpl extends ServiceImpl<SysOrgExtMapper, SysOrg> implements ISysOrgService {
 
 }

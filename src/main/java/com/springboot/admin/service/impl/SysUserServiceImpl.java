@@ -1,8 +1,9 @@
 package com.springboot.admin.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.springboot.admin.mapper.ext.SysUserExtMapper;
 import com.springboot.admin.model.entity.sys.SysUser;
 import com.springboot.admin.service.ISysUserService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 /**
@@ -14,6 +15,6 @@ import org.springframework.stereotype.Service;
  * @since 2026-02-06
  */
 @Service
-public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements ISysUserService {
+public class SysUserServiceImpl extends ServiceImpl<SysUserExtMapper, SysUser> implements ISysUserService {
 
 }

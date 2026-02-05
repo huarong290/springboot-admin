@@ -1,8 +1,9 @@
 package com.springboot.admin.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.springboot.admin.mapper.ext.SysMenuPermissionExtMapper;
 import com.springboot.admin.model.entity.sys.SysMenuPermission;
 import com.springboot.admin.service.ISysMenuPermissionService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 /**
@@ -14,6 +15,6 @@ import org.springframework.stereotype.Service;
  * @since 2026-02-06
  */
 @Service
-public class SysMenuPermissionServiceImpl extends ServiceImpl<SysMenuPermissionMapper, SysMenuPermission> implements ISysMenuPermissionService {
+public class SysMenuPermissionServiceImpl extends ServiceImpl<SysMenuPermissionExtMapper, SysMenuPermission> implements ISysMenuPermissionService {
 
 }

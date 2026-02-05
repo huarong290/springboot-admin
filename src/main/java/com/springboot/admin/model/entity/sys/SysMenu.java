@@ -1,18 +1,12 @@
 package com.springboot.admin.model.entity.sys;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import com.baomidou.mybatisplus.annotation.*;
 import com.baomidou.mybatisplus.extension.activerecord.Model;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.extension.activerecord.Model;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -83,8 +77,8 @@ public class SysMenu extends Model<SysMenu> {
      * 菜单是否可见：1可见 0隐藏，前端渲染控制
      */
     @Schema(description = "菜单是否可见：1可见 0隐藏，前端渲染控制")
-    @TableField("visible")
-    private Byte visible;
+    @TableField("menu_visible")
+    private Byte menuVisible;
     /**
      * 菜单状态：1启用 0禁用，控制权限访问
      */
