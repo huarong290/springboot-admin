@@ -25,13 +25,7 @@ spring:
       port: 6379
       password: 123456
       database: 0
-
       # Redis 超时时间
       timeout: 1000ms
-      lettuce:
-        pool:
-          max-active: 50
-          max-idle: 20
-          min-idle: 10
-          max-wait: 1000ms
+
 
