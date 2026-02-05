@@ -2,7 +2,6 @@ package com.springboot.admin.filter;
 
 import com.springboot.admin.constants.security.JwtConstants;
 import com.springboot.admin.exception.JwtAuthenticationException;
-import com.springboot.admin.service.IRedisService;
 import com.springboot.admin.utils.JwtUtil;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;

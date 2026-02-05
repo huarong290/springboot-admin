@@ -1,7 +1,6 @@
 package com.springboot.admin.mapper.ext;
 
 import com.springboot.admin.mapper.auto.SysPermissionMapper;
-import com.springboot.admin.model.entity.sys.SysPermission;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

@@ -1,7 +1,6 @@
 package com.springboot.admin.mapper.auto;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.springboot.admin.model.entity.sys.SysRoleDataScope;
 
 /**
  * <p>
