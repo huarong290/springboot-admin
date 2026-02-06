@@ -53,7 +53,13 @@ public class RedisConfig {
             poolConfig.setMaxTotal(p.getMaxActive());
             poolConfig.setMaxIdle(p.getMaxIdle());
             poolConfig.setMinIdle(p.getMinIdle());
+            if (p.getMaxWait() != null) {
+                poolConfig.setMaxWait(Duration.ofMillis(p.getMaxWait().toMillis()));
+            }else {
+                poolConfig.setMaxWait(Duration.ofSeconds(2)); // 默认值
+            }
             poolConfig.setMaxWait(Duration.ofMillis(p.getMaxWait().toMillis()));
+
         }
         return poolConfig;
     }

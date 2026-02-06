@@ -1,6 +1,8 @@
 package com.springboot.admin.service.redis.biz.impl;
 
 import com.springboot.admin.service.redis.biz.IRedisRateLimitService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
@@ -22,13 +24,16 @@ import java.util.*;
  * <ul>
  *   <li>滑动窗口：ZSET 存储时间戳，Lua 脚本设置 TTL，避免无限增长</li>
  *   <li>固定窗口：Lua 脚本保证 INCR + EXPIRE 原子性，避免高并发下重复设置 TTL</li>
- *   <li>令牌桶：Lua 脚本保证补充 + 消耗原子性，并设置 TTL，避免长期占用内存</li>
+ *   <li>令牌桶：Lua 脚本保证补充 + 消耗原子性，并设置 TTL</li>
  *   <li>漏桶：Hash 存储 last + count，使用毫秒级时间戳，漏水更平滑，并设置 TTL</li>
+ *   <li>异常处理：所有 Redis 调用加 try/catch，日志记录并返回安全失败结果</li>
  *   <li>脚本缓存：所有 Lua 脚本静态缓存，避免 GC 压力</li>
  * </ul>
  */
 @Service
 public class RedisRateLimitServiceImpl implements IRedisRateLimitService {
+
+    private static final Logger log = LoggerFactory.getLogger(RedisRateLimitServiceImpl.class);
 
     private final RedisTemplate<String, String> redisTemplate;
 
@@ -98,6 +103,7 @@ public class RedisRateLimitServiceImpl implements IRedisRateLimitService {
         this.redisTemplate = redisTemplate;
     }
 
+    // ==================== 滑动窗口 ====================
     /**
      * 滑动窗口限流
      *
@@ -113,19 +119,25 @@ public class RedisRateLimitServiceImpl implements IRedisRateLimitService {
         long windowStart = now - window.toMillis();
         String redisKey = "rate:sliding:" + key + ":" + memberId;
 
-        Long count = redisTemplate.execute(SLIDING_WINDOW_SCRIPT,
-                Collections.singletonList(redisKey),
-                String.valueOf(windowStart),
-                String.valueOf(now),
-                String.valueOf(window.toMillis()));
+        try {
+            Long count = redisTemplate.execute(SLIDING_WINDOW_SCRIPT,
+                    Collections.singletonList(redisKey),
+                    String.valueOf(windowStart),
+                    String.valueOf(now),
+                    String.valueOf(window.toMillis()));
 
-        boolean allowed = count != null && count <= maxCount;
-        Map<String, Object> metrics = new HashMap<>();
-        metrics.put("remaining", Math.max(0, maxCount - (count == null ? 0 : count)));
-        metrics.put("resetAfterMillis", window.toMillis());
-        return new RateLimitResult(allowed, metrics);
+            boolean allowed = count != null && count <= maxCount;
+            Map<String, Object> metrics = new HashMap<>();
+            metrics.put("remaining", Math.max(0, maxCount - (count == null ? 0 : count)));
+            metrics.put("resetAfterMillis", window.toMillis());
+            return new RateLimitResult(allowed, metrics);
+        } catch (Exception e) {
+            log.error("Redis 执行滑动窗口限流脚本异常 key={}", key, e);
+            return new RateLimitResult(false, Map.of("error", "redis-execute-failed"));
+        }
     }
 
+    // ==================== 固定窗口 ====================
     /**
      * 固定窗口限流
      *
@@ -137,17 +149,23 @@ public class RedisRateLimitServiceImpl implements IRedisRateLimitService {
     @Override
     public RateLimitResult allowRequestFixedWindow(String key, long maxCount, Duration window) {
         String redisKey = "rate:fixed:" + key + ":" + (System.currentTimeMillis() / window.toMillis());
-        Long count = redisTemplate.execute(FIXED_WINDOW_SCRIPT,
-                Collections.singletonList(redisKey),
-                String.valueOf(window.toMillis()));
+        try {
+            Long count = redisTemplate.execute(FIXED_WINDOW_SCRIPT,
+                    Collections.singletonList(redisKey),
+                    String.valueOf(window.toMillis()));
 
-        boolean allowed = count != null && count <= maxCount;
-        Map<String, Object> metrics = new HashMap<>();
-        metrics.put("remaining", Math.max(0, maxCount - (count == null ? 0 : count)));
-        metrics.put("resetAfterMillis", window.toMillis());
-        return new RateLimitResult(allowed, metrics);
+            boolean allowed = count != null && count <= maxCount;
+            Map<String, Object> metrics = new HashMap<>();
+            metrics.put("remaining", Math.max(0, maxCount - (count == null ? 0 : count)));
+            metrics.put("resetAfterMillis", window.toMillis());
+            return new RateLimitResult(allowed, metrics);
+        } catch (Exception e) {
+            log.error("Redis 执行固定窗口限流脚本异常 key={}", key, e);
+            return new RateLimitResult(false, Map.of("error", "redis-execute-failed"));
+        }
     }
 
+    // ==================== 令牌桶 ====================
     /**
      * 令牌桶限流
      *
@@ -171,22 +189,27 @@ public class RedisRateLimitServiceImpl implements IRedisRateLimitService {
         // TTL 设置为桶容量对应的最大 refill 时间的几倍，避免过早过期
         long ttlMillis = (capacity / refillTokens) * refillPeriod.toMillis() * 2;
 
-        List<Object> result = redisTemplate.execute(TOKEN_BUCKET_SCRIPT,
-                Arrays.asList(tokensKey, timestampKey),
-                String.valueOf(capacity),
-                String.valueOf(refillTokens),
-                String.valueOf(refillPeriod.toMillis()),
-                String.valueOf(now),
-                String.valueOf(ttlMillis));
+        try {
+            List<Object> result = redisTemplate.execute(TOKEN_BUCKET_SCRIPT,
+                    Arrays.asList(tokensKey, timestampKey),
+                    String.valueOf(capacity),
+                    String.valueOf(refillTokens),
+                    String.valueOf(refillPeriod.toMillis()),
+                    String.valueOf(now),
+                    String.valueOf(ttlMillis));
 
-        boolean allowed = result != null && Long.valueOf(result.get(0).toString()) == 1;
-        long tokensLeft = result != null ? Long.valueOf(result.get(1).toString()) : 0;
+            boolean allowed = result != null && Long.valueOf(result.get(0).toString()) == 1;
+            long tokensLeft = result != null ? Long.valueOf(result.get(1).toString()) : 0;
 
-        Map<String, Object> metrics = new HashMap<>();
-        metrics.put("tokensLeft", tokensLeft);
-        metrics.put("capacity", capacity);
-        metrics.put("refillPeriodMillis", refillPeriod.toMillis());
-        return new RateLimitResult(allowed, metrics);
+            Map<String, Object> metrics = new HashMap<>();
+            metrics.put("tokensLeft", tokensLeft);
+            metrics.put("capacity", capacity);
+            metrics.put("refillPeriodMillis", refillPeriod.toMillis());
+            return new RateLimitResult(allowed, metrics);
+        } catch (Exception e) {
+            log.error("Redis 执行令牌桶限流脚本异常 key={}", key, e);
+            return new RateLimitResult(false, Map.of("error", "redis-execute-failed"));
+        }
     }
 
     /**
@@ -199,8 +222,8 @@ public class RedisRateLimitServiceImpl implements IRedisRateLimitService {
      * 同时为 Hash 设置 TTL，避免长期未访问时占用内存。
      * </p>
      *
-     * @param key              限流资源标识
-     * @param capacity         桶容量（最大排队长度）
+     * @param key               限流资源标识
+     * @param capacity          桶容量（最大排队长度）
      * @param leakRatePerSecond 漏桶速率（每秒处理请求数）
      * @return RateLimitResult，包含是否允许请求及当前排队长度
      */
@@ -212,20 +235,25 @@ public class RedisRateLimitServiceImpl implements IRedisRateLimitService {
         // TTL 设置为容量 / 漏水速率的几倍，避免过早过期
         long ttlMillis = (capacity / leakRatePerSecond) * 1000 * 2;
 
-        List<Object> result = redisTemplate.execute(LEAKY_BUCKET_SCRIPT,
-                Collections.singletonList(redisKey),
-                String.valueOf(now),
-                String.valueOf(leakRatePerSecond),
-                String.valueOf(capacity),
-                String.valueOf(ttlMillis));
+        try {
+            List<Object> result = redisTemplate.execute(LEAKY_BUCKET_SCRIPT,
+                    Collections.singletonList(redisKey),
+                    String.valueOf(now),
+                    String.valueOf(leakRatePerSecond),
+                    String.valueOf(capacity),
+                    String.valueOf(ttlMillis));
 
-        boolean allowed = result != null && Long.valueOf(result.get(0).toString()) == 1;
-        long queueLength = result != null ? Long.valueOf(result.get(1).toString()) : 0;
+            boolean allowed = result != null && Long.valueOf(result.get(0).toString()) == 1;
+            long queueLength = result != null ? Long.valueOf(result.get(1).toString()) : 0;
 
-        Map<String, Object> metrics = new HashMap<>();
-        metrics.put("queueLength", queueLength);
-        metrics.put("capacity", capacity);
-        metrics.put("leakRatePerSecond", leakRatePerSecond);
-        return new RateLimitResult(allowed, metrics);
+            Map<String, Object> metrics = new HashMap<>();
+            metrics.put("queueLength", queueLength);
+            metrics.put("capacity", capacity);
+            metrics.put("leakRatePerSecond", leakRatePerSecond);
+            return new RateLimitResult(allowed, metrics);
+        } catch (Exception e) {
+            log.error("Redis 执行漏桶限流脚本异常 key={}", key, e);
+            return new RateLimitResult(false, Map.of("error", "redis-execute-failed"));
+        }
     }
 }
