@@ -24,7 +24,11 @@ public enum BusinessResultCode implements IApiResult {
     CAPTCHA_NOT_FOUND("0100105", "验证码不存在"),
     CAPTCHA_EXPIRED("0100106","验证码已过期"),
     CAPTCHA_INVALID("0100107", "验证码错误"),
-    CAPTCHA_USED("0100107", "验证码已被使用"),
+    CAPTCHA_USED("0100108", "验证码已被使用"),
+    MISMATCH("0100109", "验证码不匹配"),
+    CAPTCHA_RATE_LIMITED("0100110", "操作过于频繁，请稍后再试"),
+    CAPTCHA_TOO_MANY_ATTEMPTS("0100111", "尝试次数过多，验证码已失效"),
+    CAPTCHA_CONTEXT_MISMATCH("0100112", "验证码业务场景或目标不匹配"),
     // ================== 用户系统 (02) ==================
     USER_NOT_FOUND("0210001", "用户不存在"),
     USER_DISABLED("0210002", "用户账号已被禁用"),

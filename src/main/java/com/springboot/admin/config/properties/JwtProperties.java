@@ -1,4 +1,4 @@
-package com.springboot.admin.config;
+package com.springboot.admin.config.properties;
 
 
 import lombok.Data;

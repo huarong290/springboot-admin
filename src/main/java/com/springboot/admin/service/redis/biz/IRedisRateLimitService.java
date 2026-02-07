@@ -30,7 +30,16 @@ import java.util.Map;
  * </ul>
  */
 public interface IRedisRateLimitService {
-
+    /**
+     * 基础频率检查（通常用于验证码发送频率控制）
+     * * @param key Redis Key
+     * @param seconds 限制的时间间隔（秒）
+     * @return true 允许发送，false 被限流
+     */
+    default boolean tryAcquire(String key, long seconds) {
+        // 内部可以直接调用固定窗口算法，maxCount 传 1
+        return allowRequestFixedWindow(key, 1, Duration.ofSeconds(seconds)).allowed;
+    }
     /**
      * 限流结果对象
      *

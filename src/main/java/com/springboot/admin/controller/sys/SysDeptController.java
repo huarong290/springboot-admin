@@ -1,18 +1,18 @@
-package com.springboot.admin.controller;
+package com.springboot.admin.controller.sys;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
  * <p>
- * 组织表（高并发版，仅存自身信息） 前端控制器
+ * 部门表 前端控制器
  * </p>
  *
  * @author system
  * @since 2026-02-06
  */
 @RestController
-@RequestMapping("/sys-org")
-public class SysOrgController {
+@RequestMapping("/sys-dept")
+public class SysDeptController {
 
 }

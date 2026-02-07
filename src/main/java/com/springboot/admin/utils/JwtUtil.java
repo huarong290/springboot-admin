@@ -1,6 +1,6 @@
 package com.springboot.admin.utils;
 
-import com.springboot.admin.config.JwtProperties;
+import com.springboot.admin.config.properties.JwtProperties;
 import com.springboot.admin.constants.security.JwtConstants;
 import com.springboot.admin.exception.BusinessException;
 import com.springboot.admin.exception.JwtAuthenticationException;

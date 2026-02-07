@@ -1,4 +1,4 @@
-package com.springboot.admin.controller;
+package com.springboot.admin.controller.sys;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

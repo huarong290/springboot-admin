@@ -14,7 +14,7 @@ public class CaptchaDTO {
     /**
      *一个 Base64 图片字符串
      */
-    private String captchaImage;
+    private String captchaContent;
     /**
      * 一个 过期时间
      */
@@ -26,5 +26,11 @@ public class CaptchaDTO {
 
     /**
      * 验证码类型（IMAGE / SMS / EMAIL）
-     */ private String captchaType;
+     */
+    private String captchaType;
+
+    /**
+     * 验证码场景
+     */
+    private String captchaScene;
 }

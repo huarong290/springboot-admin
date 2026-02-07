@@ -1,18 +1,18 @@
-package com.springboot.admin.controller;
+package com.springboot.admin.controller.sys;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
  * <p>
- * 部门层级闭包表 前端控制器
+ * 数据权限范围定义表 前端控制器
  * </p>
  *
  * @author system
  * @since 2026-02-06
  */
 @RestController
-@RequestMapping("/sys-dept-closure")
-public class SysDeptClosureController {
+@RequestMapping("/sys-data-scope")
+public class SysDataScopeController {
 
 }

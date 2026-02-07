@@ -1,18 +1,18 @@
-package com.springboot.admin.controller;
+package com.springboot.admin.controller.sys;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
  * <p>
- * 用户-角色关联表 前端控制器
+ * 系统菜单表，存储前端菜单和权限路由 前端控制器
  * </p>
  *
  * @author system
  * @since 2026-02-06
  */
 @RestController
-@RequestMapping("/sys-user-role")
-public class SysUserRoleController {
+@RequestMapping("/sys-menu")
+public class SysMenuController {
 
 }

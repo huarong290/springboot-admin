@@ -54,7 +54,20 @@ jwt:
   access-token-prefix: "access"           # AccessToken Redis 前缀
   refresh-token-prefix: "refresh"         # RefreshToken Redis 前缀
   jti-blacklist-prefix: "jwt:blacklist:"  # 被拉黑的 JTI 前缀，用于登出或强制失效
-
+# ------------------------
+# 验证码配置
+# ------------------------
+captcha:
+  hmac-secret: "my-real-secret-123456"
+  ttl-seconds: 300
+  rate-limit-seconds: 60
+  max-attempts: 5
+  # 图片专用配置
+  image:
+    length: 4        # 验证码位数
+    width: 130       # 图片宽度
+    height: 48       # 图片高度
+    line-count: 30   # 干扰线数量（越多越难破解，但也越难看清）
 # ------------------------
 # 日志配置
 # ------------------------
@@ -71,6 +84,7 @@ logging:
 # ------------------------
 security:
   whitelist:
+    - /api/captcha/getCaptcha
     - /api/auth/login
     - /api/auth/refresh
     - /api/auth/logout

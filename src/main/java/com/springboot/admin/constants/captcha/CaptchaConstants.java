@@ -10,29 +10,21 @@ public final class CaptchaConstants {
     // ---------------- Redis ----------------
 
     /**
-     * 验证码 Redis Key 前缀
+     * 验证码 Redis Key 模板
+     * 建议格式：captcha:store:{id}
+     * 这样在代码里可以用 String.format(CAPTCHA_STORE_KEY, id)
      */
-    public static final String CAPTCHA_PREFIX = "captcha:";
+    public static final String CAPTCHA_STORE_KEY = "captcha:store:%s";
 
     /**
-     * 验证码过期时间（分钟）
+     * 验证码频率限制 Redis Key 模板
+     * 格式：captcha:limit:{scene}:{target}
      */
-    public static final long CAPTCHA_EXPIRE_MINUTES = 5L;
-
-    // ---------------- Captcha Config ----------------
-
-    /**
-     * 验证码长度
-     */
-    public static final int CAPTCHA_LENGTH = 4;
+    public static final String CAPTCHA_LIMIT_KEY = "captcha:limit:%s:%s";
 
     /**
-     * 验证码图片宽度
+     * 验证码错误计数 Redis Key 模板 (用于实现 max-attempts)
+     * 格式：captcha:attempts:{id}
      */
-    public static final int CAPTCHA_WIDTH = 120;
-
-    /**
-     * 验证码图片高度
-     */
-    public static final int CAPTCHA_HEIGHT = 40;
+    public static final String CAPTCHA_ATTEMPT_KEY = "captcha:attempts:%s";
 }
