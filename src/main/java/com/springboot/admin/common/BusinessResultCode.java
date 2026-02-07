@@ -14,13 +14,17 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum BusinessResultCode implements IApiResult {
-
+    BUSINESS_SUCCESS_CODE("0000000","业务执行成功"),
     // ================== 认证系统 (01) ==================
     AUTH_TOKEN_MISSING("0100101", "缺少认证令牌"),
     TOKEN_INVALID("0100102", "令牌无效或已过期"),
     TOKEN_REVOKED("0100103", "令牌已被撤销"),
     AUTH_PROCESSING_ERROR("0100104", "认证处理失败"),
 
+    CAPTCHA_NOT_FOUND("0100105", "验证码不存在"),
+    CAPTCHA_EXPIRED("0100106","验证码已过期"),
+    CAPTCHA_INVALID("0100107", "验证码错误"),
+    CAPTCHA_USED("0100107", "验证码已被使用"),
     // ================== 用户系统 (02) ==================
     USER_NOT_FOUND("0210001", "用户不存在"),
     USER_DISABLED("0210002", "用户账号已被禁用"),

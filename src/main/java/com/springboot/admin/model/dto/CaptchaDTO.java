@@ -20,7 +20,11 @@ public class CaptchaDTO {
      */
     private Long expireTime;
     /**
-     * 一个 是否启用标志
+     * 是否已使用标志（true=已使用，false=未使用）
      */
-    private Boolean captchaEnabled;
+    private boolean used;
+
+    /**
+     * 验证码类型（IMAGE / SMS / EMAIL）
+     */ private String captchaType;
 }
